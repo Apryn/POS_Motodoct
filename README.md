@@ -1,4 +1,4 @@
-# 🏍️ Cashier Bengkel Motor - motodoct
+# Cashier Bengkel Motor - motodoct
 
 Aplikasi kasir untuk bengkel motor motodoct.
 
@@ -47,5 +47,5 @@ git push origin feature/nama-fitur
 ## Tim
 | Nama | Role |
 |------|------|
-| -    | Frontend |
-| -    | Backend  |
+| - Apriyan   | Frontend |
+| - Riski   | Backend  |
