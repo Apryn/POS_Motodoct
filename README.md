@@ -1,4 +1,4 @@
-# 🏍️ Cashier Bengkel Motor - motodoct
+# Cashier Bengkel Motor - motodoct
 
 Aplikasi kasir untuk bengkel motor motodoct.
 
