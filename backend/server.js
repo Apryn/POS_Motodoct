@@ -7,6 +7,7 @@ const db = require("./config/db"); // Mengimpor koneksi database
 
 // Import Routes
 const sparepartRoutes = require("./routes/sparepartRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,6 +79,7 @@ app.post("/api/login", async (req, res) => {
 
 // Daftarkan Routes
 app.use("/api/spareparts", sparepartRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
