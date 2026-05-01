@@ -45,7 +45,13 @@ git push origin feature/nama-fitur
 ```
 
 ## Tim
+<<<<<<< HEAD
 | Nama  | Role |
 |------ |------|
 | - Apriyan | Frontend |
+=======
+| Nama | Role |
+|------|------|
+| - Apriyan   | Frontend |
+>>>>>>> be80e27 (Update README.md)
 | - Riski   | Backend  |
