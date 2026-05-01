@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kasir - Motodoct</title>
+  <link rel="stylesheet" href="../css/pos.css" />
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="pos-topbar">
+    <div class="pos-topbar-left">
+      <h1>🧾 Cashier</h1>
+      <span>Motodoct Workshop</span>
+    </div>
+    <div class="pos-topbar-right">
+      <div class="clock-display" id="clockDisplay">—</div>
+      <button class="notif-btn" title="Notifikasi">🔔</button>
+      <div class="user-badge">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div class="user-badge-info">
+          <span class="user-badge-name" id="userDisplay">Admin</span>
+          <span class="user-badge-role" id="userRole">Kasir</span>
+        </div>
+      </div>
+      <button class="btn-topbar btn-topbar-outline" onclick="window.location.href='dashboard.html'">🏠 Dashboard</button>
+      <button class="btn-topbar btn-topbar-danger" onclick="logout()">🚪 Logout</button>
+    </div>
+  </header>
+
+  <!-- POS Layout -->
+  <div class="pos-layout">
+
+    <!-- Left: Products -->
+    <div class="pos-left">
+
+      <!-- Barcode Scan -->
+      <div class="scan-bar">
+        <span class="scan-icon">📷</span>
+        <input
+          type="text"
+          id="barcodeInput"
+          placeholder="Scan barcode atau ketik kode produk, tekan Enter..."
+          autocomplete="off"
+          autofocus
+        />
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="sparepart" onclick="switchTab('sparepart')">🔩 Sparepart</button>
+        <button class="tab-btn" data-tab="servis" onclick="switchTab('servis')">🔧 Servis</button>
+      </div>
+
+      <!-- Product Grids -->
+      <div class="product-grid" id="tabSparepart">
+        <div class="empty-state">Memuat produk...</div>
+      </div>
+      <div class="product-grid hidden" id="tabServis">
+        <div class="empty-state">Memuat servis...</div>
+      </div>
+
+    </div>
+
+    <!-- Right: Receipt -->
+    <div class="pos-right">
+
+      <div class="receipt-header">
+        <span>🧾 Keranjang</span>
+        <span id="cartCount" style="font-size:12px;color:#aaa;font-weight:400">0 item</span>
+      </div>
+
+      <!-- Cart Items -->
+      <div class="receipt-items" id="cartList">
+        <div class="empty-cart">Belum ada item di keranjang</div>
+      </div>
+
+      <!-- Mechanic Row (hidden by default) -->
+      <div class="mechanic-row hidden" id="mechanicRow">
+        <label>👨‍🔧 Pilih Mekanik <span style="color:#e74c3c">*</span></label>
+        <select id="selectMechanic">
+          <option value="">-- Pilih Mekanik --</option>
+        </select>
+      </div>
+
+      <!-- Totals -->
+      <div class="receipt-total">
+        <div class="total-row">
+          <span>Subtotal</span>
+          <span id="subtotalDisplay">Rp 0</span>
+        </div>
+        <div class="total-row grand">
+          <span>TOTAL</span>
+          <span id="totalDisplay">Rp 0</span>
+        </div>
+      </div>
+
+      <!-- Payment -->
+      <div class="payment-section">
+        <div class="payment-label">Metode Pembayaran</div>
+        <div class="payment-methods">
+          <button class="pay-btn active" data-method="cash" onclick="selectPayment('cash')">💵 Cash</button>
+          <button class="pay-btn" data-method="qris" onclick="selectPayment('qris')">📱 QRIS</button>
+          <button class="pay-btn" data-method="transfer" onclick="selectPayment('transfer')">🏦 Transfer</button>
+        </div>
+        <div class="cash-input" id="cashInput">
+          <label>Uang Diterima</label>
+          <input type="number" id="cashReceived" placeholder="0" min="0" />
+          <div class="change-row">
+            <span>Kembalian</span>
+            <span id="changeDisplay">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pos-actions">
+        <button class="btn-process" id="btnProcess" onclick="processTransaction()">BAYAR</button>
+        <button class="btn-clear" onclick="clearCart()">🗑️ Batal</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Struk -->
+  <div class="modal-struk hidden" id="modalStruk">
+    <div class="struk-box">
+      <div class="struk-header">
+        <h3>✅ Transaksi Berhasil</h3>
+        <button class="btn-close-struk" onclick="closeStruk()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <div class="struk-content" id="strukContent"></div>
+      <div class="struk-footer">
+        <button class="btn-print-struk" onclick="printStruk()">🖨️ Cetak Struk</button>
+        <button class="btn-close-struk" onclick="closeStruk()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/pos.js"></script>
+</body>
+</html>

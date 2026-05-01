@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Laporan - Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/laporan.css" />
+  <link rel="stylesheet" href="../css/table.css" />
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">🏠 Dashboard</a>
+      <a href="transaksi.html" class="nav-item">🧾 Transaksi</a>
+      <a href="sparepart.html" class="nav-item">🔧 Stok Gudang</a>
+      <a href="pembelian.html" class="nav-item">🛒 Pembelian Stok</a>
+      <a href="kategori.html" class="nav-item">📂 Kategori</a>
+      <a href="servis.html" class="nav-item">⚙️ Servis</a>
+      <a href="mekanik.html" class="nav-item">👨‍🔧 Mekanik</a>
+      <a href="pelanggan.html" class="nav-item">👤 Pelanggan</a>
+      <a href="laporan.html" class="nav-item active">📊 Laporan</a>
+    </nav>
+    <button class="btn-logout" onclick="logout()">🚪 Keluar</button>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Lap Header -->
+    <div class="lap-header">
+      <div>
+        <h1>Laporan Bengkel</h1>
+        <p>Ringkasan keuangan dan transaksi</p>
+      </div>
+      <div class="lap-header-right">
+        <div class="filter-periode">
+          <span>📅</span>
+          <input type="date" id="dateFrom" />
+          <span>—</span>
+          <input type="date" id="dateTo" />
+        </div>
+        <button class="btn-primary" onclick="applyFilter()">Terapkan</button>
+        <button class="btn-print" onclick="printLaporan()">🖨️ Cetak</button>
+      </div>
+    </div>
+
+    <!-- Lap Stats -->
+    <div class="lap-stats">
+      <div class="lap-card purple">
+        <div class="lap-card-icon">🧾</div>
+        <div>
+          <p>Total Transaksi</p>
+          <h2 id="statTrx">—</h2>
+        </div>
+      </div>
+      <div class="lap-card blue">
+        <div class="lap-card-icon">💰</div>
+        <div>
+          <p>Total Pendapatan</p>
+          <h2 id="statPendapatan">—</h2>
+        </div>
+      </div>
+      <div class="lap-card red">
+        <div class="lap-card-icon">🛒</div>
+        <div>
+          <p>Total Pengeluaran</p>
+          <h2 id="statPengeluaran">—</h2>
+        </div>
+      </div>
+      <div class="lap-card green">
+        <div class="lap-card-icon">📈</div>
+        <div>
+          <p>Laba Kotor</p>
+          <h2 id="statLaba">—</h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lap Tabs -->
+    <div class="lap-tabs">
+      <button class="lap-tab active" data-tab="Pendapatan" onclick="switchTab('Pendapatan')">📈 Pendapatan</button>
+      <button class="lap-tab" data-tab="Biaya" onclick="switchTab('Biaya')">📉 Biaya Operasional</button>
+      <button class="lap-tab" data-tab="Perbandingan" onclick="switchTab('Perbandingan')">📊 Perbandingan</button>
+    </div>
+
+    <!-- Tab: Pendapatan -->
+    <div class="chart-box" id="tabPendapatan">
+      <h3>Pendapatan Harian</h3>
+      <canvas id="chartPendapatan" height="80"></canvas>
+    </div>
+
+    <!-- Tab: Biaya Operasional -->
+    <div class="chart-box hidden" id="tabBiaya">
+      <h3>Biaya Operasional Harian</h3>
+      <canvas id="chartBiaya" height="80"></canvas>
+    </div>
+
+    <!-- Tab: Perbandingan -->
+    <div class="chart-box hidden" id="tabPerbandingan">
+      <h3>Perbandingan Pendapatan vs Pengeluaran</h3>
+      <canvas id="chartPerbandingan" height="80"></canvas>
+    </div>
+
+    <!-- Bottom: Donut + Bar Harian -->
+    <div class="lap-bottom">
+      <div class="chart-box">
+        <h3>Metode Pembayaran</h3>
+        <div class="donut-wrap">
+          <canvas id="chartDonut" width="160" height="160" style="max-width:160px;max-height:160px"></canvas>
+          <div class="donut-legend" id="donutLegend">
+            <div class="legend-item" style="color:#bbb;font-size:12px">Belum ada data</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h3>Transaksi Harian</h3>
+        <canvas id="chartTrxHarian" height="120"></canvas>
+      </div>
+    </div>
+
+    <!-- Transaction Table -->
+    <div class="table-wrap" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f0f0f0">
+        <h3 style="font-size:14px;color:#333">Riwayat Transaksi</h3>
+        <button class="btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Invoice</th>
+            <th>Tanggal</th>
+            <th>Pelanggan</th>
+            <th>Metode</th>
+            <th>Total</th>
+            <th>Kasir</th>
+          </tr>
+        </thead>
+        <tbody id="trxTableBody">
+          <tr><td colspan="7" class="empty-state">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../js/laporan.js"></script>
+</body>
+</html>

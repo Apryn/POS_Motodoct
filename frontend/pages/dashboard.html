@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/laporan.css" />
+</head>
+<body>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="transaksi.html" class="nav-item"><span class="nav-icon">🧾</span> Transaksi</a>
+      <a href="sparepart.html" class="nav-item"><span class="nav-icon">🔧</span> Stok Gudang</a>
+      <a href="pembelian.html" class="nav-item"><span class="nav-icon">🛒</span> Pembelian Stok</a>
+      <a href="kategori.html" class="nav-item"><span class="nav-icon">📂</span> Kategori</a>
+      <a href="servis.html" class="nav-item"><span class="nav-icon">⚙️</span> Servis</a>
+      <a href="mekanik.html" class="nav-item"><span class="nav-icon">👨‍🔧</span> Mekanik</a>
+      <a href="pelanggan.html" class="nav-item"><span class="nav-icon">👤</span> Pelanggan</a>
+      <a href="laporan.html" class="nav-item"><span class="nav-icon">📊</span> Laporan</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()">🚪 Keluar</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-left">
+          <h1>Dashboard</h1>
+          <p id="periodeText"></p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-badge">
+          <div class="user-avatar-sm" id="userAvatar">A</div>
+          <span class="user-badge-name" id="welcomeText">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Cards: Keuangan Hari Ini -->
+    <div class="stats-grid" style="margin-bottom:20px;">
+      <div class="stat-card blue" onclick="window.location.href='laporan.html'">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Transaksi Hari Ini</span>
+          <div class="stat-card-icon">🧾</div>
+        </div>
+        <div class="stat-card-value" id="statTrx">
+          <span class="skeleton" style="width:40px;height:28px;">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        </div>
+        <div class="stat-card-sub">transaksi selesai</div>
+      </div>
+
+      <div class="stat-card green" onclick="window.location.href='laporan.html'">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Pendapatan Hari Ini</span>
+          <div class="stat-card-icon">💰</div>
+        </div>
+        <div class="stat-card-value" id="statPendapatan">
+          <span class="skeleton" style="width:80px;height:28px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        </div>
+        <div class="stat-card-sub" id="statPendapatanSub">dari penjualan</div>
+      </div>
+
+      <div class="stat-card red" onclick="window.location.href='pembelian.html'">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Pengeluaran Hari Ini</span>
+          <div class="stat-card-icon">🛒</div>
+        </div>
+        <div class="stat-card-value" id="statPengeluaran">
+          <span class="skeleton" style="width:80px;height:28px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        </div>
+        <div class="stat-card-sub">pembelian stok</div>
+      </div>
+
+      <div class="stat-card" id="labaCard" onclick="window.location.href='laporan.html'">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Laba Hari Ini</span>
+          <div class="stat-card-icon" id="labaIcon">📈</div>
+        </div>
+        <div class="stat-card-value" id="statLaba">
+          <span class="skeleton" style="width:80px;height:28px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        </div>
+        <div class="stat-card-sub" id="labaSub">pendapatan - pengeluaran</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-section" style="margin-bottom:20px;">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Tren Keuangan</div>
+          <div class="chart-subtitle">Pendapatan vs Pengeluaran</div>
+        </div>
+        <div class="chart-toggle">
+          <button class="chart-toggle-btn active" id="btn7" onclick="switchChart(7, this)">7 Hari</button>
+          <button class="chart-toggle-btn" id="btn30" onclick="switchChart(30, this)">30 Hari</button>
+        </div>
+      </div>
+      <div id="chartEmpty" class="empty-state-box" style="display:none;">
+        <div class="empty-icon">📊</div>
+        <p>Belum ada data transaksi</p>
+      </div>
+      <canvas id="chartDashboard" height="80"></canvas>
+    </div>
+
+    <!-- Bottom: Inventaris + Bulan -->
+    <div class="bottom-grid">
+
+      <!-- Inventaris -->
+      <div class="chart-section">
+        <div class="chart-header" style="margin-bottom:14px;">
+          <div>
+            <div class="chart-title">Inventaris Gudang</div>
+            <div class="chart-subtitle">Status stok sparepart</div>
+          </div>
+          <a href="sparepart.html" style="font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;">Lihat semua →</a>
+        </div>
+        <div class="inventory-grid">
+          <div class="inv-card" onclick="window.location.href='sparepart.html'">
+            <div class="inv-card-icon" style="background:rgba(59,130,246,0.1);">📦</div>
+            <div class="inv-card-info">
+              <p>Total Item</p>
+              <h3 id="totalSparepart">—</h3>
+            </div>
+          </div>
+          <div class="inv-card" onclick="window.location.href='transaksi.html'">
+            <div class="inv-card-icon" style="background:rgba(16,185,129,0.1);">📅</div>
+            <div class="inv-card-info">
+              <p>Trx Bulan Ini</p>
+              <h3 id="totalTrxBulan">—</h3>
+            </div>
+          </div>
+          <div class="inv-card" onclick="window.location.href='sparepart.html'">
+            <div class="inv-card-icon" style="background:rgba(245,158,11,0.1);">⚠️</div>
+            <div class="inv-card-info">
+              <p>Stok Menipis</p>
+              <h3 id="totalMenipis" style="color:var(--orange);">—</h3>
+            </div>
+          </div>
+          <div class="inv-card" onclick="window.location.href='sparepart.html'">
+            <div class="inv-card-icon" style="background:rgba(239,68,68,0.1);">❌</div>
+            <div class="inv-card-info">
+              <p>Stok Habis</p>
+              <h3 id="totalHabis" style="color:var(--red);">—</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ringkasan Bulan -->
+      <div class="chart-section">
+        <div class="chart-header" style="margin-bottom:14px;">
+          <div>
+            <div class="chart-title">Ringkasan Bulan Ini</div>
+            <div class="chart-subtitle" id="bulanLabel"></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(59,130,246,0.06);border-radius:10px;border:1px solid rgba(59,130,246,0.15);">
+            <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Total Transaksi</span>
+            <span style="font-size:16px;font-weight:800;color:var(--blue);" id="bulanTrx">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(16,185,129,0.06);border-radius:10px;border:1px solid rgba(16,185,129,0.15);">
+            <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Pendapatan</span>
+            <span style="font-size:16px;font-weight:800;color:var(--green);" id="bulanPendapatan">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(239,68,68,0.06);border-radius:10px;border:1px solid rgba(239,68,68,0.15);">
+            <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Pengeluaran</span>
+            <span style="font-size:16px;font-weight:800;color:var(--red);" id="bulanPengeluaran">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(139,92,246,0.06);border-radius:10px;border:1px solid rgba(139,92,246,0.15);">
+            <span style="font-size:13px;color:var(--text-muted);font-weight:500;">Laba Kotor</span>
+            <span style="font-size:16px;font-weight:800;" id="bulanLaba">—</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../js/dashboard.js"></script>
+</body>
+</html>
