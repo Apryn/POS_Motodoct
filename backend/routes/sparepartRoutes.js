@@ -1,0 +1,11 @@
+const express = require('express');
+const router = express.Router();
+const c = require('../controllers/sparepartController');
+const auth = require('../middleware/auth');
+router.get('/', c.getAllSpareparts);
+router.get('/:id', c.getSparepartById);
+router.post('/', c.createSparepart);
+router.put('/:id', c.updateSparepart);
+router.delete('/all', auth, c.deleteAllSpareparts);
+router.delete('/:id', c.deleteSparepart);
+module.exports = router;
