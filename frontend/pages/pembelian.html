@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -9,23 +9,28 @@
 </head>
 <body>
 
+  <!-- Sidebar Overlay (mobile) -->
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
+  <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><img src="../assets/logo.png" alt="Motodoct" /></div>
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
     <nav>
-      <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
-      <a href="transaksi.html" class="nav-item"><span class="nav-icon">🧾</span> Transaksi</a>
-      <a href="sparepart.html" class="nav-item"><span class="nav-icon">🔧</span> Stok Gudang</a>
-      <a href="pembelian.html" class="nav-item active"><span class="nav-icon">🛒</span> Pembelian Stok</a>
-      <a href="kategori.html" class="nav-item"><span class="nav-icon">📂</span> Kategori</a>
-      <a href="servis.html" class="nav-item"><span class="nav-icon">⚙️</span> Servis</a>
-      <a href="mekanik.html" class="nav-item"><span class="nav-icon">👨‍🔧</span> Mekanik</a>
-      <a href="pelanggan.html" class="nav-item"><span class="nav-icon">👤</span> Pelanggan</a>
-      <a href="laporan.html" class="nav-item"><span class="nav-icon">📊</span> Laporan</a>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
+      <a href="sparepart.html" class="nav-item"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
+      <a href="pembelian.html" class="nav-item active"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
+      <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
+      <a href="servis.html" class="nav-item"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
+      <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
+      <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
+      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="notifikasi.html" class="nav-item"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
     </nav>
     <div class="sidebar-footer">
-      <button class="btn-logout" onclick="logout()">🚪 Keluar</button>
+      <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
     </div>
   </aside>
 
@@ -235,5 +240,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="../js/pembelian.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
+
+
+

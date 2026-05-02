@@ -4,6 +4,7 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("./config/db");
+const { checkStokAndNotify } = require("./services/telegramService");
 
 // Import Routes
 const sparepartRoutes = require("./routes/sparepartRoutes");
@@ -14,6 +15,7 @@ const serviceRoutes = require("./routes/serviceRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const purchaseRoutes = require("./routes/purchaseRoutes");
+const notifRoutes = require("./routes/notifRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,7 +68,28 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/purchases", purchaseRoutes);
+app.use("/api/notif", notifRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+
+  // Cek stok setiap hari jam 08:00 WIB
+  scheduleDailyCheck();
 });
+
+function scheduleDailyCheck() {
+  const now = new Date();
+  const next8am = new Date();
+  next8am.setHours(8, 0, 0, 0);
+  if (now >= next8am) next8am.setDate(next8am.getDate() + 1);
+
+  const msUntil8am = next8am - now;
+
+  setTimeout(() => {
+    checkStokAndNotify(db);
+    // Ulangi setiap 24 jam
+    setInterval(() => checkStokAndNotify(db), 24 * 60 * 60 * 1000);
+  }, msUntil8am);
+
+  console.log(`⏰ Cek stok terjadwal jam 08:00 WIB (${Math.round(msUntil8am/1000/60)} menit lagi)`);
+}
