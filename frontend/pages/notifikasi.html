@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notifikasi — Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/table.css" />
+  <style>
+    /* Action Cards */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .action-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .action-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .action-card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex: 1;
+    }
+
+    .btn-telegram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px;
+      background: #0088cc;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+    }
+    .btn-telegram:hover { background: #006fa8; }
+    .btn-telegram:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-telegram.green { background: #27ae60; }
+    .btn-telegram.green:hover { background: #1e8449; }
+
+    /* Threshold setting */
+    .threshold-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .threshold-row label { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+
+    .threshold-row input {
+      width: 70px;
+      padding: 7px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+    }
+    .threshold-row input:focus { border-color: var(--primary); }
+
+    .threshold-row button {
+      padding: 7px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Notif sections */
+    .notif-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-count {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      color: #fff;
+    }
+    .badge-count.red    { background: var(--red); }
+    .badge-count.orange { background: var(--orange); }
+
+    .notif-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+
+    .notif-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s;
+    }
+    .notif-item:hover { box-shadow: var(--shadow-md); }
+
+    .notif-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .notif-icon.red    { background: rgba(231,76,60,0.1); }
+    .notif-icon.orange { background: rgba(243,156,18,0.1); }
+
+    .notif-info { flex: 1; }
+    .notif-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .notif-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .notif-stock {
+      font-size: 18px; font-weight: 800;
+      min-width: 60px; text-align: right;
+    }
+    .notif-stock.red    { color: var(--red); }
+    .notif-stock.orange { color: var(--orange); }
+
+    .notif-empty {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-muted);
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .notif-empty .icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* Riwayat */
+    .riwayat-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .riwayat-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; margin-top: 2px; }
+    .riwayat-msg { flex: 1; color: var(--text); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      color: #fff; padding: 12px 24px;
+      border-radius: 10px; font-size: 13px; font-weight: 600;
+      z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      display: none;
+    }
+    .toast.show { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+    @media (max-width: 768px) { .action-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
+      <a href="sparepart.html" class="nav-item"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
+      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
+      <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
+      <a href="servis.html" class="nav-item"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
+      <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
+      <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
+      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="notifikasi.html" class="nav-item active"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-left">
+          <h1>Notifikasi</h1>
+          <p>Monitor stok & kirim laporan ke Telegram</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-badge">
+          <div class="user-avatar-sm" id="userAvatar">A</div>
+          <span class="user-badge-name" id="welcomeText">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="action-grid">
+      <div class="action-card">
+        <div class="action-card-title">🔔 Notifikasi Stok</div>
+        <div class="action-card-desc">Kirim daftar stok menipis dan habis ke Telegram sekarang.</div>
+        <button class="btn-telegram" id="btnSendStok" onclick="sendStok()">
+          📨 Kirim Notif Stok
+        </button>
+      </div>
+      <div class="action-card">
+        <div class="action-card-title">📊 Laporan Harian</div>
+        <div class="action-card-desc">Kirim ringkasan transaksi, pendapatan, dan laba hari ini ke Telegram.</div>
+        <button class="btn-telegram green" id="btnSendDaily" onclick="sendDaily()">
+          📈 Kirim Laporan Harian
+        </button>
+      </div>
+      <div class="action-card">
+        <div class="action-card-title">⚙️ Setting Threshold</div>
+        <div class="action-card-desc">Batas stok dianggap menipis. Default: 5 pcs.</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="number" id="thresholdInput" value="5" min="1" max="100" />
+          <button onclick="applyThreshold()" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;flex:1;">Terapkan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stok Alert -->
+    <div id="stokSection">
+      <div style="text-align:center;padding:32px;color:var(--text-muted);">Memuat data stok...</div>
+    </div>
+
+    <!-- Riwayat Notifikasi -->
+    <div style="margin-top:8px;">
+      <div class="notif-section-title" style="margin-bottom:12px;">📋 Riwayat Notifikasi</div>
+      <div id="riwayatList">
+        <div style="text-align:center;padding:24px;color:var(--text-muted);background:#fff;border-radius:10px;border:1px solid var(--border);font-size:13px;">
+          Belum ada riwayat notifikasi yang dikirim.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/notifikasi.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
+
+
+

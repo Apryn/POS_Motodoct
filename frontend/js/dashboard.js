@@ -231,8 +231,18 @@ async function loadDashboard() {
     if (spRes.success) {
       const parts = spRes.data;
       document.getElementById('totalSparepart').textContent = parts.length;
-      document.getElementById('totalMenipis').textContent = parts.filter(p => p.stock > 0 && p.stock <= 5).length;
-      document.getElementById('totalHabis').textContent = parts.filter(p => p.stock === 0).length;
+      const menipis = parts.filter(p => p.stock > 0 && p.stock <= 5).length;
+      const habis = parts.filter(p => p.stock === 0).length;
+      document.getElementById('totalMenipis').textContent = menipis;
+      document.getElementById('totalHabis').textContent = habis;
+
+      // Badge notifikasi di sidebar
+      const badge = document.getElementById('notifBadge');
+      const total = menipis + habis;
+      if (badge && total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline';
+      }
     }
 
     // ===== CHART =====

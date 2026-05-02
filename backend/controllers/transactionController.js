@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { checkStokAndNotify } = require('../services/telegramService');
 
 exports.createTransaction = async (req, res) => {
     const conn = await db.getConnection();
@@ -34,6 +35,10 @@ exports.createTransaction = async (req, res) => {
             }
         }
         await conn.commit();
+
+        // Cek stok setelah transaksi — kirim notif kalau ada yang menipis/habis
+        checkStokAndNotify(db);
+
         res.status(201).json({ success: true, message: 'Transaksi berhasil', data: { transaction_id, invoice_number, total } });
     } catch (error) {
         await conn.rollback();
