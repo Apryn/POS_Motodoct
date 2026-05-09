@@ -235,20 +235,29 @@ function renderCharts(d) {
 function renderTransactionTable(data) {
   const tbody = document.getElementById('trxTableBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Tidak ada transaksi</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Tidak ada transaksi</td></tr>';
     return;
   }
-  tbody.innerHTML = data.map((t, i) => `
-    <tr>
+
+  const methodStyle = {
+    cash:     { bg: '#e8f8f0', color: '#27ae60' },
+    qris:     { bg: '#fff8e6', color: '#f39c12' },
+    transfer: { bg: '#eef2ff', color: '#4a6cf7' }
+  };
+
+  tbody.innerHTML = data.map((t, i) => {
+    const m = methodStyle[t.payment_method] || { bg: '#f0f0f0', color: '#888' };
+    return `<tr>
       <td>${i + 1}</td>
-      <td>${t.invoice_number || '-'}</td>
+      <td><span class="code-badge">${t.invoice_number || '-'}</span></td>
       <td>${t.created_at ? new Date(t.created_at).toLocaleDateString('id-ID') : '-'}</td>
       <td>${t.customer_name || 'Umum'}</td>
-      <td>${(t.payment_method || '-').toUpperCase()}</td>
-      <td>${rupiah(t.total_amount)}</td>
+      <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${m.bg};color:${m.color}">${(t.payment_method||'-').toUpperCase()}</span></td>
+      <td><strong>${rupiah(t.total_amount)}</strong></td>
       <td>${t.username || '-'}</td>
-    </tr>
-  `).join('');
+      <td><button onclick="lihatDetail(${t.id})" style="padding:4px 10px;background:#eef2ff;color:#4a6cf7;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Detail</button></td>
+    </tr>`;
+  }).join('');
 }
 
 // Tab switching
@@ -287,6 +296,76 @@ function exportCSV() {
   a.download = `laporan_${dateFromEl?.value || firstDay}_${dateToEl?.value || today}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+async function lihatDetail(id) {
+  try {
+    const res = await fetch(`${API}/transactions/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+    const { data } = await res.json();
+    if (!data) return;
+
+    const tgl = new Date(data.created_at).toLocaleString('id-ID');
+    let html = `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:13px;color:#888;">Invoice</div>
+        <div style="font-size:15px;font-weight:700;">${data.invoice_number}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:13px;">
+        <div><span style="color:#888;">Tanggal:</span> ${tgl}</div>
+        <div><span style="color:#888;">Kasir:</span> ${data.username}</div>
+        <div><span style="color:#888;">Pelanggan:</span> ${data.customer_name || 'Umum'}</div>
+        <div><span style="color:#888;">Metode:</span> ${(data.payment_method||'').toUpperCase()}</div>
+      </div>`;
+
+    if (data.spareparts?.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Sparepart</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px;">
+          <thead><tr style="background:#f8f9fa;">
+            <th style="padding:6px 10px;text-align:left;">Nama</th>
+            <th style="padding:6px 10px;text-align:center;">Qty</th>
+            <th style="padding:6px 10px;text-align:right;">Subtotal</th>
+          </tr></thead>
+          <tbody>${data.spareparts.map(s => `
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:6px 10px;">${s.sparepart_name}</td>
+              <td style="padding:6px 10px;text-align:center;">${s.quantity}</td>
+              <td style="padding:6px 10px;text-align:right;">${rupiah(s.subtotal)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    if (data.services?.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Servis</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px;">
+          <thead><tr style="background:#f8f9fa;">
+            <th style="padding:6px 10px;text-align:left;">Jenis Servis</th>
+            <th style="padding:6px 10px;text-align:left;">Mekanik</th>
+            <th style="padding:6px 10px;text-align:right;">Harga</th>
+          </tr></thead>
+          <tbody>${data.services.map(s => `
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:6px 10px;">${s.service_name}</td>
+              <td style="padding:6px 10px;">${s.mechanic_name}</td>
+              <td style="padding:6px 10px;text-align:right;">${rupiah(s.price)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    html += `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;padding:10px 0;border-top:2px solid #f0f0f0;">
+      <span>TOTAL</span><span style="color:#e87722;">${rupiah(data.total_amount)}</span>
+    </div>`;
+
+    document.getElementById('detailContent').innerHTML = html;
+    document.getElementById('modalDetail').classList.remove('hidden');
+  } catch (err) {
+    alert('Gagal memuat detail transaksi');
+  }
+}
+
+function closeDetail() {
+  document.getElementById('modalDetail').classList.add('hidden');
 }
 
 function printLaporan() {

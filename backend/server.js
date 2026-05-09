@@ -16,6 +16,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const purchaseRoutes = require("./routes/purchaseRoutes");
 const notifRoutes = require("./routes/notifRoutes");
+const savedCartRoutes = require("./routes/savedCartRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,6 +70,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/notif", notifRoutes);
+app.use("/api/saved-carts", savedCartRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);

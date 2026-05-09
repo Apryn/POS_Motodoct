@@ -11,7 +11,7 @@
   <!-- Topbar -->
   <header class="pos-topbar">
     <div class="pos-topbar-left">
-      <h1>🧾 Cashier</h1>
+      <h1>Cashier</h1>
       <span>Motodoct Workshop</span>
     </div>
     <div class="pos-topbar-right">
@@ -61,9 +61,9 @@
         <div class="empty-state">Memuat servis...</div>
       </div>
 
-    </div>
+      <!-- Saved Carts Panel dihapus - dipindah ke halaman keranjang.html -->
 
-    <!-- Right: Receipt -->
+    </div><!-- end pos-left -->
     <div class="pos-right">
 
       <div class="receipt-header">
@@ -90,9 +90,16 @@
           <span>Subtotal</span>
           <span id="subtotalDisplay">Rp 0</span>
         </div>
+        <div class="total-row" id="discountRow" style="display:none;">
+          <span style="color:#e74c3c;">Diskon <span id="discountPctLabel"></span></span>
+          <span id="discountAmount" style="color:#e74c3c;font-weight:600;">- Rp 0</span>
+        </div>
         <div class="total-row grand">
           <span>TOTAL</span>
           <span id="totalDisplay">Rp 0</span>
+        </div>
+        <div style="text-align:right;margin-top:4px;">
+          <button onclick="openDiscountModal()" style="background:none;border:none;font-size:11px;color:#aaa;cursor:pointer;text-decoration:underline;">+ Tambah Diskon</button>
         </div>
       </div>
 
@@ -117,9 +124,49 @@
       <!-- Action Buttons -->
       <div class="pos-actions">
         <button class="btn-process" id="btnProcess" onclick="processTransaction()">BAYAR</button>
-        <button class="btn-clear" onclick="clearCart()">🗑️ Batal</button>
+        <button class="btn-save-cart" onclick="openSaveCartModal()" title="Simpan keranjang">💾</button>
+        <a href="keranjang.html" class="btn-save-cart" title="Lihat keranjang tersimpan" style="text-decoration:none;display:flex;align-items:center;justify-content:center;">🗂</a>
+        <button class="btn-clear" onclick="clearCart()">🗑️</button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Modal Simpan Keranjang -->
+  <div class="modal-struk hidden" id="modalSaveCart">
+    <div class="struk-box" style="max-width:340px;">
+      <div class="struk-header">
+        <h3>💾 Simpan Keranjang</h3>
+        <button class="btn-close-struk" onclick="closeSaveCartModal()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <p style="font-size:13px;color:#555;">Keranjang akan disimpan dan bisa dilanjutkan nanti.</p>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Plat Nomor Motor <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="savePlate" placeholder="Contoh: B 1234 ABC"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;outline:none;text-transform:uppercase;font-weight:700;letter-spacing:1px;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Nama Pelanggan</label>
+          <input type="text" id="saveCustomer" placeholder="Opsional"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Mekanik</label>
+          <select id="saveMechanic" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;">
+            <option value="">-- Pilih Mekanik --</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Catatan</label>
+          <input type="text" id="saveNote" placeholder="Opsional"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+      </div>
+      <div class="struk-footer">
+        <button class="btn-print-struk" onclick="confirmSaveCart()">💾 Simpan</button>
+        <button class="btn-close-struk" onclick="closeSaveCartModal()">Batal</button>
+      </div>
     </div>
   </div>
 
@@ -134,6 +181,34 @@
       <div class="struk-footer">
         <button class="btn-print-struk" onclick="printStruk()">🖨️ Cetak Struk</button>
         <button class="btn-close-struk" onclick="closeStruk()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Diskon -->
+  <div class="modal-struk hidden" id="modalDiskon">
+    <div class="struk-box" style="max-width:320px;">
+      <div class="struk-header">
+        <h3>🔐 Verifikasi Diskon</h3>
+        <button class="btn-close-struk" onclick="closeDiscountModal()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <p style="font-size:13px;color:#555;">Masukkan password kasir untuk memberikan diskon.</p>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Password Kasir</label>
+          <input type="password" id="discountPassword" placeholder="Password akun Anda"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Diskon (%)</label>
+          <input type="number" id="discountInput" placeholder="0" min="0" max="100"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;text-align:center;" />
+        </div>
+        <p id="discountError" style="font-size:12px;color:#e74c3c;display:none;"></p>
+      </div>
+      <div class="struk-footer">
+        <button class="btn-print-struk" onclick="applyDiscount()">Terapkan Diskon</button>
+        <button class="btn-close-struk" onclick="closeDiscountModal()">Batal</button>
       </div>
     </div>
   </div>

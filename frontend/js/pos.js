@@ -45,6 +45,7 @@ let mechanics = [];
 let cart = [];
 let activeTab = 'sparepart';
 let paymentMethod = 'cash';
+let activeSavedCartId = null; // track keranjang tersimpan yang sedang aktif
 
 // Load data
 async function loadData() {
@@ -214,8 +215,17 @@ function renderCart() {
 
 function updateTotals() {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const discountPct = parseFloat(document.getElementById('discountInput')?.value || 0);
+  const discountAmt = Math.round(subtotal * discountPct / 100);
+  const total = subtotal - discountAmt;
+
   document.getElementById('subtotalDisplay').textContent = rupiah(subtotal);
-  document.getElementById('totalDisplay').textContent = rupiah(subtotal);
+  if (discountAmt > 0) {
+    document.getElementById('discountAmount').textContent = `- ${rupiah(discountAmt)}`;
+    document.getElementById('discountRow').style.display = 'flex';
+    document.getElementById('discountPctLabel').textContent = `(${discountPct}%)`;
+  }
+  document.getElementById('totalDisplay').textContent = rupiah(total);
   updateChange();
 }
 
@@ -237,7 +247,9 @@ function selectPayment(method) {
 }
 
 function updateChange() {
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const discountPct = parseFloat(document.getElementById('discountInput')?.value || 0);
+  const total = subtotal - Math.round(subtotal * discountPct / 100);
   const cash = parseFloat(document.getElementById('cashReceived')?.value || 0);
   const changeEl = document.getElementById('changeDisplay');
   if (changeEl) {
@@ -261,7 +273,10 @@ async function processTransaction() {
     return;
   }
 
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const discountPct = parseFloat(document.getElementById('discountInput')?.value || 0);
+  const discountAmt = Math.round(subtotal * discountPct / 100);
+  const total = subtotal - discountAmt;
 
   if (paymentMethod === 'cash') {
     const cash = parseFloat(document.getElementById('cashReceived')?.value || 0);
@@ -304,9 +319,20 @@ async function processTransaction() {
     });
     const data = await res.json();
     if (data.success) {
-      showStruk(data.data, total);
+      showStruk(data.data, total, subtotal, discountAmt);
+
+      // Hapus keranjang tersimpan kalau transaksi dari saved cart
+      if (activeSavedCartId) {
+        await fetch(`${API}/saved-carts/${activeSavedCartId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        activeSavedCartId = null;
+      }
+
       clearCart();
-      await loadData(); // refresh stok realtime
+      await loadData();
+      loadSavedCarts();
     } else {
       alert('Gagal: ' + data.message);
     }
@@ -318,18 +344,70 @@ async function processTransaction() {
   }
 }
 
+function openDiscountModal() {
+  document.getElementById('discountPassword').value = '';
+  document.getElementById('discountInput').value = '';
+  document.getElementById('discountError').style.display = 'none';
+  document.getElementById('modalDiskon').classList.remove('hidden');
+  setTimeout(() => document.getElementById('discountPassword').focus(), 100);
+}
+
+function closeDiscountModal() {
+  document.getElementById('modalDiskon').classList.add('hidden');
+}
+
+async function applyDiscount() {
+  const password = document.getElementById('discountPassword').value;
+  const pct = parseFloat(document.getElementById('discountInput').value) || 0;
+  const errEl = document.getElementById('discountError');
+
+  if (!password) { errEl.textContent = 'Password wajib diisi!'; errEl.style.display = 'block'; return; }
+  if (pct <= 0 || pct > 100) { errEl.textContent = 'Diskon harus antara 1-100%'; errEl.style.display = 'block'; return; }
+
+  // Verifikasi password ke backend
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      errEl.textContent = 'Password salah!';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Terapkan diskon
+    closeDiscountModal();
+    updateTotals();
+    document.getElementById('discountRow').style.display = 'flex';
+    document.getElementById('discountPctLabel').textContent = `(${pct}%)`;
+
+  } catch {
+    errEl.textContent = 'Tidak bisa terhubung ke server!';
+    errEl.style.display = 'block';
+  }
+}
+
 function clearCart() {
   cart = [];
+  activeSavedCartId = null;
   if (document.getElementById('cashReceived')) document.getElementById('cashReceived').value = '';
+  if (document.getElementById('discountInput')) document.getElementById('discountInput').value = '';
+  if (document.getElementById('discountRow')) document.getElementById('discountRow').style.display = 'none';
   renderCart();
   selectPayment('cash');
 }
 
 // Struk modal
-function showStruk(trxData, total) {
+function showStruk(trxData, total, subtotal, discountAmt) {
   const cash = parseFloat(document.getElementById('cashReceived')?.value || 0);
   const change = paymentMethod === 'cash' ? cash - total : 0;
   const now = new Date();
+  discountAmt = discountAmt || 0;
+  subtotal = subtotal || total;
 
   const itemsHtml = cart.map(i => `
     <tr>
@@ -352,6 +430,13 @@ function showStruk(trxData, total) {
       <tbody>${itemsHtml}</tbody>
     </table>
     <hr style="border:1px dashed #ccc;margin:8px 0">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px">
+      <span>Subtotal</span><span>${rupiah(subtotal)}</span>
+    </div>
+    ${discountAmt > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;color:#e74c3c">
+      <span>Diskon (${document.getElementById('discountPctLabel')?.textContent || ''})</span><span>- ${rupiah(discountAmt)}</span>
+    </div>
+    <div style="font-size:11px;color:#27ae60;text-align:right;margin-bottom:4px;">🎉 Hemat ${rupiah(discountAmt)}!</div>` : ''}
     <div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px">
       <span>TOTAL</span><span>${rupiah(total)}</span>
     </div>
@@ -381,7 +466,139 @@ function printStruk() {
   win.print();
 }
 
+// ===== SAVED CARTS =====
+async function loadSavedCarts() {
+  try {
+    const res = await fetch(`${API}/saved-carts`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    const list = document.getElementById('savedCartList');
+    const count = document.getElementById('savedCartCount');
+    const carts = data.data || [];
+
+    if (count) count.textContent = carts.length;
+
+    if (!carts.length) {
+      if (list) list.innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;font-size:12px;">Belum ada keranjang tersimpan</div>';
+      return;
+    }
+
+    if (!list) return;
+
+    list.innerHTML = carts.map(c => {
+      const cartItems = JSON.parse(c.cart_data || '[]');
+      const total = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
+      const tgl = new Date(c.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      return `
+        <div class="saved-cart-item">
+          <span class="saved-cart-plate">${c.license_plate}</span>
+          <div class="saved-cart-info">
+            <div class="saved-cart-name">${c.customer_name || 'Tanpa nama'} ${c.mechanic_name ? '· ' + c.mechanic_name : ''}</div>
+            <div class="saved-cart-detail">${cartItems.length} item · ${rupiah(total)} · ${tgl}</div>
+          </div>
+          <div class="saved-cart-actions">
+            <button class="btn-load-cart" onclick="loadSavedCart(${c.id})">Lanjut</button>
+            <button class="btn-del-cart" onclick="deleteSavedCart(${c.id})">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('Load saved carts error:', err);
+  }
+}
+
+function openSaveCartModal() {
+  if (!cart.length) { alert('Keranjang kosong!'); return; }
+  document.getElementById('savePlate').value = '';
+  document.getElementById('saveCustomer').value = '';
+  document.getElementById('saveNote').value = '';
+
+  // Isi dropdown mekanik
+  const sel = document.getElementById('saveMechanic');
+  sel.innerHTML = '<option value="">-- Pilih Mekanik --</option>' +
+    mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  document.getElementById('modalSaveCart').classList.remove('hidden');
+  setTimeout(() => document.getElementById('savePlate').focus(), 100);
+}
+
+function closeSaveCartModal() {
+  document.getElementById('modalSaveCart').classList.add('hidden');
+}
+
+async function confirmSaveCart() {
+  const plate = document.getElementById('savePlate').value.trim().toUpperCase();
+  if (!plate) { alert('Plat nomor wajib diisi!'); return; }
+
+  const mechanic_id = document.getElementById('saveMechanic').value || null;
+
+  try {
+    const res = await fetch(`${API}/saved-carts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        license_plate: plate,
+        customer_name: document.getElementById('saveCustomer').value.trim() || null,
+        cart_data: cart,
+        mechanic_id: mechanic_id ? parseInt(mechanic_id) : null,
+        note: document.getElementById('saveNote').value.trim() || null,
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeSaveCartModal();
+      clearCart();
+      loadSavedCarts();
+      alert(`✅ Keranjang ${plate} berhasil disimpan!`);
+    } else {
+      alert(data.message || 'Gagal menyimpan!');
+    }
+  } catch { alert('Tidak bisa terhubung ke server!'); }
+}
+
+async function loadSavedCart(id) {
+  try {
+    const res = await fetch(`${API}/saved-carts`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    const saved = (data.data || []).find(c => c.id === id);
+    if (!saved) return;
+
+    const cartItems = JSON.parse(saved.cart_data || '[]');
+    cart = cartItems;
+    activeSavedCartId = saved.id; // tandai keranjang ini sedang aktif
+
+    // Set mekanik kalau ada
+    if (saved.mechanic_id) {
+      const sel = document.getElementById('selectMechanic');
+      if (sel) sel.value = saved.mechanic_id;
+    }
+
+    renderCart();
+    loadSavedCarts();
+    alert(`✅ Keranjang ${saved.license_plate} dimuat!`);
+  } catch { alert('Gagal memuat keranjang!'); }
+}
+
+async function deleteSavedCart(id) {
+  if (!confirm('Hapus keranjang tersimpan ini?')) return;
+  try {
+    const res = await fetch(`${API}/saved-carts/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) loadSavedCarts();
+  } catch { alert('Gagal menghapus!'); }
+}
+
 // Init
 loadData();
 selectPayment('cash');
 renderCart();
+
+// Auto-load keranjang tersimpan kalau dari halaman keranjang
+const pendingCartId = localStorage.getItem('loadCartId');
+if (pendingCartId) {
+  localStorage.removeItem('loadCartId');
+  // Tunggu data sparepart/mekanik selesai load dulu
+  setTimeout(() => loadSavedCart(parseInt(pendingCartId)), 1000);
+}
