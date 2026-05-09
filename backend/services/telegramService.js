@@ -15,8 +15,7 @@ function sendTelegram(message) {
 
   const body = JSON.stringify({
     chat_id: CHAT_ID,
-    text: message,
-    parse_mode: 'HTML'
+    text: message
   });
 
   const options = {
@@ -58,36 +57,44 @@ async function checkStokAndNotify(db) {
     const habis   = rows.filter(r => r.stock === 0);
     const menipis = rows.filter(r => r.stock > 0 && r.stock <= 5);
 
-    let msg = `🏍️ <b>MOTODOCT — Notifikasi Stok</b>\n`;
-    msg += `📅 ${new Date().toLocaleString('id-ID')}\n\n`;
+    // Batasi max 20 item per kategori agar tidak melebihi limit Telegram (4096 char)
+    const MAX_ITEMS = 20;
+    const habisShow   = habis.slice(0, MAX_ITEMS);
+    const menipisShow = menipis.slice(0, MAX_ITEMS);
 
-    if (habis.length > 0) {
-      msg += `❌ <b>STOK HABIS (${habis.length} item)</b>\n`;
-      habis.forEach(r => {
-        msg += `• ${r.name}`;
-        if (r.code) msg += ` <code>[${r.code}]</code>`;
-        if (r.rack_location) msg += ` — Rak ${r.rack_location}`;
-        msg += ` → <b>0 pcs</b>\n`;
+    let msg = `\uD83C\uDFCD MOTODOCT \u2014 Notifikasi Stok\n`;
+    msg += `Tanggal: ${new Date().toLocaleString('id-ID')}\n\n`;
+
+    if (habisShow.length > 0) {
+      msg += `STOK HABIS (${habis.length} item)${habis.length > MAX_ITEMS ? `, tampil ${MAX_ITEMS}` : ''}:\n`;
+      habisShow.forEach(r => {
+        const kode = r.code ? ` [${r.code}]` : '';
+        const rak  = r.rack_location ? ` Rak:${r.rack_location}` : '';
+        msg += `- ${r.name}${kode}${rak} = 0 pcs\n`;
       });
       msg += '\n';
     }
 
-    if (menipis.length > 0) {
-      msg += `⚠️ <b>STOK MENIPIS (${menipis.length} item)</b>\n`;
-      menipis.forEach(r => {
-        msg += `• ${r.name}`;
-        if (r.code) msg += ` <code>[${r.code}]</code>`;
-        if (r.rack_location) msg += ` — Rak ${r.rack_location}`;
-        msg += ` → <b>${r.stock} pcs</b>\n`;
+    if (menipisShow.length > 0) {
+      msg += `STOK MENIPIS (${menipis.length} item)${menipis.length > MAX_ITEMS ? `, tampil ${MAX_ITEMS}` : ''}:\n`;
+      menipisShow.forEach(r => {
+        const kode = r.code ? ` [${r.code}]` : '';
+        const rak  = r.rack_location ? ` Rak:${r.rack_location}` : '';
+        msg += `- ${r.name}${kode}${rak} = ${r.stock} pcs\n`;
       });
     }
 
-    msg += `\n🔗 Segera lakukan restock!`;
+    msg += `\nSegera lakukan restock!`;
+
+    // Pastikan tidak melebihi 4096 karakter
+    if (msg.length > 4000) {
+      msg = msg.substring(0, 3900) + '\n...(terpotong, terlalu banyak item)';
+    }
 
     sendTelegram(msg);
-    console.log(`📨 Notifikasi Telegram dikirim: ${habis.length} habis, ${menipis.length} menipis`);
+    console.log(`\uD83D\uDCE8 Notifikasi Telegram dikirim: ${habis.length} habis, ${menipis.length} menipis`);
   } catch (err) {
-    console.error('❌ checkStokAndNotify error:', err.message);
+    console.error('\u274C checkStokAndNotify error:', err.message);
   }
 }
 

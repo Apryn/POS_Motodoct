@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Servis — Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/table.css" />
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
+      <a href="keranjang.html" class="nav-item"><i data-lucide="archive"></i><span class="nav-label">Keranjang Tersimpan</span></a>
+      <a href="sparepart.html" class="nav-item"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
+      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
+      <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
+      <a href="servis.html" class="nav-item active"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
+      <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
+      <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
+      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="notifikasi.html" class="nav-item"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-left">
+          <h1>Jenis Servis</h1>
+          <p>Manajemen daftar jenis servis bengkel</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-badge">
+          <div class="user-avatar-sm" id="userAvatar">A</div>
+          <span class="user-badge-name" id="welcomeText">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px;">
+      <div class="stat-card blue">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Total Servis</span>
+          <div class="stat-card-icon">🔧</div>
+        </div>
+        <div class="stat-card-value" id="statTotal">—</div>
+        <div class="stat-card-sub">jenis servis tersedia</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Harga Rata-rata</span>
+          <div class="stat-card-icon">💰</div>
+        </div>
+        <div class="stat-card-value" id="statAvgHarga">—</div>
+        <div class="stat-card-sub">rata-rata harga servis</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input type="text" id="searchInput" placeholder="🔍 Cari nama servis..." oninput="filterTable()" />
+      </div>
+      <button class="btn-primary" onclick="openModal()">+ Tambah Servis</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Nama Servis</th>
+            <th>Harga</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="servisTableBody">
+          <tr><td colspan="4" class="empty-state">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Modal Tambah/Edit -->
+  <div class="modal hidden" id="modalServis">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle">Tambah Servis</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <form id="formServis" onsubmit="event.preventDefault(); saveService()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nama Servis <span class="required">*</span></label>
+            <input type="text" id="fieldNama" placeholder="Contoh: Ganti Oli" required />
+          </div>
+          <div class="form-group">
+            <label>Harga <span class="required">*</span></label>
+            <input type="number" id="fieldHarga" placeholder="0" min="0" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Batal</button>
+          <button type="submit" class="btn-primary" id="btnSaveServis">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Hapus -->
+  <div class="modal hidden" id="modalDelete">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3>Hapus Servis</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Yakin ingin menghapus <strong id="deleteItemName"></strong>?</p>
+        <p style="font-size:12px;color:#e74c3c;margin-top:4px;">Tindakan ini tidak dapat dibatalkan.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeDeleteModal()">Batal</button>
+        <button class="btn-danger" onclick="confirmDelete()">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="../js/servis.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
