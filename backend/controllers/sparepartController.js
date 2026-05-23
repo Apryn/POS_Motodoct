@@ -47,6 +47,7 @@ exports.updateSparepart = async (req, res) => {
         );
         res.json({ success: true, message: 'Sparepart berhasil diupdate' });
     } catch (error) {
+        console.error("Error update sparepart:", error);
         res.status(500).json({ success: false, message: 'Gagal mengupdate sparepart' });
     }
 };

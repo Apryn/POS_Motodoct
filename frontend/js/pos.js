@@ -246,11 +246,27 @@ function selectPayment(method) {
   updateChange();
 }
 
+// Format input uang dengan titik ribuan
+function formatCashInput(input) {
+  // Ambil hanya angka
+  const raw = input.value.replace(/\D/g, '');
+  // Format dengan titik ribuan
+  input.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+  updateChange();
+}
+
+function getCashValue() {
+  const el = document.getElementById('cashReceived');
+  if (!el) return 0;
+  // Hapus titik sebelum parse
+  return parseFloat(el.value.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
 function updateChange() {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const discountPct = parseFloat(document.getElementById('discountInput')?.value || 0);
   const total = subtotal - Math.round(subtotal * discountPct / 100);
-  const cash = parseFloat(document.getElementById('cashReceived')?.value || 0);
+  const cash = getCashValue();
   const changeEl = document.getElementById('changeDisplay');
   if (changeEl) {
     if (paymentMethod === 'cash') {
@@ -262,9 +278,6 @@ function updateChange() {
     }
   }
 }
-
-const cashReceivedEl = document.getElementById('cashReceived');
-if (cashReceivedEl) cashReceivedEl.addEventListener('input', updateChange);
 
 // Process transaction
 async function processTransaction() {
@@ -279,7 +292,7 @@ async function processTransaction() {
   const total = subtotal - discountAmt;
 
   if (paymentMethod === 'cash') {
-    const cash = parseFloat(document.getElementById('cashReceived')?.value || 0);
+    const cash = getCashValue();
     if (cash < total) {
       alert('Uang yang diterima kurang!');
       return;
@@ -403,7 +416,7 @@ function clearCart() {
 
 // Struk modal
 function showStruk(trxData, total, subtotal, discountAmt) {
-  const cash = parseFloat(document.getElementById('cashReceived')?.value || 0);
+  const cash = getCashValue();
   const change = paymentMethod === 'cash' ? cash - total : 0;
   const now = new Date();
   discountAmt = discountAmt || 0;

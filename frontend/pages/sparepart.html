@@ -103,6 +103,7 @@
         </select>
       </div>
       <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="exportExcel()">⬇ Export Excel</button>
         <button class="btn-danger" onclick="openDeleteAllModal()">🗑 Hapus Semua</button>
         <button class="btn-primary" onclick="openAddModal()">+ Tambah</button>
       </div>
@@ -218,6 +219,7 @@
   </div>
 
   <script src="../js/sparepart.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>
 </body>

@@ -23,6 +23,44 @@ function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
+function exportExcel() {
+  if (!spareparts.length) { alert('Tidak ada data untuk diekspor!'); return; }
+
+  const headers = [
+    'No', 'Kode', 'Nama Barang', 'Kategori', 'Supplier',
+    'Lokasi Rak', 'Stok', 'Harga Beli', 'Harga Jual', 'Diskon (%)', 'Status'
+  ];
+
+  const rows = spareparts.map((s, i) => [
+    i + 1,
+    s.code || '',
+    s.name,
+    s.category_name || '',
+    s.supplier || '',
+    s.rack_location || '',
+    s.stock,
+    s.buy_price || 0,
+    s.price,
+    s.discount || 0,
+    s.stock === 0 ? 'Habis' : s.stock <= 5 ? 'Menipis' : 'Aman'
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  // Set lebar kolom
+  ws['!cols'] = [
+    { wch: 5 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 15 },
+    { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stok Gudang');
+
+  const now = new Date();
+  const tgl = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `stok_gudang_${tgl}.xlsx`);
+}
+
 function logout() {
   localStorage.clear();
   window.location.href = 'login.html';

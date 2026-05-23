@@ -61,8 +61,6 @@
         <div class="empty-state">Memuat servis...</div>
       </div>
 
-      <!-- Saved Carts Panel dihapus - dipindah ke halaman keranjang.html -->
-
     </div><!-- end pos-left -->
     <div class="pos-right">
 
@@ -113,7 +111,7 @@
         </div>
         <div class="cash-input" id="cashInput">
           <label>Uang Diterima</label>
-          <input type="number" id="cashReceived" placeholder="0" min="0" />
+          <input type="text" id="cashReceived" placeholder="0" inputmode="numeric" autocomplete="off" oninput="formatCashInput(this)" />
           <div class="change-row">
             <span>Kembalian</span>
             <span id="changeDisplay">—</span>

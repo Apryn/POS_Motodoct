@@ -202,6 +202,10 @@ async function savePembelian() {
     if (data.success) {
       closeModal();
       loadData();
+      // Tampilkan notifikasi kalau harga naik
+      if (data.data?.harga_naik && data.data?.saran) {
+        setTimeout(() => alert(`⚠️ ${data.data.saran}`), 300);
+      }
     } else {
       alert('Gagal: ' + data.message);
     }
