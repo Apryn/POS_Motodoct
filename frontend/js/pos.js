@@ -1,4 +1,16 @@
-const API = 'http://localhost:3000/api';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000/api'
+  : window.location.origin + '/api';
+
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+  const response = await originalFetch(...args);
+  if (response.status === 401) {
+    localStorage.clear();
+    window.location.href = 'login.html';
+  }
+  return response;
+};
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -474,9 +486,55 @@ function closeStruk() {
 function printStruk() {
   const content = document.getElementById('strukContent').innerHTML;
   const win = window.open('', '_blank', 'width=400,height=600');
-  win.document.write(`<html><head><title>Struk</title><style>body{font-family:monospace;padding:16px;font-size:13px}hr{border:1px dashed #ccc}</style></head><body>${content}</body></html>`);
+  win.document.write(`
+    <html>
+      <head>
+        <title>Struk Belanja - Motodoct</title>
+        <style>
+          @page {
+            size: 58mm auto;
+            margin: 0;
+          }
+          body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 58mm;
+            margin: 0;
+            padding: 4mm 4mm 8mm 4mm;
+            font-size: 11px;
+            line-height: 1.3;
+            color: #000;
+            background: #fff;
+            box-sizing: border-box;
+          }
+          h2, h3, strong {
+            font-weight: bold;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin: 6px 0;
+          }
+          th, td {
+            padding: 3px 0;
+            border: none;
+          }
+          hr {
+            border: none;
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+          }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .no-print { display: none; }
+        </style>
+      </head>
+      <body onload="window.print(); setTimeout(() => window.close(), 500);">
+        ${content}
+      </body>
+    </html>
+  `);
   win.document.close();
-  win.print();
 }
 
 // ===== SAVED CARTS =====

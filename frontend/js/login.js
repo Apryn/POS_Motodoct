@@ -1,3 +1,7 @@
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000/api'
+  : window.location.origin + '/api';
+
 const loginForm = document.getElementById("loginForm");
 const errorMsg = document.getElementById("errorMsg");
 const btnLogin = document.getElementById("btnLogin");
@@ -10,7 +14,7 @@ loginForm.addEventListener("submit", async (e) => {
   btnLogin.disabled = true;
   btnLogin.textContent = "Memproses...";
   try {
-    const response = await fetch("http://localhost:3000/api/login", {
+    const response = await fetch(`${API}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })

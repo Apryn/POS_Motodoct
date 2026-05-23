@@ -1,4 +1,16 @@
-const API = 'http://localhost:3000/api';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000/api'
+  : window.location.origin + '/api';
+
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+  const response = await originalFetch(...args);
+  if (response.status === 401) {
+    localStorage.clear();
+    window.location.href = 'login.html';
+  }
+  return response;
+};
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 if (!token) window.location.href = 'login.html';

@@ -1,4 +1,16 @@
-const API = 'http://localhost:3000/api';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000/api'
+  : window.location.origin + '/api';
+
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+  const response = await originalFetch(...args);
+  if (response.status === 401) {
+    localStorage.clear();
+    window.location.href = 'login.html';
+  }
+  return response;
+};
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -71,7 +83,8 @@ function renderTable(list) {
       <td><span class="code-badge">${escHtml(c.license_plate || '-')}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn-edit"    onclick="openEdit(${c.id})">Edit</button>
+          <button class="btn-edit" onclick="openEdit(${c.id})">Edit</button>
+          <button class="btn-secondary" style="padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;" onclick="openHistory(${c.id}, '${escAttr(c.name)}', '${escAttr(c.license_plate)}')">📋 Riwayat</button>
           <button class="btn-del-row" onclick="openDelete(${c.id}, '${escAttr(c.name)}')">Hapus</button>
         </div>
       </td>
@@ -174,6 +187,70 @@ async function confirmDelete() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(str) { return String(str).replace(/'/g,"\\'"); }
+
+// ── Riwayat (Rekam Medis) ───────────────────────────────────────────────────────
+async function openHistory(id, name, plate) {
+  document.getElementById('historyCustomerName').textContent = name;
+  document.getElementById('historyLicensePlate').textContent = plate;
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">Memuat riwayat servis...</div>';
+  document.getElementById('modalHistory').classList.remove('hidden');
+
+  try {
+    const res = await fetch(`${API}/customers/${id}/history`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const history = data.data || [];
+
+    if (!history.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;background:#fcfcfc;border-radius:8px;border:1px dashed #ddd;font-size:13px;">Belum ada riwayat transaksi / servis untuk kendaraan ini.</div>';
+      return;
+    }
+
+    listEl.innerHTML = history.map(trx => {
+      const tgl = new Date(trx.created_at).toLocaleString('id-ID', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      let itemsHtml = '';
+      
+      if (trx.spareparts && trx.spareparts.length) {
+        itemsHtml += `<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:6px;letter-spacing:0.5px;">🔩 Spareparts:</div>
+          <ul style="margin:2px 0 6px 14px;padding:0;font-size:12.5px;color:#334155;">
+            ${trx.spareparts.map(s => `<li>${s.sparepart_name} (x${s.quantity})</li>`).join('')}
+          </ul>`;
+      }
+
+      if (trx.services && trx.services.length) {
+        itemsHtml += `<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:6px;letter-spacing:0.5px;">🔧 Jasa Servis (Mekanik: ${trx.services[0].mechanic_name}):</div>
+          <ul style="margin:2px 0 6px 14px;padding:0;font-size:12.5px;color:#334155;">
+            ${trx.services.map(s => `<li>${s.service_name}</li>`).join('')}
+          </ul>`;
+      }
+
+      return `
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:6px;margin-bottom:8px;">
+            <span style="font-size:11.5px;font-weight:700;color:#f97316;">${trx.invoice_number}</span>
+            <span style="font-size:11px;color:#94a3b8;">${tgl}</span>
+          </div>
+          ${itemsHtml}
+          <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px dashed #e2e8f0;font-size:13px;font-weight:700;color:#1e293b;">
+            <span>Total Transaksi</span>
+            <span style="color:#f97316;">Rp ${Number(trx.total_amount).toLocaleString('id-ID')}</span>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat riwayat.</div>';
+  }
+}
+
+function closeHistoryModal() {
+  document.getElementById('modalHistory').classList.add('hidden');
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();

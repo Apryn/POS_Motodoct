@@ -1,4 +1,16 @@
-const API = 'http://localhost:3000/api';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000/api'
+  : window.location.origin + '/api';
+
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+  const response = await originalFetch(...args);
+  if (response.status === 401) {
+    localStorage.clear();
+    window.location.href = 'login.html';
+  }
+  return response;
+};
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -33,6 +45,10 @@ function rupiahShort(n) {
 function logout() {
   localStorage.clear();
   window.location.href = 'login.html';
+}
+
+function roundToNearest500(val) {
+  return Math.ceil(val / 500) * 500;
 }
 
 let purchases = [];
@@ -101,7 +117,7 @@ function calcTotal() {
 
 function calcHargaJual() {
   const harga = parseFloat(document.getElementById('fieldHargaBeli')?.value || 0);
-  const jual = Math.ceil(harga * 1.3);
+  const jual = roundToNearest500(harga * 1.3);
   const el = document.getElementById('fieldHargaJual');
   if (el) el.value = jual;
 }
@@ -352,7 +368,7 @@ async function submitImport() {
             name: row.nama,
             supplier: row.supplier,
             buy_price: row.beliPcs,
-            price: row.jualPcs || Math.ceil(row.beliPcs * 1.3),
+            price: row.jualPcs || roundToNearest500(row.beliPcs * 1.3),
             rack_location: row.lokasiRak,
             stock: (existing.stock || 0) + row.qty,
             category_id: existing.category_id,
@@ -369,7 +385,7 @@ async function submitImport() {
             name: row.nama,
             supplier: row.supplier,
             buy_price: row.beliPcs,
-            price: row.jualPcs || Math.ceil(row.beliPcs * 1.3),
+            price: row.jualPcs || roundToNearest500(row.beliPcs * 1.3),
             rack_location: row.lokasiRak,
             stock: row.qty,
             discount: row.diskon
@@ -389,7 +405,7 @@ async function submitImport() {
             supplier: row.supplier,
             quantity: row.qty,
             buy_price: row.beliPcs,
-            sell_price: row.jualPcs || Math.ceil(row.beliPcs * 1.3),
+            sell_price: row.jualPcs || roundToNearest500(row.beliPcs * 1.3),
             rack_location: row.lokasiRak,
             note: 'Import Excel'
           })

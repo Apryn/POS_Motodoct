@@ -8,8 +8,8 @@ exports.createTransaction = async (req, res) => {
         const { customer_id, payment_method, spareparts, services } = req.body;
         const user_id = req.user.id;
         let total = 0;
-        if (spareparts) spareparts.forEach(s => total += s.price * s.quantity);
-        if (services) services.forEach(s => total += s.price);
+        if (spareparts) spareparts.forEach(s => total += Number(s.price) * Number(s.quantity));
+        if (services) services.forEach(s => total += Number(s.price));
         const invoice_number = `INV-${Date.now()}`;
         const [trx] = await conn.execute(
             'INSERT INTO transactions (invoice_number, user_id, customer_id, total_amount, payment_method) VALUES (?, ?, ?, ?, ?)',
