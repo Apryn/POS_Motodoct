@@ -5,7 +5,7 @@ const API = window.location.hostname === 'localhost' || window.location.hostname
 const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   const response = await originalFetch(...args);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     localStorage.clear();
     window.location.href = 'login.html';
   }
@@ -56,6 +56,7 @@ let chartPerbandingan = null;
 let chartDonut = null;
 let chartTrxHarian = null;
 let currentTransactions = [];
+let currentDetailTrx = null;
 
 async function loadLaporan() {
   const from = dateFromEl?.value || firstDay;
@@ -316,6 +317,11 @@ async function lihatDetail(id) {
     const { data } = await res.json();
     if (!data) return;
 
+    currentDetailTrx = data;
+    if (document.getElementById('btnPrintDetailStruk')) {
+      document.getElementById('btnPrintDetailStruk').style.display = 'inline-block';
+    }
+
     const tgl = new Date(data.created_at).toLocaleString('id-ID');
     let html = `
       <div style="margin-bottom:12px;">
@@ -378,6 +384,104 @@ async function lihatDetail(id) {
 
 function closeDetail() {
   document.getElementById('modalDetail').classList.add('hidden');
+  currentDetailTrx = null;
+  if (document.getElementById('btnPrintDetailStruk')) {
+    document.getElementById('btnPrintDetailStruk').style.display = 'none';
+  }
+}
+
+function printDetailStruk() {
+  if (!currentDetailTrx) return;
+  const data = currentDetailTrx;
+  const now = new Date(data.created_at);
+
+  let itemsHtml = '';
+  if (data.spareparts?.length) {
+    itemsHtml += data.spareparts.map(s => `
+      <tr>
+        <td>${s.sparepart_name}</td>
+        <td style="text-align:center">${s.quantity}</td>
+        <td style="text-align:right">${rupiah(s.subtotal)}</td>
+      </tr>
+    `).join('');
+  }
+  if (data.services?.length) {
+    itemsHtml += data.services.map(s => `
+      <tr>
+        <td>${s.service_name} (${s.mechanic_name || 'Mekanik'})</td>
+        <td style="text-align:center">1</td>
+        <td style="text-align:right">${rupiah(s.price)}</td>
+      </tr>
+    `).join('');
+  }
+
+  const win = window.open('', '_blank', 'width=400,height=600');
+  win.document.write(`
+    <html>
+      <head>
+        <title>Struk Belanja - Motodoct</title>
+        <style>
+          @page {
+            size: 58mm auto;
+            margin: 0;
+          }
+          body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 58mm;
+            margin: 0;
+            padding: 4mm 4mm 8mm 4mm;
+            font-size: 11px;
+            line-height: 1.3;
+            color: #000;
+            background: #fff;
+            box-sizing: border-box;
+          }
+          h2, h3, strong {
+            font-weight: bold;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin: 6px 0;
+          }
+          th, td {
+            padding: 3px 0;
+            border: none;
+          }
+          hr {
+            border: none;
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+          }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+        </style>
+      </head>
+      <body onload="window.print(); setTimeout(() => window.close(), 500);">
+        <div style="text-align:center;margin-bottom:12px">
+          <strong style="font-size:16px">MOTODOCT</strong><br>
+          <small>Bengkel Motor Terpercaya</small><br>
+          <small>${now.toLocaleString('id-ID')}</small>
+        </div>
+        <hr>
+        <div style="font-size:12px;margin-bottom:4px">No: <strong>${data.invoice_number}</strong></div>
+        ${data.customer_name ? `<div style="font-size:11px;margin-bottom:4px">Plat: <strong>${data.license_plate || '-'}</strong> (${data.customer_name})</div>` : ''}
+        <table>
+          <thead><tr><th style="text-align:left">Item</th><th>Qty</th><th style="text-align:right">Harga</th></tr></thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+        <hr>
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px">
+          <span>TOTAL</span><span>${rupiah(data.total_amount)}</span>
+        </div>
+        <div style="font-size:13px;margin-top:4px">Metode: ${(data.payment_method || 'CASH').toUpperCase()}</div>
+        <hr>
+        <div style="text-align:center;font-size:12px;color:#888">Terima kasih atas kunjungan Anda!</div>
+      </body>
+    </html>
+  `);
+  win.document.close();
 }
 
 function printLaporan() {

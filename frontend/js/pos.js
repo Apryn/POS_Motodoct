@@ -5,7 +5,7 @@ const API = window.location.hostname === 'localhost' || window.location.hostname
 const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   const response = await originalFetch(...args);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     localStorage.clear();
     window.location.href = 'login.html';
   }
@@ -54,6 +54,7 @@ function logout() {
 let spareparts = [];
 let services = [];
 let mechanics = [];
+let customers = [];
 let cart = [];
 let activeTab = 'sparepart';
 let paymentMethod = 'cash';
@@ -62,17 +63,25 @@ let activeSavedCartId = null; // track keranjang tersimpan yang sedang aktif
 // Load data
 async function loadData() {
   try {
-    const [resS, resSv, resM] = await Promise.all([
+    const [resS, resSv, resM, resC] = await Promise.all([
       fetch(`${API}/spareparts`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${API}/services`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${API}/mechanics`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/mechanics`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/customers`, { headers: { Authorization: `Bearer ${token}` } })
     ]);
-    const [sData, svData, mData] = await Promise.all([resS.json(), resSv.json(), resM.json()]);
+    const [sData, svData, mData, cData] = await Promise.all([
+      resS.json(),
+      resSv.json(),
+      resM.json(),
+      resC.json()
+    ]);
     if (sData.success) spareparts = sData.data;
     if (svData.success) services = svData.data;
     if (mData.success) mechanics = mData.data;
+    if (cData.success) customers = cData.data;
     renderProducts();
     renderMechanicSelect();
+    renderCustomerSelect();
   } catch (err) {
     console.error('Load data error:', err);
   }
@@ -249,6 +258,14 @@ function renderMechanicSelect() {
     mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 }
 
+// Customer select
+function renderCustomerSelect() {
+  const sel = document.getElementById('selectCustomer');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- Pelanggan Umum (Tanpa Registrasi) --</option>' +
+    customers.map(c => `<option value="${c.id}">${c.name} (${c.license_plate || '-'})</option>`).join('');
+}
+
 // Payment
 function selectPayment(method) {
   paymentMethod = method;
@@ -311,6 +328,7 @@ async function processTransaction() {
     }
   }
 
+  const customerId = document.getElementById('selectCustomer')?.value || null;
   const mechanicId = document.getElementById('selectMechanic')?.value || null;
   const hasServis = cart.some(c => c.type === 'servis');
   if (hasServis && !mechanicId) {
@@ -337,6 +355,7 @@ async function processTransaction() {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
+        customer_id: customerId ? parseInt(customerId) : null,
         payment_method: paymentMethod,
         spareparts: sparepartsPayload,
         services: servicesPayload
@@ -641,6 +660,20 @@ async function loadSavedCart(id) {
     if (saved.mechanic_id) {
       const sel = document.getElementById('selectMechanic');
       if (sel) sel.value = saved.mechanic_id;
+    }
+
+    // Auto-match plat nomor ke pelanggan terdaftar
+    if (saved.license_plate) {
+      const cleanedPlate = saved.license_plate.replace(/\s+/g, '').toUpperCase();
+      const matchedCust = customers.find(c => (c.license_plate || '').replace(/\s+/g, '').toUpperCase() === cleanedPlate);
+      const selCust = document.getElementById('selectCustomer');
+      if (selCust) {
+        if (matchedCust) {
+          selCust.value = matchedCust.id;
+        } else {
+          selCust.value = '';
+        }
+      }
     }
 
     renderCart();

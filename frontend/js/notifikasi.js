@@ -5,7 +5,7 @@ const API = window.location.hostname === 'localhost' || window.location.hostname
 const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   const response = await originalFetch(...args);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     localStorage.clear();
     window.location.href = 'login.html';
   }

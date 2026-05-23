@@ -5,7 +5,7 @@ const API = window.location.hostname === 'localhost' || window.location.hostname
 const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   const response = await originalFetch(...args);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     localStorage.clear();
     window.location.href = 'login.html';
   }
@@ -217,29 +217,51 @@ async function openHistory(id, name, plate) {
       let itemsHtml = '';
       
       if (trx.spareparts && trx.spareparts.length) {
-        itemsHtml += `<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:6px;letter-spacing:0.5px;">🔩 Spareparts:</div>
-          <ul style="margin:2px 0 6px 14px;padding:0;font-size:12.5px;color:#334155;">
-            ${trx.spareparts.map(s => `<li>${s.sparepart_name} (x${s.quantity})</li>`).join('')}
-          </ul>`;
+        itemsHtml += `
+          <div style="margin-top: 8px;">
+            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; letter-spacing: 0.5px;">
+              <span>🔩</span> Spareparts yang Diganti
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-left: 4px;">
+              ${trx.spareparts.map(s => `
+                <span style="display: inline-flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; font-size: 12px; color: #334155; font-weight: 500;">
+                  ${s.sparepart_name} 
+                  <span style="background: #e2e8f0; color: #475569; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 4px; margin-left: 6px;">x${s.quantity}</span>
+                </span>
+              `).join('')}
+            </div>
+          </div>`;
       }
 
       if (trx.services && trx.services.length) {
-        itemsHtml += `<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:6px;letter-spacing:0.5px;">🔧 Jasa Servis (Mekanik: ${trx.services[0].mechanic_name}):</div>
-          <ul style="margin:2px 0 6px 14px;padding:0;font-size:12.5px;color:#334155;">
-            ${trx.services.map(s => `<li>${s.service_name}</li>`).join('')}
-          </ul>`;
+        itemsHtml += `
+          <div style="margin-top: 10px;">
+            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; letter-spacing: 0.5px;">
+              <span>🔧</span> Jasa Servis & Perbaikan
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 4px;">
+              ${trx.services.map(s => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: #166534; font-weight: 600;">
+                  <span>${s.service_name}</span>
+                  <span style="font-size: 10.5px; font-weight: 500; background: #dcfce7; color: #15803d; border-radius: 6px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                    👨‍🔧 ${s.mechanic_name || 'Mekanik'}
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
       }
 
       return `
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:6px;margin-bottom:8px;">
-            <span style="font-size:11.5px;font-weight:700;color:#f97316;">${trx.invoice_number}</span>
-            <span style="font-size:11px;color:#94a3b8;">${tgl}</span>
+        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+            <span style="font-size:12px; font-weight:800; color:#3b82f6; background:#eff6ff; padding:4px 8px; border-radius:6px; font-family:monospace;">${trx.invoice_number}</span>
+            <span style="font-size:12px; color:#64748b; font-weight:500;">📅 ${tgl}</span>
           </div>
           ${itemsHtml}
-          <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px dashed #e2e8f0;font-size:13px;font-weight:700;color:#1e293b;">
-            <span>Total Transaksi</span>
-            <span style="color:#f97316;">Rp ${Number(trx.total_amount).toLocaleString('id-ID')}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px dashed #e2e8f0; font-size:14px; font-weight:700; color:#1e293b;">
+            <span style="color:#64748b; font-size:13px; font-weight:500;">Total Biaya</span>
+            <span style="color:#10b981; font-size:15px; font-weight:800;">Rp ${Number(trx.total_amount).toLocaleString('id-ID')}</span>
           </div>
         </div>`;
     }).join('');
