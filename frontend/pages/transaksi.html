@@ -1,6 +1,72 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <!-- Secure Route Guard & Role Access Control -->
+  <script>
+    (function() {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      const rolePages = {
+        admin: [
+          'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
+          'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
+          'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
+        ],
+        kasir: [
+          'transaksi.html', 'keranjang.html', 'sparepart.html'
+        ],
+        gudang: [
+          'sparepart.html', 'pembelian.html'
+        ],
+        owner: [
+          'dashboard.html', 'sparepart.html', 'pembelian.html', 'pengeluaran.html',
+          'kategori.html', 'servis.html', 'mekanik.html', 'pelanggan.html',
+          'laporan.html', 'notifikasi.html', 'user.html'
+        ]
+      };
+      
+      const roleDefaults = {
+        admin: 'dashboard.html',
+        kasir: 'transaksi.html',
+        gudang: 'sparepart.html',
+        owner: 'dashboard.html'
+      };
+      
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      
+      if (currentPage === 'index.html') {
+        window.location.href = roleDefaults[user.role] || 'login.html';
+        return;
+      }
+      
+      const allowedPages = rolePages[user.role] || [];
+      const isAllowed = allowedPages.some(page => currentPage.includes(page));
+      
+      if (!isAllowed) {
+        alert('Akses Ditolak: Role Anda (' + (user.role || 'user') + ') tidak memiliki izin untuk halaman ini!');
+        window.location.href = roleDefaults[user.role] || 'login.html';
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.sidebar nav a').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href) {
+              const linkPage = href.split('/').pop();
+              const isLinkAllowed = allowedPages.some(page => linkPage.includes(page));
+              if (!isLinkAllowed) {
+                a.style.display = 'none';
+              }
+            }
+          });
+        });
+      }
+    })();
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kasir - Motodoct</title>
@@ -24,6 +90,7 @@
           <span class="user-badge-role" id="userRole">Kasir</span>
         </div>
       </div>
+      <button class="btn-topbar btn-topbar-outline" onclick="openReceiptSettings()">⚙️ Pengaturan Struk</button>
       <button class="btn-topbar btn-topbar-outline" onclick="window.location.href='dashboard.html'">🏠 Dashboard</button>
       <button class="btn-topbar btn-topbar-danger" onclick="logout()">🚪 Logout</button>
     </div>
@@ -76,10 +143,19 @@
 
       <!-- Pelanggan Row -->
       <div class="mechanic-row" id="customerRow" style="margin-top: 10px;">
-        <label>👤 Pilih Pelanggan (Kendaraan)</label>
-        <select id="selectCustomer">
-          <option value="">-- Pelanggan Umum (Tanpa Registrasi) --</option>
-        </select>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+          <label style="margin-bottom: 0;">👤 Pilih Pelanggan (Kendaraan)</label>
+          <button type="button" onclick="openAddCustomerModal()" style="background: none; border: none; color: #e87722; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 0;">+ Tambah Baru</button>
+        </div>
+        <input
+          type="text"
+          id="selectCustomerInput"
+          list="customerDatalist"
+          placeholder="-- Pelanggan Umum (Tanpa Registrasi) --"
+          autocomplete="off"
+        />
+        <datalist id="customerDatalist"></datalist>
+        <button type="button" id="btnVehicleHistory" onclick="openVehicleHistory()" style="display:none; background:none; border:none; color:#e87722; font-size:12px; font-weight:700; cursor:pointer; text-decoration:underline; padding:0; margin-top:6px; text-align:left;">📖 Lihat Rekam Medis (Histori Servis Motor)</button>
       </div>
 
       <!-- Mechanic Row (hidden by default) -->
@@ -215,6 +291,167 @@
       <div class="struk-footer">
         <button class="btn-print-struk" onclick="applyDiscount()">Terapkan Diskon</button>
         <button class="btn-close-struk" onclick="closeDiscountModal()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Pelanggan Cepat -->
+  <div class="modal-struk hidden" id="modalAddCustomer" style="z-index: 1100;">
+    <div class="struk-box" style="max-width:340px;">
+      <div class="struk-header">
+        <h3>👤 Tambah Pelanggan Baru</h3>
+        <button class="btn-close-struk" onclick="closeAddCustomerModal()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <p style="font-size:13px;color:#555;">Masukkan detail pelanggan untuk didaftarkan langsung ke sistem.</p>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Nama Pelanggan <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="addCustName" placeholder="Nama lengkap pelanggan"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Plat Nomor Motor <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="addCustPlate" placeholder="Contoh: B 1234 ABC"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;outline:none;text-transform:uppercase;font-weight:700;letter-spacing:1px;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">No. HP</label>
+          <input type="text" id="addCustPhone" placeholder="Contoh: 08123456789 (Opsional)"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+      </div>
+      <div class="struk-footer">
+        <button class="btn-print-struk" onclick="saveNewCustomerQuick()">💾 Simpan</button>
+        <button class="btn-close-struk" onclick="closeAddCustomerModal()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pengaturan Struk -->
+  <div class="modal-struk hidden" id="modalReceiptSettings" style="z-index: 1200;">
+    <div class="struk-box" style="max-width:340px;">
+      <div class="struk-header">
+        <h3>⚙️ Pengaturan Struk</h3>
+        <button class="btn-close-struk" onclick="closeReceiptSettings()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <p style="font-size:13px;color:#555;">Sesuaikan informasi header & footer cetak struk belanja.</p>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Nama Bengkel</label>
+          <input type="text" id="cfgShopName" placeholder="Contoh: MOTODOCT"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Slogan / Alamat</label>
+          <input type="text" id="cfgShopSlogan" placeholder="Contoh: Bengkel Motor Terpercaya"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">No. WhatsApp</label>
+          <input type="text" id="cfgShopWA" placeholder="Contoh: 08123456789"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Akun Instagram</label>
+          <input type="text" id="cfgShopIG" placeholder="Contoh: @motodoct_workshop"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Catatan Kaki (Footer)</label>
+          <input type="text" id="cfgShopFooter" placeholder="Contoh: Terima kasih atas kunjungan Anda!"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+      </div>
+      <div class="struk-footer">
+        <button class="btn-print-struk" onclick="saveReceiptSettings()">💾 Simpan</button>
+        <button class="btn-close-struk" onclick="closeReceiptSettings()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Rekam Medis / Histori Servis Kendaraan -->
+  <div class="modal-struk hidden" id="modalVehicleHistory" style="z-index: 1300;">
+    <div class="struk-box" style="max-width:720px; width:92%; max-height:85vh; display:flex; flex-direction:column; overflow:hidden;">
+      <div class="struk-header" style="flex-shrink:0;">
+        <h3 style="font-size: 16px; font-weight:700; color:#1a1a2e; display:flex; align-items:center; gap:8px;">
+          <span>📋 Rekam Medis Servis Kendaraan</span>
+        </h3>
+        <button class="btn-close-struk" onclick="closeVehicleHistory()" style="width:auto; padding:4px 10px; font-weight:700; border-radius:50%; background:#f3f4f6;">✕</button>
+      </div>
+      
+      <!-- Content Area with scroll -->
+      <div style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px;">
+        
+        <!-- Info Cards -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; background: #f8fafc; border: 1px solid #e2e8f0; padding:12px; border-radius:10px;">
+          <div>
+            <span style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; display:block;">Plat Nomor</span>
+            <span id="vhPlateBadge" style="display:inline-block; font-size:14px; font-weight:800; background:#1e293b; color:#fff; padding:3px 8px; border-radius:6px; margin-top:4px;">-</span>
+          </div>
+          <div>
+            <span style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; display:block;">Nama Pemilik</span>
+            <span id="vhCustomerName" style="font-size:14px; font-weight:700; color:#1e293b; display:block; margin-top:4px;">-</span>
+          </div>
+          <div>
+            <span style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; display:block;">Kunjungan Terakhir</span>
+            <span id="vhLastVisit" style="font-size:13px; font-weight:600; color:#0f766e; display:block; margin-top:4px;">-</span>
+          </div>
+        </div>
+
+        <!-- Section Servis -->
+        <div>
+          <h4 style="font-size:14px; font-weight:700; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <span>🔧 Riwayat Tindakan Servis</span>
+            <span id="vhServicesCount" style="font-size:11px; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:10px; font-weight:700;">0</span>
+          </h4>
+          <div style="overflow-x:auto; border: 1px solid #e2e8f0; border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
+                  <th style="padding:10px; font-weight:600; color:#475569;">Tanggal</th>
+                  <th style="padding:10px; font-weight:600; color:#475569;">Tindakan Servis</th>
+                  <th style="padding:10px; font-weight:600; color:#475569;">Mekanik</th>
+                  <th style="padding:10px; text-align:right; font-weight:600; color:#475569;">Biaya</th>
+                </tr>
+              </thead>
+              <tbody id="vhServicesTableBody">
+                <tr>
+                  <td colspan="4" style="padding:16px; text-align:center; color:#94a3b8;">Belum ada riwayat servis</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section Sparepart -->
+        <div>
+          <h4 style="font-size:14px; font-weight:700; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <span>🔩 Sparepart yang Pernah Diganti</span>
+            <span id="vhSparepartsCount" style="font-size:11px; background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:10px; font-weight:700;">0</span>
+          </h4>
+          <div style="overflow-x:auto; border: 1px solid #e2e8f0; border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
+                  <th style="padding:10px; font-weight:600; color:#475569;">Tanggal</th>
+                  <th style="padding:10px; font-weight:600; color:#475569;">Nama Sparepart</th>
+                  <th style="padding:10px; text-align:center; font-weight:600; color:#475569;">Qty</th>
+                  <th style="padding:10px; text-align:right; font-weight:600; color:#475569;">Harga Satuan</th>
+                </tr>
+              </thead>
+              <tbody id="vhSparepartsTableBody">
+                <tr>
+                  <td colspan="4" style="padding:16px; text-align:center; color:#94a3b8;">Belum ada penggantian sparepart</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="struk-footer" style="padding:12px 20px; border-top:1px solid #f0f0f0; background:#f8fafc; flex-shrink:0; display:flex; justify-content:flex-end;">
+        <button class="btn-close-struk" onclick="closeVehicleHistory()" style="background:#64748b; color:#fff; font-weight:600; border:none; padding:8px 16px; border-radius:8px; cursor:pointer;">Tutup</button>
       </div>
     </div>
   </div>

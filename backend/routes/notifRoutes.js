@@ -60,4 +60,16 @@ router.post('/send-daily', async (req, res) => {
   }
 });
 
+// POST test koneksi bot Telegram
+router.post('/test-telegram', async (req, res) => {
+  try {
+    const { sendTelegram } = require('../services/telegramService');
+    const msg = `⚡ <b>KONEKSI TELEGRAM SUKSES</b>\n\nNotifikasi bot kasir <b>Motodoct</b> telah terhubung dengan benar dan siap menerima laporan!`;
+    sendTelegram(msg);
+    res.json({ success: true, message: 'Pesan tes koneksi dikirim!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal mengirim pesan tes' });
+  }
+});
+
 module.exports = router;

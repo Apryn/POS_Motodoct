@@ -4,5 +4,6 @@ const c = require('../controllers/mechanicController');
 router.get('/', c.getAllMechanics);
 router.post('/', c.createMechanic);
 router.put('/:id', c.updateMechanic);
+router.get('/:id/jobs', c.getMechanicJobs);
 router.delete('/:id', c.deleteMechanic);
 module.exports = router;

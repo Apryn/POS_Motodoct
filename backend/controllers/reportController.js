@@ -11,9 +11,14 @@ exports.getSummary = async (req, res) => {
             FROM transactions WHERE DATE(created_at) BETWEEN ? AND ?
         `, [dateFrom, dateTo]);
 
-        const [[pengeluaran]] = await db.execute(`
-            SELECT COALESCE(SUM(total), 0) as total_pengeluaran
+        const [[pembelian]] = await db.execute(`
+            SELECT COALESCE(SUM(total), 0) as total_pembelian
             FROM purchases WHERE DATE(created_at) BETWEEN ? AND ?
+        `, [dateFrom, dateTo]);
+
+        const [[biayaOps]] = await db.execute(`
+            SELECT COALESCE(SUM(amount), 0) as total_biaya
+            FROM expenses WHERE DATE(created_at) BETWEEN ? AND ?
         `, [dateFrom, dateTo]);
 
         const [harian] = await db.execute(`
@@ -30,12 +35,16 @@ exports.getSummary = async (req, res) => {
 
         const [pengeluaranHarian] = await db.execute(`
             SELECT DATE(created_at) as tanggal, COALESCE(SUM(total), 0) as pengeluaran
-            FROM purchases WHERE DATE(created_at) BETWEEN ? AND ?
+            FROM (
+                SELECT created_at, total FROM purchases WHERE DATE(created_at) BETWEEN ? AND ?
+                UNION ALL
+                SELECT created_at, amount as total FROM expenses WHERE DATE(created_at) BETWEEN ? AND ?
+            ) combined
             GROUP BY DATE(created_at) ORDER BY tanggal ASC
-        `, [dateFrom, dateTo]);
+        `, [dateFrom, dateTo, dateFrom, dateTo]);
 
         const totalPendapatan = parseFloat(summary.total_pendapatan);
-        const totalPengeluaran = parseFloat(pengeluaran.total_pengeluaran);
+        const totalPengeluaran = parseFloat(pembelian.total_pembelian) + parseFloat(biayaOps.total_biaya);
 
         res.json({
             success: true,
@@ -44,7 +53,9 @@ exports.getSummary = async (req, res) => {
                 total_pendapatan: totalPendapatan,
                 total_pengeluaran: totalPengeluaran,
                 laba_kotor: totalPendapatan - totalPengeluaran,
-                harian, pengeluaran_harian: pengeluaranHarian, pembayaran,
+                harian, 
+                pengeluaran_harian: pengeluaranHarian, 
+                pembayaran,
                 periode: { from: dateFrom, to: dateTo }
             }
         });

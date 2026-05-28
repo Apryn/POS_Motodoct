@@ -63,7 +63,7 @@ function renderTable(list) {
   const data  = list !== undefined ? list : mechanics;
   const tbody = document.getElementById('mekanikTableBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Tidak ada data mekanik</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Tidak ada data mekanik</td></tr>';
     return;
   }
   tbody.innerHTML = data.map((m, i) => `
@@ -71,8 +71,10 @@ function renderTable(list) {
       <td>${i + 1}</td>
       <td>${escHtml(m.name)}</td>
       <td>${escHtml(m.phone || '-')}</td>
+      <td><strong>${Number(m.commission_rate || 35).toFixed(1)}%</strong></td>
       <td>
         <div class="action-btns">
+          <button class="btn-primary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openJobs(${m.id}, '${escAttr(m.name)}')">💼 Detail Kerja</button>
           <button class="btn-edit"    onclick="openEdit(${m.id})">Edit</button>
           <button class="btn-del-row" onclick="openDelete(${m.id}, '${escAttr(m.name)}')">Hapus</button>
         </div>
@@ -94,6 +96,7 @@ function openModal() {
   editId = null;
   document.getElementById('modalTitle').textContent = 'Tambah Mekanik';
   document.getElementById('formMekanik').reset();
+  document.getElementById('fieldKomisi').value = '35';
   document.getElementById('modalMekanik').classList.remove('hidden');
 }
 
@@ -104,6 +107,7 @@ function openEdit(id) {
   document.getElementById('modalTitle').textContent = 'Edit Mekanik';
   document.getElementById('fieldNama').value = m.name;
   document.getElementById('fieldHp').value   = m.phone || '';
+  document.getElementById('fieldKomisi').value = m.commission_rate || '35';
   document.getElementById('modalMekanik').classList.remove('hidden');
 }
 
@@ -114,7 +118,8 @@ function closeModal() {
 async function saveMechanic() {
   const payload = {
     name:  document.getElementById('fieldNama').value.trim(),
-    phone: document.getElementById('fieldHp').value.trim() || null
+    phone: document.getElementById('fieldHp').value.trim() || null,
+    commission_rate: parseFloat(document.getElementById('fieldKomisi').value) || 35.00
   };
 
   if (!payload.name) { alert('Nama mekanik wajib diisi!'); return; }
@@ -168,6 +173,62 @@ async function confirmDelete() {
   } catch (err) {
     alert('Koneksi error!');
   }
+}
+
+// ── Detail Pekerjaan & Gaji ──────────────────────────────────────────────────
+async function openJobs(id, name) {
+  document.getElementById('jobsMechanicName').textContent = name;
+  document.getElementById('totalMotorDisplay').textContent = '—';
+  document.getElementById('totalWagesDisplay').textContent = 'Rp 0';
+  document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Memuat histori pekerjaan...</td></tr>';
+  document.getElementById('modalJobs').classList.remove('hidden');
+
+  try {
+    const res = await fetch(`${API}/mechanics/${id}/jobs`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.success && data.data.length > 0) {
+      const list = data.data;
+      
+      // Ambil rate komisi dari data database
+      const commRate = parseFloat(list[0].commission_rate || 35.00);
+
+      // Hitung total motor unik berdasarkan plat nomor
+      const uniquePlates = new Set(list.map(j => (j.license_plate || '').replace(/\s+/g, '').toUpperCase()).filter(p => p !== ''));
+      document.getElementById('totalMotorDisplay').textContent = `${uniquePlates.size} motor (${list.length} kali servis)`;
+
+      // Hitung total nilai pekerjaan kotor (gross)
+      const totalWagesGross = list.reduce((sum, j) => sum + parseFloat(j.service_price || 0), 0);
+      // Hitung upah komisi bersih (net)
+      const totalWagesNet = (totalWagesGross * commRate) / 100;
+      
+      document.getElementById('totalWagesDisplay').textContent = `${formatRp(totalWagesNet)} (Komisi ${commRate}% dari ${formatRp(totalWagesGross)} kotor)`;
+
+      document.getElementById('jobsTableBody').innerHTML = list.map((j, i) => {
+        const tgl = new Date(j.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${tgl}</td>
+            <td><strong>${escHtml(j.invoice_number)}</strong></td>
+            <td>${escHtml(j.customer_name || 'Pelanggan Umum')}</td>
+            <td><span class="code-badge" style="background:#1a1a2e; color:#fff; font-weight:800; font-size:11px;">${escHtml(j.license_plate || '-')}</span></td>
+            <td>${escHtml(j.service_name)}</td>
+            <td style="text-align:right; font-weight:700; color:#27ae60;">${formatRp(j.service_price)}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      document.getElementById('totalMotorDisplay').textContent = '0';
+      document.getElementById('totalWagesDisplay').textContent = 'Rp 0';
+      document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Mekanik ini belum pernah menangani servis.</td></tr>';
+    }
+  } catch (err) {
+    document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="7" class="empty-state" style="color:#e74c3c;">Gagal memuat data pekerjaan.</td></tr>';
+  }
+}
+
+function closeJobsModal() {
+  document.getElementById('modalJobs').classList.add('hidden');
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

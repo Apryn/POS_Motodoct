@@ -170,6 +170,23 @@ function applyThreshold() {
   loadStok();
 }
 
+// ===== TEST TELEGRAM KONEKSI =====
+async function testTelegram() {
+  const btn = document.getElementById('btnTestTelegram');
+  btn.disabled = true; btn.textContent = 'Menghubungkan...';
+  try {
+    const res = await fetch(`${API}/notif/test-telegram`, { method: 'POST', headers });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ ' + data.message, '#f39c12');
+      addRiwayat('Tes koneksi bot Telegram berhasil terkirim', 'stok');
+    } else {
+      showToast('❌ ' + data.message, '#e74c3c');
+    }
+  } catch { showToast('❌ Tidak bisa terhubung ke server', '#e74c3c'); }
+  finally { btn.disabled = false; btn.textContent = '🔌 Tes Koneksi Bot'; }
+}
+
 // Init
 loadStok();
 renderRiwayat();

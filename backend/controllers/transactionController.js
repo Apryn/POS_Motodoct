@@ -5,15 +5,15 @@ exports.createTransaction = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { customer_id, payment_method, spareparts, services } = req.body;
+        const { customer_id, payment_method, spareparts, services, license_plate, customer_name } = req.body;
         const user_id = req.user.id;
         let total = 0;
         if (spareparts) spareparts.forEach(s => total += Number(s.price) * Number(s.quantity));
         if (services) services.forEach(s => total += Number(s.price));
         const invoice_number = `INV-${Date.now()}`;
         const [trx] = await conn.execute(
-            'INSERT INTO transactions (invoice_number, user_id, customer_id, total_amount, payment_method) VALUES (?, ?, ?, ?, ?)',
-            [invoice_number, user_id, customer_id || null, total, payment_method || 'cash']
+            'INSERT INTO transactions (invoice_number, user_id, customer_id, total_amount, payment_method, license_plate, customer_name) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [invoice_number, user_id, customer_id || null, total, payment_method || 'cash', license_plate || null, customer_name || null]
         );
         const transaction_id = trx.insertId;
         if (spareparts && spareparts.length > 0) {
@@ -52,7 +52,7 @@ exports.createTransaction = async (req, res) => {
 exports.getAllTransactions = async (req, res) => {
     try {
         const [rows] = await db.execute(`
-            SELECT t.*, c.name as customer_name, u.username 
+            SELECT t.*, COALESCE(c.name, t.customer_name) as customer_name, u.username 
             FROM transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
             LEFT JOIN users u ON t.user_id = u.id
@@ -68,7 +68,7 @@ exports.getTransactionById = async (req, res) => {
     try {
         const { id } = req.params;
         const [[trx]] = await db.execute(`
-            SELECT t.*, c.name as customer_name, c.license_plate, u.username
+            SELECT t.*, COALESCE(c.name, t.customer_name) as customer_name, COALESCE(c.license_plate, t.license_plate) as license_plate, u.username
             FROM transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
             LEFT JOIN users u ON t.user_id = u.id
@@ -90,3 +90,62 @@ exports.getTransactionById = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
+
+exports.getVehicleHistory = async (req, res) => {
+    try {
+        const { plate } = req.params;
+        const sanitizedPlate = plate.trim().toUpperCase();
+
+        // 1. Get transactions
+        const [transactions] = await db.execute(`
+            SELECT t.id, t.invoice_number, t.created_at, COALESCE(c.name, t.customer_name) as customer_name, COALESCE(c.license_plate, t.license_plate) as license_plate
+            FROM transactions t
+            LEFT JOIN customers c ON t.customer_id = c.id
+            WHERE COALESCE(c.license_plate, t.license_plate) = ?
+            ORDER BY t.created_at DESC
+        `, [sanitizedPlate]);
+
+        if (transactions.length === 0) {
+            return res.json({ success: true, data: { transactions: [], services: [], spareparts: [] } });
+        }
+
+        // 2. Get services
+        const [services] = await db.execute(`
+            SELECT ts.transaction_id, t.created_at, s.name as service_name, ts.price, m.name as mechanic_name
+            FROM transaction_services ts
+            JOIN transactions t ON ts.transaction_id = t.id
+            LEFT JOIN customers c ON t.customer_id = c.id
+            JOIN services s ON ts.service_id = s.id
+            JOIN mechanics m ON ts.mechanic_id = m.id
+            WHERE COALESCE(c.license_plate, t.license_plate) = ?
+            ORDER BY t.created_at DESC
+        `, [sanitizedPlate]);
+
+        // 3. Get spareparts
+        const [spareparts] = await db.execute(`
+            SELECT tsp.transaction_id, t.created_at, sp.name as sparepart_name, tsp.quantity, tsp.price
+            FROM transaction_spareparts tsp
+            JOIN transactions t ON tsp.transaction_id = t.id
+            LEFT JOIN customers c ON t.customer_id = c.id
+            JOIN spareparts sp ON tsp.sparepart_id = sp.id
+            WHERE COALESCE(c.license_plate, t.license_plate) = ?
+            ORDER BY t.created_at DESC
+        `, [sanitizedPlate]);
+
+        res.json({
+            success: true,
+            data: {
+                license_plate: sanitizedPlate,
+                customer_name: transactions[0].customer_name,
+                last_visit: transactions[0].created_at,
+                transactions,
+                services,
+                spareparts
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching vehicle history:", error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+

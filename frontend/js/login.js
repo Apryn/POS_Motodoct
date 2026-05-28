@@ -23,7 +23,16 @@ loginForm.addEventListener("submit", async (e) => {
     if (response.ok && data.success) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      window.location.href = "dashboard.html";
+      
+      // Role defaults mapping
+      const roleDefaults = {
+        admin: 'dashboard.html',
+        kasir: 'transaksi.html',
+        gudang: 'sparepart.html',
+        owner: 'dashboard.html'
+      };
+      
+      window.location.href = roleDefaults[data.user.role] || 'dashboard.html';
     } else {
       errorMsg.textContent = "⚠️ " + (data.message || "Username atau password salah!");
       errorMsg.classList.remove("hidden");

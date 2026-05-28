@@ -18,6 +18,8 @@ const reportRoutes = require("./routes/reportRoutes");
 const purchaseRoutes = require("./routes/purchaseRoutes");
 const notifRoutes = require("./routes/notifRoutes");
 const savedCartRoutes = require("./routes/savedCartRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const path = require("path");
 
@@ -101,6 +103,8 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/notif", notifRoutes);
 app.use("/api/saved-carts", savedCartRoutes);
+app.use("/api/expenses", expenseRoutes);
+app.use("/api/users", userRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

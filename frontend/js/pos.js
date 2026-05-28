@@ -258,12 +258,11 @@ function renderMechanicSelect() {
     mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 }
 
-// Customer select
+// Customer select (Datalist Autocomplete)
 function renderCustomerSelect() {
-  const sel = document.getElementById('selectCustomer');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">-- Pelanggan Umum (Tanpa Registrasi) --</option>' +
-    customers.map(c => `<option value="${c.id}">${c.name} (${c.license_plate || '-'})</option>`).join('');
+  const dl = document.getElementById('customerDatalist');
+  if (!dl) return;
+  dl.innerHTML = customers.map(c => `<option value="${c.name} (${c.license_plate || '-'})"></option>`).join('');
 }
 
 // Payment
@@ -328,7 +327,32 @@ async function processTransaction() {
     }
   }
 
-  const customerId = document.getElementById('selectCustomer')?.value || null;
+  const customerInputVal = document.getElementById('selectCustomerInput')?.value.trim() || '';
+  let customerId = null;
+  let customName = null;
+  let customPlate = null;
+
+  if (customerInputVal) {
+    const matched = customers.find(c => `${c.name} (${c.license_plate || '-'})` === customerInputVal);
+    if (matched) {
+      customerId = matched.id;
+    } else {
+      // Smart parsing untuk input manual non-member
+      const parenMatch = customerInputVal.match(/^(.*?)\s*\((.*?)\)$/);
+      if (parenMatch) {
+        customName = parenMatch[1].trim() || null;
+        customPlate = parenMatch[2].trim() || null;
+      } else {
+        // Cek jika input diawali huruf lalu angka (format plat nomor)
+        if (/^[a-zA-Z]{1,2}\s*\d+/.test(customerInputVal)) {
+          customPlate = customerInputVal.toUpperCase();
+        } else {
+          customName = customerInputVal;
+        }
+      }
+    }
+  }
+
   const mechanicId = document.getElementById('selectMechanic')?.value || null;
   const hasServis = cart.some(c => c.type === 'servis');
   if (hasServis && !mechanicId) {
@@ -358,7 +382,9 @@ async function processTransaction() {
         customer_id: customerId ? parseInt(customerId) : null,
         payment_method: paymentMethod,
         spareparts: sparepartsPayload,
-        services: servicesPayload
+        services: servicesPayload,
+        license_plate: customPlate,
+        customer_name: customName
       })
     });
     const data = await res.json();
@@ -441,8 +467,58 @@ function clearCart() {
   if (document.getElementById('cashReceived')) document.getElementById('cashReceived').value = '';
   if (document.getElementById('discountInput')) document.getElementById('discountInput').value = '';
   if (document.getElementById('discountRow')) document.getElementById('discountRow').style.display = 'none';
+  if (document.getElementById('selectCustomerInput')) document.getElementById('selectCustomerInput').value = '';
   renderCart();
   selectPayment('cash');
+}
+
+// ===== RECEIPT SETTINGS =====
+const DEFAULT_RECEIPT_SETTINGS = {
+  shopName: 'MOTODOCT',
+  shopSlogan: 'Bengkel Motor Terpercaya',
+  shopWA: '',
+  shopIG: '',
+  shopFooter: 'Terima kasih atas kunjungan Anda!'
+};
+
+function getReceiptSettings() {
+  try {
+    const saved = localStorage.getItem('receipt_settings');
+    return saved ? JSON.parse(saved) : DEFAULT_RECEIPT_SETTINGS;
+  } catch {
+    return DEFAULT_RECEIPT_SETTINGS;
+  }
+}
+
+function openReceiptSettings() {
+  const cfg = getReceiptSettings();
+  document.getElementById('cfgShopName').value = cfg.shopName || '';
+  document.getElementById('cfgShopSlogan').value = cfg.shopSlogan || '';
+  document.getElementById('cfgShopWA').value = cfg.shopWA || '';
+  document.getElementById('cfgShopIG').value = cfg.shopIG || '';
+  document.getElementById('cfgShopFooter').value = cfg.shopFooter || '';
+  document.getElementById('modalReceiptSettings').classList.remove('hidden');
+}
+
+function closeReceiptSettings() {
+  document.getElementById('modalReceiptSettings').classList.add('hidden');
+}
+
+function saveReceiptSettings() {
+  const cfg = {
+    shopName: document.getElementById('cfgShopName').value.trim() || 'MOTODOCT',
+    shopSlogan: document.getElementById('cfgShopSlogan').value.trim() || 'Bengkel Motor Terpercaya',
+    shopWA: document.getElementById('cfgShopWA').value.trim(),
+    shopIG: document.getElementById('cfgShopIG').value.trim(),
+    shopFooter: document.getElementById('cfgShopFooter').value.trim() || 'Terima kasih atas kunjungan Anda!'
+  };
+  localStorage.setItem('receipt_settings', JSON.stringify(cfg));
+  closeReceiptSettings();
+  alert('✅ Pengaturan struk berhasil disimpan!');
+}
+
+function escHtml(str) { 
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
 }
 
 // Struk modal
@@ -452,6 +528,8 @@ function showStruk(trxData, total, subtotal, discountAmt) {
   const now = new Date();
   discountAmt = discountAmt || 0;
   subtotal = subtotal || total;
+  
+  const cfg = getReceiptSettings();
 
   const itemsHtml = cart.map(i => `
     <tr>
@@ -461,10 +539,15 @@ function showStruk(trxData, total, subtotal, discountAmt) {
     </tr>
   `).join('');
 
+  let contactHtml = '';
+  if (cfg.shopWA) contactHtml += `<small>WA: ${escHtml(cfg.shopWA)}</small><br>`;
+  if (cfg.shopIG) contactHtml += `<small>IG: ${escHtml(cfg.shopIG)}</small><br>`;
+
   document.getElementById('strukContent').innerHTML = `
     <div style="text-align:center;margin-bottom:12px">
-      <strong style="font-size:16px">MOTODOCT</strong><br>
-      <small>Bengkel Motor Terpercaya</small><br>
+      <strong style="font-size:16px;text-transform:uppercase;">${escHtml(cfg.shopName)}</strong><br>
+      <small>${escHtml(cfg.shopSlogan)}</small><br>
+      ${contactHtml}
       <small>${now.toLocaleString('id-ID')}</small>
     </div>
     <hr style="border:1px dashed #ccc;margin:8px 0">
@@ -492,7 +575,7 @@ function showStruk(trxData, total, subtotal, discountAmt) {
       <span>Kembalian</span><span>${rupiah(change)}</span>
     </div>` : `<div style="font-size:13px;margin-top:4px">Metode: ${paymentMethod.toUpperCase()}</div>`}
     <hr style="border:1px dashed #ccc;margin:8px 0">
-    <div style="text-align:center;font-size:12px;color:#888">Terima kasih atas kunjungan Anda!</div>
+    <div style="text-align:center;font-size:12px;color:#888">${escHtml(cfg.shopFooter)}</div>
   `;
 
   document.getElementById('modalStruk').classList.remove('hidden');
@@ -666,12 +749,12 @@ async function loadSavedCart(id) {
     if (saved.license_plate) {
       const cleanedPlate = saved.license_plate.replace(/\s+/g, '').toUpperCase();
       const matchedCust = customers.find(c => (c.license_plate || '').replace(/\s+/g, '').toUpperCase() === cleanedPlate);
-      const selCust = document.getElementById('selectCustomer');
-      if (selCust) {
+      const custInput = document.getElementById('selectCustomerInput');
+      if (custInput) {
         if (matchedCust) {
-          selCust.value = matchedCust.id;
+          custInput.value = `${matchedCust.name} (${matchedCust.license_plate || '-'})`;
         } else {
-          selCust.value = '';
+          custInput.value = '';
         }
       }
     }
@@ -692,6 +775,239 @@ async function deleteSavedCart(id) {
     const data = await res.json();
     if (data.success) loadSavedCarts();
   } catch { alert('Gagal menghapus!'); }
+}
+
+function openAddCustomerModal() {
+  document.getElementById('addCustName').value = '';
+  document.getElementById('addCustPlate').value = '';
+  document.getElementById('addCustPhone').value = '';
+  document.getElementById('modalAddCustomer').classList.remove('hidden');
+  setTimeout(() => document.getElementById('addCustName').focus(), 100);
+}
+
+function closeAddCustomerModal() {
+  document.getElementById('modalAddCustomer').classList.add('hidden');
+}
+
+async function saveNewCustomerQuick() {
+  const name = document.getElementById('addCustName').value.trim();
+  const plate = document.getElementById('addCustPlate').value.trim().toUpperCase();
+  const phone = document.getElementById('addCustPhone').value.trim() || null;
+
+  if (!name) { alert('Nama pelanggan wajib diisi!'); return; }
+  if (!plate) { alert('Plat nomor wajib diisi!'); return; }
+
+  try {
+    const res = await fetch(`${API}/customers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ name, license_plate: plate, phone })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Reload daftar pelanggan
+      const resC = await fetch(`${API}/customers`, { headers: { Authorization: `Bearer ${token}` } });
+      const cData = await resC.json();
+      if (cData.success) {
+        customers = cData.data;
+        renderCustomerSelect();
+        
+        // Pilih pelanggan yang baru saja ditambahkan secara otomatis
+        const matched = customers.find(c => c.license_plate.replace(/\s+/g, '').toUpperCase() === plate.replace(/\s+/g, '').toUpperCase());
+        if (matched) {
+          document.getElementById('selectCustomerInput').value = `${matched.name} (${matched.license_plate || '-'})`;
+        }
+      }
+      closeAddCustomerModal();
+      alert(`✅ Pelanggan ${name} (${plate}) berhasil didaftarkan dan dipilih!`);
+      // Update rekam medis button state if necessary
+      if (typeof checkVehicleHistoryButton === 'function') checkVehicleHistoryButton();
+    } else {
+      alert('Gagal menyimpan: ' + (data.message || 'Terjadi kesalahan'));
+    }
+  } catch (err) {
+    alert('Koneksi error!');
+  }
+}
+
+// ===== VEHICLE SERVICE MEDICAL HISTORY =====
+function getPlateFromInput() {
+  const inputVal = document.getElementById('selectCustomerInput')?.value.trim() || '';
+  if (!inputVal) return null;
+  
+  // 1. Cek kecocokan dengan member terdaftar
+  const matched = customers.find(c => `${c.name} (${c.license_plate || '-'})` === inputVal);
+  if (matched && matched.license_plate) {
+    return matched.license_plate;
+  }
+  
+  // 2. Smart parsing untuk non-member
+  const parenMatch = inputVal.match(/^(.*?)\s*\((.*?)\)$/);
+  if (parenMatch) {
+    const plate = parenMatch[2].trim();
+    if (plate && plate !== '-') return plate;
+  }
+  
+  // Jika format plat nomor (misal: "B 1234 XYZ" atau "b 1234 xyz")
+  if (/^[a-zA-Z]{1,2}\s*\d+/.test(inputVal)) {
+    return inputVal.toUpperCase();
+  }
+  
+  return null;
+}
+
+function checkVehicleHistoryButton() {
+  const plate = getPlateFromInput();
+  const btn = document.getElementById('btnVehicleHistory');
+  if (btn) {
+    if (plate) {
+      btn.style.display = 'inline-block';
+      btn.textContent = `📖 Lihat Rekam Medis (${plate})`;
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
+function closeVehicleHistory() {
+  document.getElementById('modalVehicleHistory').classList.add('hidden');
+}
+
+async function openVehicleHistory() {
+  const plate = getPlateFromInput();
+  if (!plate) return;
+
+  // Tampilkan modal terlebih dahulu dengan state loading
+  const modal = document.getElementById('modalVehicleHistory');
+  modal.classList.remove('hidden');
+
+  // Set initial labels
+  document.getElementById('vhPlateBadge').textContent = plate;
+  document.getElementById('vhCustomerName').textContent = 'Memuat...';
+  document.getElementById('vhLastVisit').textContent = 'Memuat...';
+  
+  document.getElementById('vhServicesCount').textContent = '0';
+  document.getElementById('vhServicesTableBody').innerHTML = `
+    <tr>
+      <td colspan="4" style="padding:16px; text-align:center; color:#94a3b8;">
+        <span class="loading-spinner">⏳ Memuat riwayat servis...</span>
+      </td>
+    </tr>
+  `;
+
+  document.getElementById('vhSparepartsCount').textContent = '0';
+  document.getElementById('vhSparepartsTableBody').innerHTML = `
+    <tr>
+      <td colspan="4" style="padding:16px; text-align:center; color:#94a3b8;">
+        <span class="loading-spinner">⏳ Memuat riwayat sparepart...</span>
+      </td>
+    </tr>
+  `;
+
+  try {
+    const res = await fetch(`${API}/transactions/vehicle/${encodeURIComponent(plate)}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      const data = result.data;
+      if (!data.transactions || data.transactions.length === 0) {
+        // Tampilkan state kosong premium
+        document.getElementById('vhCustomerName').textContent = 'Kendaraan Baru (Belum Terdaftar)';
+        document.getElementById('vhLastVisit').textContent = 'Belum pernah berkunjung';
+        document.getElementById('vhServicesTableBody').innerHTML = `
+          <tr>
+            <td colspan="4" style="padding:24px; text-align:center; color:#94a3b8; font-weight:500;">
+              📭 Belum ada riwayat servis untuk kendaraan ini.
+            </td>
+          </tr>
+        `;
+        document.getElementById('vhSparepartsTableBody').innerHTML = `
+          <tr>
+            <td colspan="4" style="padding:24px; text-align:center; color:#94a3b8; font-weight:500;">
+              📭 Belum ada penggantian sparepart untuk kendaraan ini.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // Set meta info
+      document.getElementById('vhCustomerName').textContent = data.customer_name || 'Pelanggan Umum';
+      const lastVisitDate = new Date(data.last_visit);
+      document.getElementById('vhLastVisit').textContent = lastVisitDate.toLocaleString('id-ID', {
+        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) + ' WIB';
+
+      // Render Services
+      const services = data.services || [];
+      document.getElementById('vhServicesCount').textContent = services.length;
+      if (services.length > 0) {
+        document.getElementById('vhServicesTableBody').innerHTML = services.map(s => {
+          const dateStr = new Date(s.created_at).toLocaleDateString('id-ID', {
+            day: 'numeric', month: 'short', year: 'numeric'
+          });
+          return `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px; color:#475569; font-weight:500;">${dateStr}</td>
+              <td style="padding:10px; color:#1e293b; font-weight:600;">${s.service_name}</td>
+              <td style="padding:10px; color:#475569;"><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">👨‍🔧 ${s.mechanic_name}</span></td>
+              <td style="padding:10px; text-align:right; color:#0f766e; font-weight:700;">${rupiah(s.price)}</td>
+            </tr>
+          `;
+        }).join('');
+      } else {
+        document.getElementById('vhServicesTableBody').innerHTML = `
+          <tr>
+            <td colspan="4" style="padding:16px; text-align:center; color:#94a3b8;">Belum ada tindakan servis</td>
+          </tr>
+        `;
+      }
+
+      // Render Spareparts
+      const spareparts = data.spareparts || [];
+      document.getElementById('vhSparepartsCount').textContent = spareparts.length;
+      if (spareparts.length > 0) {
+        document.getElementById('vhSparepartsTableBody').innerHTML = spareparts.map(sp => {
+          const dateStr = new Date(sp.created_at).toLocaleDateString('id-ID', {
+            day: 'numeric', month: 'short', year: 'numeric'
+          });
+          return `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px; color:#475569; font-weight:500;">${dateStr}</td>
+              <td style="padding:10px; color:#1e293b; font-weight:600;">${sp.sparepart_name}</td>
+              <td style="padding:10px; text-align:center; color:#1e293b; font-weight:700;"><span style="background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:800;">${sp.quantity}</span></td>
+              <td style="padding:10px; text-align:right; color:#0369a1; font-weight:700;">${rupiah(sp.price)}</td>
+            </tr>
+          `;
+        }).join('');
+      } else {
+        document.getElementById('vhSparepartsTableBody').innerHTML = `
+          <tr>
+            <td colspan="4" style="padding:16px; text-align:center; color:#94a3b8;">Belum ada penggantian sparepart</td>
+          </tr>
+        `;
+      }
+
+    } else {
+      alert('Gagal mengambil data rekam medis!');
+      closeVehicleHistory();
+    }
+  } catch (err) {
+    console.error('Error fetching vehicle history:', err);
+    alert('Terjadi kesalahan koneksi ke server!');
+    closeVehicleHistory();
+  }
+}
+
+// Add selectCustomerInput listeners
+const selectCustomerInput = document.getElementById('selectCustomerInput');
+if (selectCustomerInput) {
+  selectCustomerInput.addEventListener('input', checkVehicleHistoryButton);
+  selectCustomerInput.addEventListener('change', checkVehicleHistoryButton);
 }
 
 // Init
