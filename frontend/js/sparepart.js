@@ -198,8 +198,11 @@ function openEditModal(id) {
   document.getElementById('fieldRak').value = p.rack_location || '';
   document.getElementById('fieldNama').value = p.name;
   document.getElementById('fieldKategori').value = p.category_id || '';
+  document.getElementById('fieldSupplier').value = p.supplier || '';
   document.getElementById('fieldStok').value = p.stock;
+  document.getElementById('fieldHargaBeli').value = p.buy_price || 0;
   document.getElementById('fieldHarga').value = p.price;
+  document.getElementById('fieldDiskon').value = p.discount || 0;
   document.getElementById('modalSparepart').classList.remove('hidden');
 }
 
@@ -213,8 +216,11 @@ async function saveSparepart() {
     rack_location: document.getElementById('fieldRak').value.trim(),
     name: document.getElementById('fieldNama').value.trim(),
     category_id: document.getElementById('fieldKategori').value || null,
+    supplier: document.getElementById('fieldSupplier').value.trim() || null,
     stock: parseInt(document.getElementById('fieldStok').value) || 0,
-    price: parseFloat(document.getElementById('fieldHarga').value) || 0
+    buy_price: parseFloat(document.getElementById('fieldHargaBeli').value) || 0,
+    price: parseFloat(document.getElementById('fieldHarga').value) || 0,
+    discount: parseFloat(document.getElementById('fieldDiskon').value) || 0
   };
 
   if (!payload.name) { alert('Nama wajib diisi!'); return; }

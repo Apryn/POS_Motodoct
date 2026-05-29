@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <!-- Secure Route Guard & Role Access Control -->
@@ -203,7 +203,7 @@
 
   <!-- Modal Tambah/Edit -->
   <div class="modal hidden" id="modalSparepart">
-    <div class="modal-box">
+    <div class="modal-box modal-lg">
       <div class="modal-header">
         <h3 id="modalTitle">Tambah Sparepart</h3>
         <button class="modal-close" onclick="closeModal()">✕</button>
@@ -216,26 +216,48 @@
               <input type="text" id="fieldKode" placeholder="Contoh: SP001" />
             </div>
             <div class="form-group">
+              <label>Nama Barang <span class="required">*</span></label>
+              <input type="text" id="fieldNama" placeholder="Nama sparepart" required />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Kategori</label>
+              <select id="fieldKategori"><option value="">-- Pilih Kategori --</option></select>
+            </div>
+            <div class="form-group">
               <label>Lokasi Rak</label>
               <input type="text" id="fieldRak" placeholder="Contoh: A1" />
             </div>
           </div>
-          <div class="form-group">
-            <label>Nama Barang <span class="required">*</span></label>
-            <input type="text" id="fieldNama" placeholder="Nama sparepart" required />
-          </div>
-          <div class="form-group">
-            <label>Kategori</label>
-            <select id="fieldKategori"><option value="">-- Pilih Kategori --</option></select>
-          </div>
           <div class="form-row-2">
+            <div class="form-group">
+              <label>Supplier</label>
+              <input type="text" id="fieldSupplier" placeholder="Contoh: PT Astra" />
+            </div>
             <div class="form-group">
               <label>Stok <span class="required">*</span></label>
               <input type="number" id="fieldStok" placeholder="0" min="0" required />
             </div>
+          </div>
+          <div class="form-row-2">
             <div class="form-group">
-              <label>Harga Jual <span class="required">*</span></label>
+              <label>Harga Beli (Rp) <span class="required">*</span></label>
+              <input type="number" id="fieldHargaBeli" placeholder="0" min="0" required />
+            </div>
+            <div class="form-group">
+              <label>Harga Jual (Rp) <span class="required">*</span></label>
               <input type="number" id="fieldHarga" placeholder="0" min="0" required />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Diskon (%)</label>
+              <input type="number" id="fieldDiskon" placeholder="0" min="0" max="100" value="0" />
+            </div>
+            <div class="form-group" style="visibility: hidden; pointer-events: none;">
+              <label>Spacer</label>
+              <input type="text" />
             </div>
           </div>
         </div>

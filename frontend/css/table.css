@@ -34,8 +34,9 @@
 
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 999; }
 .modal.hidden { display: none; }
-.modal-box { background: #fff; border-radius: 14px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; }
+.modal-box { background: #fff; border-radius: 14px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; transition: max-width 0.2s; }
 .modal-sm { max-width: 360px; }
+.modal-lg { max-width: 720px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #f0f0f0; }
 .modal-header h3 { font-size: 16px; color: #1a1a2e; }
 .modal-close { background: none; border: none; font-size: 16px; color: #aaa; cursor: pointer; padding: 4px; }

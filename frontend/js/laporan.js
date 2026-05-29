@@ -395,89 +395,145 @@ function printDetailStruk() {
   const data = currentDetailTrx;
   const now = new Date(data.created_at);
 
+  const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
   let itemsHtml = '';
   if (data.spareparts?.length) {
     itemsHtml += data.spareparts.map(s => `
-      <tr>
-        <td>${s.sparepart_name}</td>
-        <td style="text-align:center">${s.quantity}</td>
-        <td style="text-align:right">${rupiah(s.subtotal)}</td>
+      <tr style="font-family:'Courier New', Courier, monospace;">
+        <td style="padding: 4px 0; vertical-align: top;">${escHtml(s.sparepart_name)}</td>
+        <td style="padding: 4px 0; text-align: center; vertical-align: top;">${s.quantity}</td>
+        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.price)}</td>
+        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.subtotal)}</td>
       </tr>
     `).join('');
   }
   if (data.services?.length) {
     itemsHtml += data.services.map(s => `
-      <tr>
-        <td>${s.service_name} (${s.mechanic_name || 'Mekanik'})</td>
-        <td style="text-align:center">1</td>
-        <td style="text-align:right">${rupiah(s.price)}</td>
+      <tr style="font-family:'Courier New', Courier, monospace;">
+        <td style="padding: 4px 0; vertical-align: top;">${escHtml(s.service_name)} (Servis)</td>
+        <td style="padding: 4px 0; text-align: center; vertical-align: top;">1</td>
+        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.price)}</td>
+        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.price)}</td>
       </tr>
     `).join('');
   }
 
-  const win = window.open('', '_blank', 'width=400,height=600');
+  let mechName = '-';
+  if (data.services?.length) {
+    const mechs = [...new Set(data.services.map(s => s.mechanic_name).filter(Boolean))];
+    if (mechs.length) mechName = mechs.join(', ');
+  }
+
+  const win = window.open('', '_blank', 'width=800,height=600');
   win.document.write(`
     <html>
       <head>
-        <title>Struk Belanja - Motodoct</title>
+        <title>Invoice Motodoct - Detail Print</title>
         <style>
-          @page {
-            size: 58mm auto;
-            margin: 0;
+          @media print {
+            @page {
+              size: auto;
+              margin: 10mm 12mm;
+            }
+            body {
+              background: #fff;
+              color: #000;
+            }
           }
           body {
             font-family: 'Courier New', Courier, monospace;
-            width: 58mm;
-            margin: 0;
-            padding: 4mm 4mm 8mm 4mm;
-            font-size: 11px;
-            line-height: 1.3;
-            color: #000;
-            background: #fff;
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 10px;
             box-sizing: border-box;
-          }
-          h2, h3, strong {
-            font-weight: bold;
+            background: #fff;
+            color: #000;
+            font-size: 12px;
+            line-height: 1.4;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
-            margin: 6px 0;
           }
-          th, td {
-            padding: 3px 0;
-            border: none;
-          }
-          hr {
-            border: none;
-            border-top: 1px dashed #000;
-            margin: 6px 0;
-          }
-          .text-center { text-align: center; }
-          .text-right { text-align: right; }
         </style>
       </head>
       <body onload="window.print(); setTimeout(() => window.close(), 500);">
-        <div style="text-align:center;margin-bottom:12px">
-          <strong style="font-size:16px">MOTODOCT</strong><br>
-          <small>Bengkel Motor Terpercaya</small><br>
-          <small>${now.toLocaleString('id-ID')}</small>
+        <div style="font-family:'Courier New', Courier, monospace; color:#000; font-size:12px; line-height:1.4; max-width:700px; margin:0 auto;">
+          <!-- Header -->
+          <div style="text-align:center; margin-bottom:12px;">
+            <strong style="font-size:18px; text-transform:uppercase; letter-spacing:1px;">MOTODOCT</strong><br>
+            <span style="font-size:12px;">Bengkel Motor Terpercaya</span><br>
+            <small>${now.toLocaleString('id-ID')} WIB</small>
+          </div>
+          
+          <!-- Monospace line divider -->
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          
+          <!-- Metadata Grid -->
+          <table style="width:100%; font-size:12px; font-family:'Courier New', Courier, monospace; margin-bottom:8px; border-collapse:collapse;">
+            <tr>
+              <td style="width:14%; padding:2px 0; vertical-align:top;">No. Invoice</td>
+              <td style="width:36%; padding:2px 0; vertical-align:top;">: <strong>${data.invoice_number}</strong></td>
+              <td style="width:14%; padding:2px 0; vertical-align:top;">Tanggal</td>
+              <td style="width:36%; padding:2px 0; vertical-align:top;">: ${now.toLocaleString('id-ID')} WIB</td>
+            </tr>
+            <tr>
+              <td style="padding:2px 0; vertical-align:top;">Pelanggan</td>
+              <td style="padding:2px 0; vertical-align:top;">: ${escHtml(data.customer_name || 'Umum')}</td>
+              <td style="padding:2px 0; vertical-align:top;">Kasir</td>
+              <td style="padding:2px 0; vertical-align:top;">: ${escHtml(data.username || 'Admin')}</td>
+            </tr>
+            <tr>
+              <td style="padding:2px 0; vertical-align:top;">No. Plat</td>
+              <td style="padding:2px 0; vertical-align:top;">: <strong>${escHtml(data.license_plate || '-')}</strong></td>
+              <td style="padding:2px 0; vertical-align:top;">Mekanik</td>
+              <td style="padding:2px 0; vertical-align:top;">: ${escHtml(mechName)}</td>
+            </tr>
+          </table>
+          
+          <!-- Monospace line divider -->
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          
+          <!-- Items Table -->
+          <table style="width:100%; font-size:12px; font-family:'Courier New', Courier, monospace; border-collapse:collapse; margin-bottom:8px;">
+            <thead>
+              <tr style="border-bottom:1px dashed #000;">
+                <th style="text-align:left; padding:4px 0; font-weight:bold;">Nama Layanan / Part</th>
+                <th style="text-align:center; padding:4px 0; width:10%; font-weight:bold;">Qty</th>
+                <th style="text-align:right; padding:4px 0; width:22%; font-weight:bold;">Harga</th>
+                <th style="text-align:right; padding:4px 0; width:22%; font-weight:bold;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          
+          <!-- Monospace line divider -->
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          
+          <!-- Calculation Summary -->
+          <table style="width:50%; margin-left:auto; font-size:12px; font-family:'Courier New', Courier, monospace; border-collapse:collapse;">
+            <tr style="font-weight:bold; border-top:1px dashed #000; border-bottom:1px dashed #000;">
+              <td style="padding:4px 0; text-align:left;">TOTAL AKHIR</td>
+              <td style="padding:4px 0; text-align:right;">${rupiah(data.total_amount)}</td>
+            </tr>
+            <tr>
+              <td style="padding:2px 0; text-align:left;">Metode</td>
+              <td style="padding:2px 0; text-align:right; text-transform:uppercase;">${data.payment_method || 'CASH'}</td>
+            </tr>
+          </table>
+          
+          <!-- Monospace line divider -->
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          
+          <!-- Footer Slogan -->
+          <div style="text-align:center; font-size:11px; margin-top:8px; font-style:italic;">
+            Terima kasih atas kunjungan Anda!
+          </div>
         </div>
-        <hr>
-        <div style="font-size:12px;margin-bottom:4px">No: <strong>${data.invoice_number}</strong></div>
-        ${data.customer_name ? `<div style="font-size:11px;margin-bottom:4px">Plat: <strong>${data.license_plate || '-'}</strong> (${data.customer_name})</div>` : ''}
-        <table>
-          <thead><tr><th style="text-align:left">Item</th><th>Qty</th><th style="text-align:right">Harga</th></tr></thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-        <hr>
-        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px">
-          <span>TOTAL</span><span>${rupiah(data.total_amount)}</span>
-        </div>
-        <div style="font-size:13px;margin-top:4px">Metode: ${(data.payment_method || 'CASH').toUpperCase()}</div>
-        <hr>
-        <div style="text-align:center;font-size:12px;color:#888">Terima kasih atas kunjungan Anda!</div>
       </body>
     </html>
   `);

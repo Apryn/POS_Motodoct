@@ -20,6 +20,7 @@ const notifRoutes = require("./routes/notifRoutes");
 const savedCartRoutes = require("./routes/savedCartRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const userRoutes = require("./routes/userRoutes");
+const reminderRoutes = require("./routes/reminderRoutes");
 
 const path = require("path");
 
@@ -105,6 +106,7 @@ app.use("/api/notif", notifRoutes);
 app.use("/api/saved-carts", savedCartRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/reminders", reminderRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -112,8 +114,59 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Terjadi kesalahan internal pada server!" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+
+  // Auto-create oil_reminders table if it doesn't exist (with nullable transaction_id)
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS oil_reminders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        transaction_id INT NULL,
+        customer_id INT NOT NULL,
+        sparepart_name VARCHAR(150) NOT NULL,
+        scheduled_date DATE NOT NULL,
+        status ENUM('pending', 'sent') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    );
+    // Jalankan ALTER untuk memastikan tabel lama ikut termigrasi jika sudah ada sebelumnya
+    await db.execute("ALTER TABLE oil_reminders MODIFY COLUMN transaction_id INT NULL");
+    console.log("✅ Tabel oil_reminders terverifikasi & termigrasi!");
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi/migrasi tabel oil_reminders:", err.message);
+  }
+
+  // Auto-create reminder_templates table if it doesn't exist
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS reminder_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        service_keyword VARCHAR(100) NOT NULL UNIQUE,
+        name VARCHAR(150) NOT NULL,
+        interval_days INT NOT NULL,
+        wa_template TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    );
+    console.log("✅ Tabel reminder_templates terverifikasi!");
+
+    // Seed default templates if empty
+    const [existing] = await db.execute("SELECT COUNT(*) as count FROM reminder_templates");
+    if (existing[0].count === 0) {
+      await db.execute(`
+        INSERT INTO reminder_templates (service_keyword, name, interval_days, wa_template) VALUES
+        ('oli', 'Ganti Oli', 39, 'Halo Kak {{name}},\\n\\nkami dari Bengkel Motodoct ingin mengingatkan bahwa motor Anda dengan plat nomor {{license_plate}} sudah waktunya untuk ganti oli kembali (terakhir ganti oli tanggal {{last_date}} dengan produk {{service_name}}).\\n\\nSilakan mampir ke bengkel kami untuk menjaga performa mesin motor Anda agar tetap prima. Terima kasih! 😊🙏'),
+        ('cvt', 'Servis CVT', 120, 'Halo Kak {{name}},\\n\\nkami dari Bengkel Motodoct ingin mengingatkan bahwa motor Anda dengan plat nomor {{license_plate}} sudah waktunya untuk melakukan perawatan berkala: *{{service_name}}*.\\n\\nSilakan mampir ke bengkel kami untuk menjaga performa mesin motor Anda agar tetap prima dan aman dikendarai. Terima kasih! 😊🙏'),
+        ('ban', 'Ganti Ban', 365, 'Halo Kak {{name}},\\n\\nkami dari Bengkel Motodoct ingin mengingatkan bahwa motor Anda dengan plat nomor {{license_plate}} sudah waktunya untuk melakukan pengecekan/penggantian: *{{service_name}}* demi keselamatan berkendara.\\n\\nSilakan mampir ke bengkel kami untuk menjaga performa mesin motor Anda agar tetap prima. Terima kasih! 😊🙏')
+      `);
+      console.log("✅ Seed data template pengingat berhasil dibuat!");
+    }
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi/migrasi tabel reminder_templates:", err.message);
+  }
 
   // Cek stok setiap hari jam 08:00 WIB menggunakan node-cron
   cron.schedule("0 8 * * *", () => {

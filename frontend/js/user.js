@@ -82,11 +82,25 @@ function renderTable(data = users) {
       roleBadge = `<span style="background:#eee; color:#666; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; text-transform:uppercase;">${u.role}</span>`;
     }
       
-    // Prevent delete button for current logged-in user
+    // Prevent delete button for current logged-in user or master admin
     const isSelf = Number(u.id) === Number(user.id);
-    const deleteBtn = isSelf 
-      ? `<button class="btn-danger" disabled style="opacity:0.4; cursor:not-allowed; background:#888;" title="Anda tidak dapat menghapus diri sendiri">Hapus</button>`
-      : `<button class="btn-danger" onclick="openDeleteModal(${u.id}, '${u.username}')">Hapus</button>`;
+    const isAdminMaster = u.username === 'admin';
+    
+    let deleteBtn = '';
+    if (isSelf) {
+      deleteBtn = `<button class="btn-danger" disabled style="opacity:0.4; cursor:not-allowed; background:#888;" title="Anda tidak dapat menghapus diri sendiri">Hapus</button>`;
+    } else if (isAdminMaster) {
+      deleteBtn = `<button class="btn-danger" disabled style="opacity:0.4; cursor:not-allowed; background:#888;" title="Akun admin utama tidak dapat dihapus!">Hapus</button>`;
+    } else {
+      deleteBtn = `<button class="btn-danger" onclick="openDeleteModal(${u.id}, '${u.username}')">Hapus</button>`;
+    }
+
+    let editBtn = '';
+    if (isAdminMaster && user.username !== 'admin') {
+      editBtn = `<button class="btn-secondary" disabled style="opacity:0.4; cursor:not-allowed;" title="Hanya akun admin utama yang bisa mengedit akun ini">Edit</button>`;
+    } else {
+      editBtn = `<button class="btn-secondary" onclick="openModal(${u.id})">Edit</button>`;
+    }
 
     return `
       <tr>
@@ -102,7 +116,7 @@ function renderTable(data = users) {
         <td>${dateStr}</td>
         <td style="text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-secondary" onclick="openModal(${u.id})">Edit</button>
+            ${editBtn}
             ${deleteBtn}
           </div>
         </td>
@@ -149,6 +163,7 @@ function openModal(id = null) {
   }
 }
 
+// closeModal
 function closeModal() {
   document.getElementById('modalUser').classList.add('hidden');
 }

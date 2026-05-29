@@ -127,7 +127,7 @@
       <div class="stat-card blue">
         <div class="stat-card-header">
           <span class="stat-card-label">Total Akun Pengguna</span>
-          <div class="stat-card-icon">👥</div>
+          <div class="stat-card-icon"><i data-lucide="users"></i></div>
         </div>
         <div class="stat-card-value" id="statTotalUsers">—</div>
         <div class="stat-card-sub">user terdaftar dalam sistem</div>
@@ -135,7 +135,7 @@
       <div class="stat-card green">
         <div class="stat-card-header">
           <span class="stat-card-label">Total Admin</span>
-          <div class="stat-card-icon">👑</div>
+          <div class="stat-card-icon"><i data-lucide="shield-check"></i></div>
         </div>
         <div class="stat-card-value" id="statTotalAdmins">—</div>
         <div class="stat-card-sub">akun dengan akses penuh</div>
@@ -143,7 +143,7 @@
       <div class="stat-card red">
         <div class="stat-card-header">
           <span class="stat-card-label">Total Kasir</span>
-          <div class="stat-card-icon">🛒</div>
+          <div class="stat-card-icon"><i data-lucide="shopping-cart"></i></div>
         </div>
         <div class="stat-card-value" id="statTotalCashiers">—</div>
         <div class="stat-card-sub">akun petugas kasir POS</div>
@@ -153,7 +153,7 @@
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <input type="text" id="searchInput" placeholder="🔍 Cari username..." oninput="filterTable()" />
+        <input type="text" id="searchInput" placeholder="Cari username..." oninput="filterTable()" style="padding-left: 12px;" />
       </div>
       <button class="btn-primary" onclick="openModal()">+ Tambah User</button>
     </div>
@@ -196,7 +196,9 @@
             <label id="labelPassword">Kata Sandi / Password <span class="required">*</span></label>
             <div style="position: relative; display: flex; align-items: center;">
               <input type="password" id="fieldPassword" placeholder="Masukkan password akun" required autocomplete="new-password" style="width: 100%; padding-right: 40px;" />
-              <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #888; font-size: 16px; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Tampilkan/Sembunyikan Sandi">👁️</button>
+              <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #888; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Tampilkan/Sembunyikan Sandi">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
             </div>
             <p id="helpPassword" style="font-size:11px; color:#aaa; margin-top:4px; display:none;">* Biarkan kosong jika tidak ingin mengganti password</p>
           </div>

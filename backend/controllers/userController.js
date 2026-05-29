@@ -46,6 +46,25 @@ exports.updateUser = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Username dan Role harus diisi!' });
         }
 
+        // 1. Dapatkan info user yang sedang diedit
+        const [[targetUser]] = await db.execute('SELECT username FROM users WHERE id = ?', [id]);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+        }
+
+        // 2. Proteksi: Akun 'admin' utama hanya bisa diedit oleh dirinya sendiri
+        if (targetUser.username === 'admin' && req.user.username !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Aksi ditolak: Hanya akun "admin" utama yang dapat mengubah datanya sendiri!' });
+        }
+
+        // 3. Proteksi: Username dan role 'admin' utama tidak dapat diganti
+        if (targetUser.username === 'admin') {
+            const sanitizedUsername = username.trim().toLowerCase();
+            if (sanitizedUsername !== 'admin' || role !== 'admin') {
+                return res.status(400).json({ success: false, message: 'Aksi ditolak: Username dan Role untuk akun "admin" utama tidak dapat diubah!' });
+            }
+        }
+
         const sanitizedUsername = username.trim().toLowerCase();
         // Cek duplikat username jika username diubah
         const [exists] = await db.execute('SELECT id FROM users WHERE username = ? AND id != ?', [sanitizedUsername, id]);
@@ -77,6 +96,17 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // 1. Dapatkan info user yang akan dihapus
+        const [[userToDelete]] = await db.execute('SELECT username, role FROM users WHERE id = ?', [id]);
+        if (!userToDelete) {
+            return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+        }
+
+        // 2. Proteksi: Akun 'admin' utama tidak bisa dihapus oleh siapa pun
+        if (userToDelete.username === 'admin') {
+            return res.status(403).json({ success: false, message: 'Aksi ditolak: Akun "admin" utama tidak dapat dihapus!' });
+        }
         
         // Mencegah admin menghapus dirinya sendiri
         if (Number(id) === Number(req.user.id)) {
@@ -85,9 +115,8 @@ exports.deleteUser = async (req, res) => {
 
         // Cek apakah masih ada minimal satu admin tersisa di database
         const [[{ count }]] = await db.execute('SELECT COUNT(*) as count FROM users WHERE role = "admin"');
-        const [[userToDelete]] = await db.execute('SELECT role FROM users WHERE id = ?', [id]);
         
-        if (userToDelete && userToDelete.role === 'admin' && count <= 1) {
+        if (userToDelete.role === 'admin' && count <= 1) {
             return res.status(400).json({ success: false, message: 'Aksi ditolak: Harus ada minimal satu akun admin tersisa di sistem!' });
         }
 

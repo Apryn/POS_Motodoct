@@ -26,12 +26,53 @@ exports.createTransaction = async (req, res) => {
                 await conn.execute('UPDATE spareparts SET stock = stock - ? WHERE id = ?', [s.quantity, s.sparepart_id]);
             }
         }
+        
         if (services && services.length > 0) {
             for (const s of services) {
                 await conn.execute(
                     'INSERT INTO transaction_services (transaction_id, service_id, mechanic_id, price) VALUES (?, ?, ?, ?)',
                     [transaction_id, s.service_id, s.mechanic_id, s.price]
                 );
+            }
+        }
+
+        // Jadwal pengingat dinamis jika ada transaksi layanan/jasa yang cocok dengan templat pengingat
+        if (customer_id && services && services.length > 0) {
+            try {
+                const [templates] = await conn.execute('SELECT * FROM reminder_templates');
+                for (const s of services) {
+                    const [[sv]] = await conn.execute('SELECT name FROM services WHERE id = ?', [s.service_id]);
+                    if (sv) {
+                        const matchedTemplate = templates.find(t => sv.name.toLowerCase().includes(t.service_keyword.toLowerCase()));
+                        if (matchedTemplate) {
+                            let reminderItemName = sv.name;
+                            
+                            // Jika template oli, prioritaskan merek oli yang dibeli di transaksi yang sama
+                            if (matchedTemplate.service_keyword.toLowerCase() === 'oli' && spareparts && spareparts.length > 0) {
+                                for (const spItem of spareparts) {
+                                    const [[spInfo]] = await conn.execute('SELECT name FROM spareparts WHERE id = ?', [spItem.sparepart_id]);
+                                    if (spInfo && spInfo.name.toLowerCase().includes('oli')) {
+                                        reminderItemName = spInfo.name;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            const scheduled = new Date();
+                            scheduled.setDate(scheduled.getDate() + matchedTemplate.interval_days);
+                            
+                            await conn.execute(
+                                'INSERT INTO oil_reminders (transaction_id, customer_id, sparepart_name, scheduled_date) VALUES (?, ?, ?, ?)',
+                                [transaction_id, customer_id, reminderItemName, scheduled]
+                            );
+                            
+                            // Hanya jadwalkan satu pengingat per transaksi demi kesederhanaan
+                            break;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Gagal menjadwalkan pengingat dinamis di transaksi:", err.message);
             }
         }
         await conn.commit();
