@@ -51,8 +51,8 @@ exports.getMechanicJobs = async (req, res) => {
                 sv.name as service_name,
                 t.invoice_number,
                 t.created_at,
-                COALESCE(c.name, t.customer_name) as customer_name,
-                COALESCE(c.license_plate, t.license_plate) as license_plate,
+                COALESCE(t.customer_name, c.name) as customer_name,
+                COALESCE(t.license_plate, c.license_plate) as license_plate,
                 m.commission_rate
             FROM transaction_services ts
             JOIN transactions t ON ts.transaction_id = t.id

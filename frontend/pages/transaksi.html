@@ -222,6 +222,35 @@
             <span id="changeDisplay">—</span>
           </div>
         </div>
+
+        <!-- QRIS Payment Display -->
+        <div class="cash-input hidden" id="qrisInput" style="padding: 12px; background: #fff8e6; border: 1.5px solid #f39c12; border-radius: 8px; margin-top: 10px; text-align: center;">
+          <div style="font-weight: 700; color: #d35400; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>📱 PEMBAYARAN QRIS</span>
+          </div>
+          <div style="background: #fff; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 6px;">
+            <img id="qrisQrCode" src="" alt="QRIS QR Code" style="width: 140px; height: 140px; display: block;" />
+          </div>
+          <p style="font-size: 11px; color: #7f8c8d; margin: 0 0 4px 0;">Scan QRIS di atas untuk melakukan pembayaran.</p>
+          <strong style="font-size: 14px; color: #2c3e50; display: block;" id="qrisTotalDisplay">Rp 0</strong>
+        </div>
+
+        <!-- Bank Transfer Payment Display -->
+        <div class="cash-input hidden" id="transferInput" style="padding: 12px; background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 8px; margin-top: 10px;">
+          <div style="font-weight: 700; color: #0369a1; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <span>🏦 TRANSFER BANK</span>
+          </div>
+          <div style="font-size: 12px; color: #334155; display:flex; flex-direction:column; gap:4px;">
+            <div>Bank: <strong id="transferBankName" style="text-transform: uppercase;">BCA</strong></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span>No. Rekening: <strong id="transferAccountNum">123-456-7890</strong></span>
+              <button type="button" onclick="copyToClipboard('transferAccountNum')" style="background: #0284c7; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600; cursor: pointer;">Salin</button>
+            </div>
+            <div>Atas Nama: <strong id="transferAccountOwner">BENGKEL MOTODOCT</strong></div>
+          </div>
+          <div style="border-top: 1px dashed #bae6fd; margin: 8px 0;"></div>
+          <strong style="font-size: 14px; color: #0369a1; text-align: center; display: block;" id="transferTotalDisplay">Rp 0</strong>
+        </div>
       </div>
 
       <!-- Action Buttons -->
@@ -356,40 +385,66 @@
 
   <!-- Modal Pengaturan Struk -->
   <div class="modal-struk hidden" id="modalReceiptSettings" style="z-index: 1200;">
-    <div class="struk-box" style="max-width:340px;">
-      <div class="struk-header">
-        <h3>Pengaturan Struk</h3>
+    <div class="struk-box" style="max-width:360px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+      <div class="struk-header" style="flex-shrink:0;">
+        <h3>Pengaturan Struk & Pembayaran</h3>
         <button class="btn-close-struk" onclick="closeReceiptSettings()" style="width:auto;padding:4px 10px">✕</button>
       </div>
-      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
-        <p style="font-size:13px;color:#555;">Sesuaikan informasi header & footer cetak struk belanja.</p>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1;">
+        <p style="font-size:13px;color:#555;margin-bottom:4px;">Sesuaikan informasi header/footer cetak struk belanja serta detail pembayaran digital.</p>
+        
+        <h4 style="font-size:12px; font-weight:700; color:#1e293b; border-bottom:1px solid #eee; padding-bottom:4px; margin:4px 0 0 0;">INFO BENGKEL</h4>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Nama Bengkel</label>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Nama Bengkel</label>
           <input type="text" id="cfgShopName" placeholder="Contoh: MOTODOCT"
             style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Slogan / Alamat</label>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Slogan / Alamat</label>
           <input type="text" id="cfgShopSlogan" placeholder="Contoh: Bengkel Motor Terpercaya"
             style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">No. WhatsApp</label>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">No. WhatsApp</label>
           <input type="text" id="cfgShopWA" placeholder="Contoh: 08123456789"
             style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Akun Instagram</label>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Akun Instagram</label>
           <input type="text" id="cfgShopIG" placeholder="Contoh: @motodoct_workshop"
             style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
         </div>
+
+        <h4 style="font-size:12px; font-weight:700; color:#0284c7; border-bottom:1px solid #eee; padding-bottom:4px; margin:8px 0 0 0;">PENGATURAN PEMBAYARAN</h4>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Catatan Kaki (Footer)</label>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Nama Bank Transfer</label>
+          <input type="text" id="cfgBankName" placeholder="Contoh: BCA / MANDIRI / BRI"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;text-transform:uppercase;" />
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Nomor Rekening Bank</label>
+          <input type="text" id="cfgBankAccount" placeholder="Contoh: 1234567890"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Nama Pemilik Rekening</label>
+          <input type="text" id="cfgBankOwner" placeholder="Contoh: BENGKEL MOTODOCT"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;text-transform:uppercase;" />
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Link Gambar QRIS Statis (Opsional)</label>
+          <input type="text" id="cfgQrisUrl" placeholder="Kosongkan jika ingin generate otomatis"
+            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+
+        <h4 style="font-size:12px; font-weight:700; color:#1e293b; border-bottom:1px solid #eee; padding-bottom:4px; margin:8px 0 0 0;">CATATAN STRUK</h4>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Catatan Kaki (Footer)</label>
           <input type="text" id="cfgShopFooter" placeholder="Contoh: Terima kasih atas kunjungan Anda!"
             style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
         </div>
       </div>
-      <div class="struk-footer">
+      <div class="struk-footer" style="flex-shrink:0; border-top:1px solid #eee; background:#fafafa;">
         <button class="btn-print-struk" onclick="saveReceiptSettings()">Simpan</button>
         <button class="btn-close-struk" onclick="closeReceiptSettings()">Batal</button>
       </div>

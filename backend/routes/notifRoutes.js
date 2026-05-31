@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { checkStokAndNotify } = require('../services/telegramService');
+const auth = require('../middleware/auth');
+
+router.use(auth);
 
 // GET stok menipis & habis
 router.get('/stok', async (req, res) => {

@@ -24,6 +24,7 @@ CREATE TABLE `mechanics` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
+  `commission_rate` decimal(5,2) NOT NULL DEFAULT 35.00,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -57,6 +58,7 @@ CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
+  `plain_password` varchar(255) DEFAULT NULL,
   `role` enum('admin','kasir') DEFAULT 'kasir',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
@@ -68,6 +70,8 @@ CREATE TABLE `transactions` (
   `invoice_number` varchar(50) NOT NULL,
   `user_id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
+  `customer_name` varchar(100) DEFAULT NULL,
+  `license_plate` varchar(20) DEFAULT NULL,
   `total_amount` decimal(10,2) NOT NULL,
   `payment_method` enum('cash','qris','transfer') DEFAULT 'cash',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -116,6 +120,28 @@ CREATE TABLE `purchases` (
   CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`sparepart_id`) REFERENCES `spareparts` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `expenses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `description` varchar(255) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `category` varchar(100) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `saved_carts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `license_plate` varchar(20) NOT NULL,
+  `customer_name` varchar(100) DEFAULT NULL,
+  `cart_data` text NOT NULL,
+  `mechanic_id` int(11) DEFAULT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `mechanic_id` (`mechanic_id`),
+  CONSTRAINT `saved_carts_ibfk_1` FOREIGN KEY (`mechanic_id`) REFERENCES `mechanics` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Default admin account (password: admin123)
-INSERT INTO `users` (`username`, `password`, `role`) VALUES
-('admin', '$2b$10$4iB5/FSusCUukrF9eALgpuXsD4SzJihnv6SOKO/HhapVnvilEXoIm', 'admin');
+INSERT INTO `users` (`username`, `password`, `plain_password`, `role`) VALUES
+('admin', '$2b$10$4iB5/FSusCUukrF9eALgpuXsD4SzJihnv6SOKO/HhapVnvilEXoIm', 'admin123', 'admin');

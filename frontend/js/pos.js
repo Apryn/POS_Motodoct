@@ -258,9 +258,12 @@ function updateTotals() {
     document.getElementById('discountAmount').textContent = `- ${rupiah(discountAmt)}`;
     document.getElementById('discountRow').style.display = 'flex';
     document.getElementById('discountPctLabel').textContent = `(${discountPct}%)`;
+  } else {
+    document.getElementById('discountRow').style.display = 'none';
   }
   document.getElementById('totalDisplay').textContent = rupiah(total);
   updateChange();
+  renderPaymentDetails(); // Sync QRIS/Transfer card amounts instantly
 }
 
 // Mechanic select
@@ -282,9 +285,61 @@ function renderCustomerSelect() {
 function selectPayment(method) {
   paymentMethod = method;
   document.querySelectorAll('.pay-btn').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+  
   const cashInput = document.getElementById('cashInput');
+  const qrisInput = document.getElementById('qrisInput');
+  const transferInput = document.getElementById('transferInput');
+  
   if (cashInput) cashInput.classList.toggle('hidden', method !== 'cash');
+  if (qrisInput) qrisInput.classList.toggle('hidden', method !== 'qris');
+  if (transferInput) transferInput.classList.toggle('hidden', method !== 'transfer');
+  
   updateChange();
+  renderPaymentDetails();
+}
+
+// Copy to clipboard helper
+function copyToClipboard(elementId) {
+  const text = document.getElementById(elementId).textContent;
+  navigator.clipboard.writeText(text);
+  alert('✅ Nomor rekening berhasil disalin!');
+}
+
+// Render dynamic QRIS and Bank Transfer Details
+function renderPaymentDetails() {
+  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const discountPct = parseFloat(document.getElementById('discountInput')?.value || 0);
+  const total = subtotal - Math.round(subtotal * discountPct / 100);
+  const formattedTotal = rupiah(total);
+  
+  // Update total displays in inputs
+  const qrisTotal = document.getElementById('qrisTotalDisplay');
+  const transferTotal = document.getElementById('transferTotalDisplay');
+  if (qrisTotal) qrisTotal.textContent = formattedTotal;
+  if (transferTotal) transferTotal.textContent = formattedTotal;
+  
+  const cfg = getReceiptSettings();
+  
+  // 1. QRIS QR Code Generator
+  const qrisQrImg = document.getElementById('qrisQrCode');
+  if (qrisQrImg) {
+    if (cfg.qrisUrl) {
+      qrisQrImg.src = cfg.qrisUrl;
+    } else {
+      // Generate clean QR code based on total amount
+      const qrData = `MOTODOCT_TOTAL_${total}`;
+      qrisQrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+    }
+  }
+  
+  // 2. Bank Transfer Info
+  const elBank = document.getElementById('transferBankName');
+  const elAccNum = document.getElementById('transferAccountNum');
+  const elOwner = document.getElementById('transferAccountOwner');
+  
+  if (elBank) elBank.textContent = cfg.bankName || 'BCA';
+  if (elAccNum) elAccNum.textContent = cfg.bankAccount || '123-456-7890';
+  if (elOwner) elOwner.textContent = cfg.bankOwner || 'BENGKEL MOTODOCT';
 }
 
 // Format input uang dengan titik ribuan
@@ -485,13 +540,17 @@ function clearCart() {
   selectPayment('cash');
 }
 
-// ===== RECEIPT SETTINGS =====
+// ===== RECEIPT & PAYMENT SETTINGS =====
 const DEFAULT_RECEIPT_SETTINGS = {
   shopName: 'MOTODOCT',
   shopSlogan: 'Bengkel Motor Terpercaya',
   shopWA: '',
   shopIG: '',
-  shopFooter: 'Terima kasih atas kunjungan Anda!'
+  shopFooter: 'Terima kasih atas kunjungan Anda!',
+  bankName: 'BCA',
+  bankAccount: '123-456-7890',
+  bankOwner: 'BENGKEL MOTODOCT',
+  qrisUrl: ''
 };
 
 function getReceiptSettings() {
@@ -510,6 +569,13 @@ function openReceiptSettings() {
   document.getElementById('cfgShopWA').value = cfg.shopWA || '';
   document.getElementById('cfgShopIG').value = cfg.shopIG || '';
   document.getElementById('cfgShopFooter').value = cfg.shopFooter || '';
+  
+  // Load bank settings
+  document.getElementById('cfgBankName').value = cfg.bankName || 'BCA';
+  document.getElementById('cfgBankAccount').value = cfg.bankAccount || '123-456-7890';
+  document.getElementById('cfgBankOwner').value = cfg.bankOwner || 'BENGKEL MOTODOCT';
+  document.getElementById('cfgQrisUrl').value = cfg.qrisUrl || '';
+  
   document.getElementById('modalReceiptSettings').classList.remove('hidden');
 }
 
@@ -523,11 +589,18 @@ function saveReceiptSettings() {
     shopSlogan: document.getElementById('cfgShopSlogan').value.trim() || 'Bengkel Motor Terpercaya',
     shopWA: document.getElementById('cfgShopWA').value.trim(),
     shopIG: document.getElementById('cfgShopIG').value.trim(),
-    shopFooter: document.getElementById('cfgShopFooter').value.trim() || 'Terima kasih atas kunjungan Anda!'
+    shopFooter: document.getElementById('cfgShopFooter').value.trim() || 'Terima kasih atas kunjungan Anda!',
+    
+    // Save bank settings
+    bankName: document.getElementById('cfgBankName').value.trim().toUpperCase() || 'BCA',
+    bankAccount: document.getElementById('cfgBankAccount').value.trim() || '123-456-7890',
+    bankOwner: document.getElementById('cfgBankOwner').value.trim().toUpperCase() || 'BENGKEL MOTODOCT',
+    qrisUrl: document.getElementById('cfgQrisUrl').value.trim()
   };
   localStorage.setItem('receipt_settings', JSON.stringify(cfg));
   closeReceiptSettings();
-  alert('✅ Pengaturan struk berhasil disimpan!');
+  renderPaymentDetails(); // Refresh payment cards instantly
+  alert('✅ Pengaturan struk & pembayaran berhasil disimpan!');
 }
 
 function escHtml(str) { 

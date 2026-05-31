@@ -109,7 +109,7 @@ exports.getTransactionById = async (req, res) => {
     try {
         const { id } = req.params;
         const [[trx]] = await db.execute(`
-            SELECT t.*, COALESCE(c.name, t.customer_name) as customer_name, COALESCE(c.license_plate, t.license_plate) as license_plate, u.username
+            SELECT t.*, COALESCE(t.customer_name, c.name) as customer_name, COALESCE(t.license_plate, c.license_plate) as license_plate, u.username
             FROM transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
             LEFT JOIN users u ON t.user_id = u.id
@@ -139,10 +139,10 @@ exports.getVehicleHistory = async (req, res) => {
 
         // 1. Get transactions
         const [transactions] = await db.execute(`
-            SELECT t.id, t.invoice_number, t.created_at, COALESCE(c.name, t.customer_name) as customer_name, COALESCE(c.license_plate, t.license_plate) as license_plate
+            SELECT t.id, t.invoice_number, t.created_at, COALESCE(t.customer_name, c.name) as customer_name, COALESCE(t.license_plate, c.license_plate) as license_plate
             FROM transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
-            WHERE COALESCE(c.license_plate, t.license_plate) = ?
+            WHERE COALESCE(t.license_plate, c.license_plate) = ?
             ORDER BY t.created_at DESC
         `, [sanitizedPlate]);
 
@@ -158,7 +158,7 @@ exports.getVehicleHistory = async (req, res) => {
             LEFT JOIN customers c ON t.customer_id = c.id
             JOIN services s ON ts.service_id = s.id
             JOIN mechanics m ON ts.mechanic_id = m.id
-            WHERE COALESCE(c.license_plate, t.license_plate) = ?
+            WHERE COALESCE(t.license_plate, c.license_plate) = ?
             ORDER BY t.created_at DESC
         `, [sanitizedPlate]);
 
@@ -169,7 +169,7 @@ exports.getVehicleHistory = async (req, res) => {
             JOIN transactions t ON tsp.transaction_id = t.id
             LEFT JOIN customers c ON t.customer_id = c.id
             JOIN spareparts sp ON tsp.sparepart_id = sp.id
-            WHERE COALESCE(c.license_plate, t.license_plate) = ?
+            WHERE COALESCE(t.license_plate, c.license_plate) = ?
             ORDER BY t.created_at DESC
         `, [sanitizedPlate]);
 

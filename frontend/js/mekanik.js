@@ -179,13 +179,22 @@ async function confirmDelete() {
 async function openJobs(id, name) {
   document.getElementById('jobsMechanicName').textContent = name;
   document.getElementById('totalMotorDisplay').textContent = '—';
+  document.getElementById('totalServisDetail').textContent = '—';
   document.getElementById('totalWagesDisplay').textContent = 'Rp 0';
+  document.getElementById('wagesDetailDisplay').textContent = 'Memuat rincian komisi...';
   document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Memuat histori pekerjaan...</td></tr>';
   document.getElementById('modalJobs').classList.remove('hidden');
 
   try {
     const res = await fetch(`${API}/mechanics/${id}/jobs`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
+    
+    // Cari element detail detailnya
+    const elMotor = document.getElementById('totalMotorDisplay');
+    const elServisDetail = document.getElementById('totalServisDetail');
+    const elWages = document.getElementById('totalWagesDisplay');
+    const elWagesDetail = document.getElementById('wagesDetailDisplay');
+    
     if (data.success && data.data.length > 0) {
       const list = data.data;
       
@@ -194,14 +203,17 @@ async function openJobs(id, name) {
 
       // Hitung total motor unik berdasarkan plat nomor
       const uniquePlates = new Set(list.map(j => (j.license_plate || '').replace(/\s+/g, '').toUpperCase()).filter(p => p !== ''));
-      document.getElementById('totalMotorDisplay').textContent = `${uniquePlates.size} motor (${list.length} kali servis)`;
+      
+      elMotor.textContent = `${uniquePlates.size} Motor`;
+      elServisDetail.textContent = `${list.length} kali servis`;
 
       // Hitung total nilai pekerjaan kotor (gross)
       const totalWagesGross = list.reduce((sum, j) => sum + parseFloat(j.service_price || 0), 0);
       // Hitung upah komisi bersih (net)
       const totalWagesNet = (totalWagesGross * commRate) / 100;
       
-      document.getElementById('totalWagesDisplay').textContent = `${formatRp(totalWagesNet)} (Komisi ${commRate}% dari ${formatRp(totalWagesGross)} kotor)`;
+      elWages.textContent = formatRp(totalWagesNet);
+      elWagesDetail.textContent = `Komisi ${commRate}% dari ${formatRp(totalWagesGross)} kotor`;
 
       document.getElementById('jobsTableBody').innerHTML = list.map((j, i) => {
         const tgl = new Date(j.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -211,15 +223,17 @@ async function openJobs(id, name) {
             <td>${tgl}</td>
             <td><strong>${escHtml(j.invoice_number)}</strong></td>
             <td>${escHtml(j.customer_name || 'Pelanggan Umum')}</td>
-            <td><span class="code-badge" style="background:#1a1a2e; color:#fff; font-weight:800; font-size:11px;">${escHtml(j.license_plate || '-')}</span></td>
+            <td><span class="code-badge" style="background:#1e293b; color:#ffffff; font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; border:1px solid #475569; letter-spacing:0.5px; display:inline-block; white-space:nowrap;">${escHtml(j.license_plate || '-')}</span></td>
             <td>${escHtml(j.service_name)}</td>
-            <td style="text-align:right; font-weight:700; color:#27ae60;">${formatRp(j.service_price)}</td>
+            <td style="text-align:right; font-weight:700; color:#10b981;">${formatRp(j.service_price)}</td>
           </tr>
         `;
       }).join('');
     } else {
-      document.getElementById('totalMotorDisplay').textContent = '0';
-      document.getElementById('totalWagesDisplay').textContent = 'Rp 0';
+      elMotor.textContent = '0 Motor';
+      elServisDetail.textContent = '0 kali servis';
+      elWages.textContent = 'Rp 0';
+      elWagesDetail.textContent = 'Komisi 0% dari Rp 0 kotor';
       document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Mekanik ini belum pernah menangani servis.</td></tr>';
     }
   } catch (err) {

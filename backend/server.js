@@ -23,22 +23,15 @@ const userRoutes = require("./routes/userRoutes");
 const reminderRoutes = require("./routes/reminderRoutes");
 
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Konfigurasi CORS dengan pembatasan domain aman di produksi
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'];
-
+// Konfigurasi CORS yang dinamis untuk menghindari pemblokiran di produksi/development
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1 && !allowedOrigins.includes('*')) {
-      const msg = 'Akses CORS ditolak oleh kebijakan keamanan Motodoct.';
-      return callback(new Error(msg), false);
-    }
+    // Mengizinkan semua origin secara dinamis
     return callback(null, true);
   },
   credentials: true
@@ -56,6 +49,16 @@ app.get("/", (req, res) => {
 
 // Jalur statis untuk halaman HTML di /pages
 app.use("/pages", express.static(path.join(__dirname, "../frontend/pages")));
+
+// Catch-all: Jika user mengakses /dashboard.html, /transaksi.html, dll langsung
+// tanpa prefix /pages/, sajikan dari folder pages/ secara otomatis
+app.get("/:page.html", (req, res, next) => {
+  const pagePath = path.join(__dirname, "../frontend/pages", req.params.page + ".html");
+  if (fs.existsSync(pagePath)) {
+    return res.sendFile(pagePath);
+  }
+  next();
+});
 
 // Health check API
 app.get("/api/health", (req, res) => {
@@ -166,6 +169,75 @@ app.listen(PORT, async () => {
     }
   } catch (err) {
     console.error("❌ Gagal memverifikasi/migrasi tabel reminder_templates:", err.message);
+  }
+
+  // Auto-create expenses table if it doesn't exist
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        description VARCHAR(255) NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    );
+    console.log("✅ Tabel expenses terverifikasi!");
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi tabel expenses:", err.message);
+  }
+
+  // Auto-create saved_carts table if it doesn't exist
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS saved_carts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        license_plate VARCHAR(20) NOT NULL,
+        customer_name VARCHAR(100) DEFAULT NULL,
+        cart_data TEXT NOT NULL,
+        mechanic_id INT DEFAULT NULL,
+        note VARCHAR(255) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (mechanic_id) REFERENCES mechanics(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    );
+    console.log("✅ Tabel saved_carts terverifikasi!");
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi tabel saved_carts:", err.message);
+  }
+
+  // Verify and add missing columns dynamically in a non-destructive way
+  try {
+    // 1. users.plain_password
+    const [userCols] = await db.execute("SHOW COLUMNS FROM users LIKE 'plain_password'");
+    if (userCols.length === 0) {
+      await db.execute("ALTER TABLE users ADD COLUMN plain_password VARCHAR(255) DEFAULT NULL");
+      console.log("🛠️  Kolom plain_password berhasil ditambahkan ke tabel users!");
+    }
+
+    // 2. mechanics.commission_rate
+    const [mechCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'commission_rate'");
+    if (mechCols.length === 0) {
+      await db.execute("ALTER TABLE mechanics ADD COLUMN commission_rate DECIMAL(5,2) NOT NULL DEFAULT 35.00");
+      console.log("🛠️  Kolom commission_rate berhasil ditambahkan ke tabel mechanics!");
+    }
+
+    // 3. transactions.customer_name & license_plate
+    const [txCustCols] = await db.execute("SHOW COLUMNS FROM transactions LIKE 'customer_name'");
+    if (txCustCols.length === 0) {
+      await db.execute("ALTER TABLE transactions ADD COLUMN customer_name VARCHAR(100) DEFAULT NULL");
+      console.log("🛠️  Kolom customer_name berhasil ditambahkan ke tabel transactions!");
+    }
+
+    const [txPlateCols] = await db.execute("SHOW COLUMNS FROM transactions LIKE 'license_plate'");
+    if (txPlateCols.length === 0) {
+      await db.execute("ALTER TABLE transactions ADD COLUMN license_plate VARCHAR(20) DEFAULT NULL");
+      console.log("🛠️  Kolom license_plate berhasil ditambahkan ke tabel transactions!");
+    }
+
+    console.log("✅ Kolom database tambahan terverifikasi!");
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi kolom tambahan:", err.message);
   }
 
   // Cek stok setiap hari jam 08:00 WIB menggunakan node-cron

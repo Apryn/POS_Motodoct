@@ -24,15 +24,16 @@ loginForm.addEventListener("submit", async (e) => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       
-      // Role defaults mapping
+      // Role defaults mapping dengan penyesuaian path dinamis
+      const basePath = window.location.pathname.includes('/pages/') ? '' : 'pages/';
       const roleDefaults = {
-        admin: 'dashboard.html',
-        kasir: 'transaksi.html',
-        gudang: 'sparepart.html',
-        owner: 'dashboard.html'
+        admin: basePath + 'dashboard.html',
+        kasir: basePath + 'transaksi.html',
+        gudang: basePath + 'sparepart.html',
+        owner: basePath + 'dashboard.html'
       };
       
-      window.location.href = roleDefaults[data.user.role] || 'dashboard.html';
+      window.location.href = roleDefaults[data.user.role] || (basePath + 'dashboard.html');
     } else {
       errorMsg.textContent = "⚠️ " + (data.message || "Username atau password salah!");
       errorMsg.classList.remove("hidden");
