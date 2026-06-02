@@ -522,7 +522,9 @@ body {
   border-radius: 14px;
   width: 360px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
 
@@ -532,16 +534,23 @@ body {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
 }
 .struk-header h3 { font-size: 15px; color: #1a1a2e; }
 
-.struk-content { padding: 20px; }
+.struk-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
 
 .struk-footer {
   display: flex;
   gap: 8px;
   padding: 14px 20px;
   border-top: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fafafa;
 }
 
 .btn-print-struk {

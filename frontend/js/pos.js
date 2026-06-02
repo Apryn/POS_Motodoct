@@ -166,14 +166,14 @@ function addToCartById(id, type) {
       }
       existing.qty++;
     } else {
-      cart.push({ id, type: 'sparepart', name: item.name, price: item.price, qty: 1, maxQty: item.stock });
+      cart.push({ id, type: 'sparepart', name: item.name, code: item.code || '-', price: item.price, qty: 1, maxQty: item.stock });
     }
   } else {
     const item = services.find(s => s.id === id);
     if (!item) return;
     const existing = cart.find(c => c.id === id && c.type === 'servis');
     if (existing) return; // servis tidak duplikat
-    cart.push({ id, type: 'servis', name: item.name, price: item.price, qty: 1, mechanic_id: null });
+    cart.push({ id, type: 'servis', name: item.name, code: '-', price: item.price, qty: 1, mechanic_id: null });
   }
   renderCart();
 }
@@ -642,114 +642,231 @@ function showStruk(trxData, total, subtotal, discountAmt) {
     if (foundM) mechName = foundM.name;
   }
 
-  const itemsHtml = cart.map(i => {
+  const isLong = cart.length > 5;
+  const minRows = isLong ? 0 : 5;
+  const containerHeightCss = isLong 
+    ? `height: auto;` 
+    : `height: 380px;`;
+  const printHeightCss = isLong 
+    ? `height: auto !important; min-height: auto !important; display: block !important;` 
+    : `height: 12.0cm !important; min-height: 12.0cm !important; display: flex !important;`;
+
+  let rowsHtml = '';
+  cart.forEach((i, idx) => {
     const typeLabel = i.type === 'servis' ? ' (Servis)' : '';
-    return `
-    <tr style="font-family:'Courier New', Courier, monospace;">
-      <td style="padding: 4px 0; vertical-align: top;">${escHtml(i.name)}${typeLabel}</td>
-      <td style="padding: 4px 0; text-align: center; vertical-align: top;">${i.qty}</td>
-      <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(i.price)}</td>
-      <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(i.price * i.qty)}</td>
+    const itemCode = i.code || '-';
+    rowsHtml += `
+    <tr style="font-family:'Courier New', Courier, monospace; height: 22px;">
+      <td style="padding: 1px 0; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${idx + 1}</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${escHtml(itemCode)}">${escHtml(itemCode)}</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;" title="${escHtml(i.name)}${typeLabel}">${escHtml(i.name)}${typeLabel}</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000;">N/A</td>
+      <td style="padding: 1px 4px; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${i.qty}</td>
+      <td style="padding: 1px 4px; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price)}</td>
+      <td style="padding: 1px 0; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price * i.qty)}</td>
     </tr>
     `;
-  }).join('');
+  });
+  for (let idx = cart.length; idx < minRows; idx++) {
+    rowsHtml += `
+    <tr style="font-family:'Courier New', Courier, monospace; height: 22px;">
+      <td style="padding: 1px 0; text-align: center; border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+    </tr>
+    `;
+  }
+
+  const discountPct = subtotal > 0 ? Math.round((discountAmt / subtotal) * 100) : 0;
 
   let contactHtml = '';
   if (cfg.shopWA) contactHtml += `WA: ${escHtml(cfg.shopWA)} `;
   if (cfg.shopIG) contactHtml += `IG: ${escHtml(cfg.shopIG)}`;
-  if (contactHtml) contactHtml = `<div style="font-size: 11px; margin-bottom: 4px;">${contactHtml}</div>`;
+  if (contactHtml) contactHtml = `<div style="font-size: 11px; margin-bottom: 2px;">${contactHtml}</div>`;
 
   document.getElementById('strukContent').innerHTML = `
-    <div style="font-family:'Courier New', Courier, monospace; color:#000; font-size:12px; line-height:1.4; max-width:700px; margin:0 auto;">
-      <!-- Header -->
-      <div style="text-align:center; margin-bottom:12px;">
-        <strong style="font-size:18px; text-transform:uppercase; letter-spacing:1px;">${escHtml(cfg.shopName)}</strong><br>
-        <span style="font-size:12px;">${escHtml(cfg.shopSlogan)}</span><br>
-        ${contactHtml}
+    <style>
+      .receipt-container {
+        font-family: 'Courier New', Courier, monospace;
+        color: #000;
+        font-size: 13px;
+        line-height: 1.3;
+        box-sizing: border-box;
+        width: 770px;
+        max-width: 100%;
+        ${containerHeightCss}
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: #fff;
+        padding: 8px 12px;
+        margin: 5px auto;
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      @page {
+        size: auto;
+        margin: 0.6cm 1.2cm 0 1.2cm;
+      }
+      @media print {
+        body {
+          width: 24.1cm !important;
+        }
+        .receipt-container {
+          width: 20.5cm !important;
+          ${printHeightCss}
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          page-break-after: always !important;
+          break-after: page !important;
+          padding: 2mm 0 !important;
+          box-sizing: border-box !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: space-between !important;
+        }
+        tr {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        .bottom-section-container {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+      }
+    </style>
+    
+    <div class="receipt-container">
+      <div>
+        <!-- Header (Logo on Left, Metadata on Right) -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+          <tr>
+            <!-- Left side: Shop Logo Box & Slogan -->
+            <td style="width: 50%; vertical-align: top;">
+              <div style="border: 2px solid #000; padding: 2px 8px; display: inline-block; font-weight: bold; font-size: 19px; letter-spacing: 1px; text-transform: uppercase;">
+                ${escHtml(cfg.shopName)}
+              </div>
+              <div style="font-size: 11px; margin-top: 2px; line-height: 1.1;">
+                ${escHtml(cfg.shopSlogan)}<br>
+                ${contactHtml}
+              </div>
+            </td>
+            <!-- Right side: Metadata Grid -->
+            <td style="width: 50%; vertical-align: top;">
+              <table style="font-size: 12px; font-family: 'Courier New', Courier, monospace; border-collapse: collapse; margin-left: auto; text-align: left;">
+                <tr>
+                  <td style="padding: 1px 0; width: 95px; font-weight: bold;">NO. FAKTUR</td>
+                  <td style="padding: 1px 4px; font-weight: bold;">:</td>
+                  <td style="padding: 1px 0; font-weight: bold;">${trxData.invoice_number}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 1px 0;">TANGGAL</td>
+                  <td style="padding: 1px 4px;">:</td>
+                  <td style="padding: 1px 0;">${now.toLocaleDateString('id-ID')} WIB</td>
+                </tr>
+                <tr>
+                  <td style="padding: 1px 0;">KEPADA YTH</td>
+                  <td style="padding: 1px 4px;">:</td>
+                  <td style="padding: 1px 0; font-weight: bold; text-transform: uppercase;">${escHtml(custName)} (${escHtml(custPlate)})</td>
+                </tr>
+                <tr>
+                  <td style="padding: 1px 0;">MEKANIK</td>
+                  <td style="padding: 1px 4px;">:</td>
+                  <td style="padding: 1px 0; text-transform: uppercase;">${escHtml(mechName || '-')}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Table of items -->
+        <table style="width: 100%; font-size: 13px; font-family: 'Courier New', Courier, monospace; border-collapse: collapse; margin-top: 4px;">
+          <thead>
+            <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold;">
+              <th style="padding: 3px 0; text-align: center; width: 4%;">No</th>
+              <th style="padding: 3px 4px; text-align: left; width: 20%;">No Part Number</th>
+              <th style="padding: 3px 4px; text-align: left; width: 36%;">Nama Barang / Layanan</th>
+              <th style="padding: 3px 4px; text-align: left; width: 8%;">Merek</th>
+              <th style="padding: 3px 4px; text-align: center; width: 6%;">Qty</th>
+              <th style="padding: 3px 4px; text-align: right; width: 13%;">Harga</th>
+              <th style="padding: 3px 0; text-align: right; width: 13%;">Jlh Harga</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
       </div>
       
-      <!-- Monospace line divider -->
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-      
-      <!-- Metadata Grid -->
-      <table style="width:100%; font-size:12px; font-family:'Courier New', Courier, monospace; margin-bottom:8px; border-collapse:collapse;">
-        <tr>
-          <td style="width:14%; padding:2px 0; vertical-align:top;">No. Invoice</td>
-          <td style="width:36%; padding:2px 0; vertical-align:top;">: <strong>${trxData.invoice_number}</strong></td>
-          <td style="width:14%; padding:2px 0; vertical-align:top;">Tanggal</td>
-          <td style="width:36%; padding:2px 0; vertical-align:top;">: ${now.toLocaleString('id-ID')} WIB</td>
-        </tr>
-        <tr>
-          <td style="padding:2px 0; vertical-align:top;">Pelanggan</td>
-          <td style="padding:2px 0; vertical-align:top;">: ${escHtml(custName)}</td>
-          <td style="padding:2px 0; vertical-align:top;">Kasir</td>
-          <td style="padding:2px 0; vertical-align:top;">: ${escHtml(user.username || 'Admin')}</td>
-        </tr>
-        <tr>
-          <td style="padding:2px 0; vertical-align:top;">No. Plat</td>
-          <td style="padding:2px 0; vertical-align:top;">: <strong>${escHtml(custPlate)}</strong></td>
-          <td style="padding:2px 0; vertical-align:top;">Mekanik</td>
-          <td style="padding:2px 0; vertical-align:top;">: ${escHtml(mechName || '-')}</td>
-        </tr>
-      </table>
-      
-      <!-- Monospace line divider -->
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-      
-      <!-- Items Table -->
-      <table style="width:100%; font-size:12px; font-family:'Courier New', Courier, monospace; border-collapse:collapse; margin-bottom:8px;">
-        <thead>
-          <tr style="border-bottom:1px dashed #000;">
-            <th style="text-align:left; padding:4px 0; font-weight:bold;">Nama Layanan / Part</th>
-            <th style="text-align:center; padding:4px 0; width:10%; font-weight:bold;">Qty</th>
-            <th style="text-align:right; padding:4px 0; width:22%; font-weight:bold;">Harga</th>
-            <th style="text-align:right; padding:4px 0; width:22%; font-weight:bold;">Total</th>
+      <div class="bottom-section-container">
+        <!-- Solid line separating table from bottom -->
+        <div style="border-top: 1px solid #000; margin-top: 2px; margin-bottom: 6px;"></div>
+        
+        <!-- Bottom Section -->
+        <table style="width: 100%; font-family: 'Courier New', Courier, monospace; font-size: 13px; border-collapse: collapse;">
+          <tr>
+            <!-- Bottom Left: Signatures & Retur Box -->
+            <td style="width: 55%; vertical-align: top; padding-right: 20px;">
+              <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 11px;">
+                <tr>
+                  <td style="width: 50%; padding-bottom: 20px;">DICEK OLEH,</td>
+                  <td style="width: 50%; padding-bottom: 20px;">DITERIMA OLEH,</td>
+                </tr>
+                <tr>
+                  <td>( ______________ )</td>
+                  <td>( ______________ )</td>
+                </tr>
+              </table>
+              
+              <!-- Retur Box -->
+              <div style="border: 1px solid #000; padding: 3px; margin-top: 6px; font-size: 10px; line-height: 1.1; text-align: center; font-style: italic;">
+                Barang2 AHM / HGP / ASLI yang sudah dibeli<br>tidak dapat di-RETUR. THANKS
+              </div>
+            </td>
+            
+            <!-- Bottom Right: Calculations -->
+            <td style="width: 45%; vertical-align: top;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                <tr>
+                  <td style="padding: 1px 0;">Subtotal</td>
+                  <td style="padding: 1px 0; text-align: right;">${rupiah(subtotal)}</td>
+                </tr>
+                ${discountAmt > 0 ? `
+                <tr>
+                  <td style="padding: 1px 0;">Diskon (${discountPct}%)</td>
+                  <td style="padding: 1px 0; text-align: right;">- ${rupiah(discountAmt)}</td>
+                </tr>` : ''}
+                <tr style="font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000;">
+                  <td style="padding: 3px 0;">TOTAL AKHIR</td>
+                  <td style="padding: 3px 0; text-align: right; font-size: 15px;">${rupiah(total)}</td>
+                </tr>
+                ${paymentMethod === 'cash' ? `
+                <tr>
+                  <td style="padding: 1px 0;">Bayar (Tunai)</td>
+                  <td style="padding: 1px 0; text-align: right;">${rupiah(cash)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 1px 0;">Kembalian</td>
+                  <td style="padding: 1px 0; text-align: right;">${rupiah(change)}</td>
+                </tr>` : `
+                <tr>
+                  <td style="padding: 1px 0;">Metode</td>
+                  <td style="padding: 1px 0; text-align: right; text-transform: uppercase;">${paymentMethod}</td>
+                </tr>`}
+              </table>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-      </table>
-      
-      <!-- Monospace line divider -->
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-      
-      <!-- Calculation Summary -->
-      <table style="width:50%; margin-left:auto; font-size:12px; font-family:'Courier New', Courier, monospace; border-collapse:collapse;">
-        <tr>
-          <td style="padding:2px 0; text-align:left;">Subtotal</td>
-          <td style="padding:2px 0; text-align:right;">${rupiah(subtotal)}</td>
-        </tr>
-        ${discountAmt > 0 ? `
-        <tr>
-          <td style="padding:2px 0; text-align:left;">Diskon (${document.getElementById('discountPctLabel')?.textContent?.replace(/[()]/g, '') || ''})</td>
-          <td style="padding:2px 0; text-align:right;">- ${rupiah(discountAmt)}</td>
-        </tr>` : ''}
-        <tr style="font-weight:bold; border-top:1px dashed #000; border-bottom:1px dashed #000;">
-          <td style="padding:4px 0; text-align:left;">TOTAL AKHIR</td>
-          <td style="padding:4px 0; text-align:right;">${rupiah(total)}</td>
-        </tr>
-        ${paymentMethod === 'cash' ? `
-        <tr>
-          <td style="padding:2px 0; text-align:left;">Bayar (Tunai)</td>
-          <td style="padding:2px 0; text-align:right;">${rupiah(cash)}</td>
-        </tr>
-        <tr>
-          <td style="padding:2px 0; text-align:left;">Kembalian</td>
-          <td style="padding:2px 0; text-align:right;">${rupiah(change)}</td>
-        </tr>` : `
-        <tr>
-          <td style="padding:2px 0; text-align:left;">Metode</td>
-          <td style="padding:2px 0; text-align:right; text-transform:uppercase;">${paymentMethod}</td>
-        </tr>`}
-      </table>
-      
-      <!-- Monospace line divider -->
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-      
-      <!-- Footer Slogan -->
-      <div style="text-align:center; font-size:11px; margin-top:8px; font-style:italic;">
-        ${escHtml(cfg.shopFooter)}
+        </table>
+        
+        <!-- Footer Slogan -->
+        <div style="text-align: center; font-size: 11px; margin-top: 4px; font-style: italic; border-top: 1px dashed #000; padding-top: 2px;">
+          ${escHtml(cfg.shopFooter)}
+        </div>
       </div>
     </div>
   `;
@@ -769,29 +886,12 @@ function printStruk() {
       <head>
         <title>Invoice Motodoct - Print</title>
         <style>
-          @media print {
-            @page {
-              size: auto;
-              margin: 10mm 12mm;
-            }
-            body {
-              background: #fff;
-              color: #000;
-            }
-          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
-            font-family: 'Courier New', Courier, monospace;
-            width: 100%;
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 10px;
-            box-sizing: border-box;
             background: #fff;
             color: #000;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
+            margin: 0;
+            padding: 0;
           }
         </style>
       </head>

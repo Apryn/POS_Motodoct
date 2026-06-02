@@ -117,7 +117,7 @@ exports.getTransactionById = async (req, res) => {
         `, [id]);
         if (!trx) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
         const [spareparts] = await db.execute(`
-            SELECT ts.*, s.name as sparepart_name FROM transaction_spareparts ts
+            SELECT ts.*, s.name as sparepart_name, s.code as sparepart_code FROM transaction_spareparts ts
             JOIN spareparts s ON ts.sparepart_id = s.id WHERE ts.transaction_id = ?
         `, [id]);
         const [services] = await db.execute(`

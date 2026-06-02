@@ -397,27 +397,34 @@ function printDetailStruk() {
 
   const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  let itemsHtml = '';
+  const allItems = [];
   if (data.spareparts?.length) {
-    itemsHtml += data.spareparts.map(s => `
-      <tr style="font-family:'Courier New', Courier, monospace;">
-        <td style="padding: 4px 0; vertical-align: top;">${escHtml(s.sparepart_name)}</td>
-        <td style="padding: 4px 0; text-align: center; vertical-align: top;">${s.quantity}</td>
-        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.price)}</td>
-        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.subtotal)}</td>
-      </tr>
-    `).join('');
+    data.spareparts.forEach(s => {
+      allItems.push({
+        code: s.sparepart_code || '-',
+        name: s.sparepart_name,
+        qty: s.quantity,
+        price: s.price,
+        isService: false
+      });
+    });
   }
   if (data.services?.length) {
-    itemsHtml += data.services.map(s => `
-      <tr style="font-family:'Courier New', Courier, monospace;">
-        <td style="padding: 4px 0; vertical-align: top;">${escHtml(s.service_name)} (Servis)</td>
-        <td style="padding: 4px 0; text-align: center; vertical-align: top;">1</td>
-        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.price)}</td>
-        <td style="padding: 4px 0; text-align: right; vertical-align: top;">${rupiah(s.price)}</td>
-      </tr>
-    `).join('');
+    data.services.forEach(s => {
+      allItems.push({
+        code: '-',
+        name: s.service_name + ' (Servis)',
+        qty: 1,
+        price: s.price,
+        isService: true
+      });
+    });
   }
+
+  const subtotal = allItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const total = parseFloat(data.total_amount) || subtotal;
+  const discountAmt = Math.max(0, subtotal - total);
+  const discountPct = subtotal > 0 ? Math.round((discountAmt / subtotal) * 100) : 0;
 
   let mechName = '-';
   if (data.services?.length) {
@@ -425,113 +432,239 @@ function printDetailStruk() {
     if (mechs.length) mechName = mechs.join(', ');
   }
 
+  const isLong = allItems.length > 5;
+  const minRows = isLong ? 0 : 5;
+  const containerHeightCss = isLong 
+    ? `height: auto;` 
+    : `height: 380px;`;
+  const printHeightCss = isLong 
+    ? `height: auto !important; min-height: auto !important; display: block !important;` 
+    : `height: 12.0cm !important; min-height: 12.0cm !important; display: flex !important;`;
+  let rowsHtml = '';
+  allItems.forEach((i, idx) => {
+    rowsHtml += `
+    <tr style="font-family:'Courier New', Courier, monospace; height: 22px;">
+      <td style="padding: 1px 0; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${idx + 1}</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${escHtml(i.code)}">${escHtml(i.code)}</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;" title="${escHtml(i.name)}">${escHtml(i.name)}</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000;">N/A</td>
+      <td style="padding: 1px 4px; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${i.qty}</td>
+      <td style="padding: 1px 4px; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price)}</td>
+      <td style="padding: 1px 0; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price * i.qty)}</td>
+    </tr>
+    `;
+  });
+  for (let idx = allItems.length; idx < minRows; idx++) {
+    rowsHtml += `
+    <tr style="font-family:'Courier New', Courier, monospace; height: 22px;">
+      <td style="padding: 1px 0; text-align: center; border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+      <td style="border-bottom: 1px dashed #000;">&nbsp;</td>
+    </tr>
+    `;
+  }
+
+  // Load shop settings from localStorage
+  const savedSettings = localStorage.getItem('receipt_settings');
+  let shopName = 'MOTODOCT';
+  let shopSlogan = 'Bengkel Motor Terpercaya';
+  let shopFooter = 'Terima kasih atas kunjungan Anda!';
+  let shopWA = '';
+  let shopIG = '';
+  if (savedSettings) {
+    try {
+      const cfg = JSON.parse(savedSettings);
+      if (cfg.shopName) shopName = cfg.shopName;
+      if (cfg.shopSlogan) shopSlogan = cfg.shopSlogan;
+      if (cfg.shopFooter) shopFooter = cfg.shopFooter;
+      if (cfg.shopWA) shopWA = cfg.shopWA;
+      if (cfg.shopIG) shopIG = cfg.shopIG;
+    } catch (e) {}
+  }
+
+  let contactHtml = '';
+  if (shopWA) contactHtml += `WA: ${escHtml(shopWA)} `;
+  if (shopIG) contactHtml += `IG: ${escHtml(shopIG)}`;
+  if (contactHtml) contactHtml = `<div style="font-size: 11px; margin-bottom: 2px;">${contactHtml}</div>`;
+
   const win = window.open('', '_blank', 'width=800,height=600');
   win.document.write(`
     <html>
       <head>
         <title>Invoice Motodoct - Detail Print</title>
         <style>
-          @media print {
-            @page {
-              size: auto;
-              margin: 10mm 12mm;
-            }
-            body {
-              background: #fff;
-              color: #000;
-            }
-          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
-            font-family: 'Courier New', Courier, monospace;
-            width: 100%;
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 10px;
-            box-sizing: border-box;
             background: #fff;
             color: #000;
-            font-size: 12px;
-            line-height: 1.4;
+            margin: 0;
+            padding: 0;
           }
-          table {
-            width: 100%;
-            border-collapse: collapse;
+          .receipt-container {
+            font-family: 'Courier New', Courier, monospace;
+            color: #000;
+            font-size: 13px;
+            line-height: 1.3;
+            box-sizing: border-box;
+            width: 770px;
+            ${containerHeightCss}
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: #fff;
+            padding: 2mm 0;
+          }
+          @page {
+            size: auto;
+            margin: 0.6cm 1.2cm 0 1.2cm;
+          }
+          @media print {
+            body {
+              width: 24.1cm !important;
+            }
+            .receipt-container {
+              width: 20.5cm !important;
+              ${printHeightCss}
+              margin: 0 !important;
+              padding: 2mm 0 !important;
+              box-sizing: border-box !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .bottom-section-container {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
           }
         </style>
       </head>
       <body onload="window.print(); setTimeout(() => window.close(), 500);">
-        <div style="font-family:'Courier New', Courier, monospace; color:#000; font-size:12px; line-height:1.4; max-width:700px; margin:0 auto;">
-          <!-- Header -->
-          <div style="text-align:center; margin-bottom:12px;">
-            <strong style="font-size:18px; text-transform:uppercase; letter-spacing:1px;">MOTODOCT</strong><br>
-            <span style="font-size:12px;">Bengkel Motor Terpercaya</span><br>
-            <small>${now.toLocaleString('id-ID')} WIB</small>
+        <div class="receipt-container">
+          <div>
+            <!-- Header (Logo on Left, Metadata on Right) -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+              <tr>
+                <!-- Left side: Shop Logo Box & Slogan -->
+                <td style="width: 50%; vertical-align: top;">
+                  <div style="border: 2px solid #000; padding: 2px 8px; display: inline-block; font-weight: bold; font-size: 19px; letter-spacing: 1px; text-transform: uppercase;">
+                    ${escHtml(shopName)}
+                  </div>
+                  <div style="font-size: 11px; margin-top: 2px; line-height: 1.1;">
+                    ${escHtml(shopSlogan)}<br>
+                    ${contactHtml}
+                  </div>
+                </td>
+                <!-- Right side: Metadata Grid -->
+                <td style="width: 50%; vertical-align: top;">
+                  <table style="font-size: 12px; font-family: 'Courier New', Courier, monospace; border-collapse: collapse; margin-left: auto; text-align: left;">
+                    <tr>
+                      <td style="padding: 1px 0; width: 95px; font-weight: bold;">NO. FAKTUR</td>
+                      <td style="padding: 1px 4px; font-weight: bold;">:</td>
+                      <td style="padding: 1px 0; font-weight: bold;">${data.invoice_number}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 1px 0;">TANGGAL</td>
+                      <td style="padding: 1px 4px;">:</td>
+                      <td style="padding: 1px 0;">${now.toLocaleDateString('id-ID')} WIB</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 1px 0;">KEPADA YTH</td>
+                      <td style="padding: 1px 4px;">:</td>
+                      <td style="padding: 1px 0; font-weight: bold; text-transform: uppercase;">${escHtml(data.customer_name || 'Umum')} (${escHtml(data.license_plate || '-')})</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 1px 0;">MEKANIK</td>
+                      <td style="padding: 1px 4px;">:</td>
+                      <td style="padding: 1px 0; text-transform: uppercase;">${escHtml(mechName)}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            
+            <!-- Table of items -->
+            <table style="width: 100%; font-size: 13px; font-family: 'Courier New', Courier, monospace; border-collapse: collapse; margin-top: 4px;">
+              <thead>
+                <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold;">
+                  <th style="padding: 3px 0; text-align: center; width: 4%;">No</th>
+                  <th style="padding: 3px 4px; text-align: left; width: 20%;">No Part Number</th>
+                  <th style="padding: 3px 4px; text-align: left; width: 36%;">Nama Barang / Layanan</th>
+                  <th style="padding: 3px 4px; text-align: left; width: 8%;">Merek</th>
+                  <th style="padding: 3px 4px; text-align: center; width: 6%;">Qty</th>
+                  <th style="padding: 3px 4px; text-align: right; width: 13%;">Harga</th>
+                  <th style="padding: 3px 0; text-align: right; width: 13%;">Jlh Harga</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
           </div>
           
-          <!-- Monospace line divider -->
-          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-          
-          <!-- Metadata Grid -->
-          <table style="width:100%; font-size:12px; font-family:'Courier New', Courier, monospace; margin-bottom:8px; border-collapse:collapse;">
-            <tr>
-              <td style="width:14%; padding:2px 0; vertical-align:top;">No. Invoice</td>
-              <td style="width:36%; padding:2px 0; vertical-align:top;">: <strong>${data.invoice_number}</strong></td>
-              <td style="width:14%; padding:2px 0; vertical-align:top;">Tanggal</td>
-              <td style="width:36%; padding:2px 0; vertical-align:top;">: ${now.toLocaleString('id-ID')} WIB</td>
-            </tr>
-            <tr>
-              <td style="padding:2px 0; vertical-align:top;">Pelanggan</td>
-              <td style="padding:2px 0; vertical-align:top;">: ${escHtml(data.customer_name || 'Umum')}</td>
-              <td style="padding:2px 0; vertical-align:top;">Kasir</td>
-              <td style="padding:2px 0; vertical-align:top;">: ${escHtml(data.username || 'Admin')}</td>
-            </tr>
-            <tr>
-              <td style="padding:2px 0; vertical-align:top;">No. Plat</td>
-              <td style="padding:2px 0; vertical-align:top;">: <strong>${escHtml(data.license_plate || '-')}</strong></td>
-              <td style="padding:2px 0; vertical-align:top;">Mekanik</td>
-              <td style="padding:2px 0; vertical-align:top;">: ${escHtml(mechName)}</td>
-            </tr>
-          </table>
-          
-          <!-- Monospace line divider -->
-          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-          
-          <!-- Items Table -->
-          <table style="width:100%; font-size:12px; font-family:'Courier New', Courier, monospace; border-collapse:collapse; margin-bottom:8px;">
-            <thead>
-              <tr style="border-bottom:1px dashed #000;">
-                <th style="text-align:left; padding:4px 0; font-weight:bold;">Nama Layanan / Part</th>
-                <th style="text-align:center; padding:4px 0; width:10%; font-weight:bold;">Qty</th>
-                <th style="text-align:right; padding:4px 0; width:22%; font-weight:bold;">Harga</th>
-                <th style="text-align:right; padding:4px 0; width:22%; font-weight:bold;">Total</th>
+          <div class="bottom-section-container">
+            <!-- Solid line separating table from bottom -->
+            <div style="border-top: 1px solid #000; margin-top: 2px; margin-bottom: 6px;"></div>
+            
+            <!-- Bottom Section -->
+            <table style="width: 100%; font-family: 'Courier New', Courier, monospace; font-size: 13px; border-collapse: collapse;">
+              <tr>
+                <!-- Bottom Left: Signatures & Retur Box -->
+                <td style="width: 55%; vertical-align: top; padding-right: 20px;">
+                  <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 11px;">
+                    <tr>
+                      <td style="width: 50%; padding-bottom: 20px;">DICEK OLEH,</td>
+                      <td style="width: 50%; padding-bottom: 20px;">DITERIMA OLEH,</td>
+                    </tr>
+                    <tr>
+                      <td>( ______________ )</td>
+                      <td>( ______________ )</td>
+                    </tr>
+                  </table>
+                  
+                  <!-- Retur Box -->
+                  <div style="border: 1px solid #000; padding: 3px; margin-top: 6px; font-size: 10px; line-height: 1.1; text-align: center; font-style: italic;">
+                    Barang2 AHM / HGP / ASLI yang sudah dibeli<br>tidak dapat di-RETUR. THANKS
+                  </div>
+                </td>
+                
+                <!-- Bottom Right: Calculations -->
+                <td style="width: 45%; vertical-align: top;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                    <tr>
+                      <td style="padding: 1px 0;">Subtotal</td>
+                      <td style="padding: 1px 0; text-align: right;">${rupiah(subtotal)}</td>
+                    </tr>
+                    ${discountAmt > 0 ? `
+                    <tr>
+                      <td style="padding: 1px 0;">Diskon (${discountPct}%)</td>
+                      <td style="padding: 1px 0; text-align: right;">- ${rupiah(discountAmt)}</td>
+                    </tr>` : ''}
+                    <tr style="font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000;">
+                      <td style="padding: 3px 0;">TOTAL AKHIR</td>
+                      <td style="padding: 3px 0; text-align: right; font-size: 15px;">${rupiah(total)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 1px 0;">Metode</td>
+                      <td style="padding: 1px 0; text-align: right; text-transform: uppercase;">${data.payment_method || 'CASH'}</td>
+                    </tr>
+                  </table>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
-          
-          <!-- Monospace line divider -->
-          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-          
-          <!-- Calculation Summary -->
-          <table style="width:50%; margin-left:auto; font-size:12px; font-family:'Courier New', Courier, monospace; border-collapse:collapse;">
-            <tr style="font-weight:bold; border-top:1px dashed #000; border-bottom:1px dashed #000;">
-              <td style="padding:4px 0; text-align:left;">TOTAL AKHIR</td>
-              <td style="padding:4px 0; text-align:right;">${rupiah(data.total_amount)}</td>
-            </tr>
-            <tr>
-              <td style="padding:2px 0; text-align:left;">Metode</td>
-              <td style="padding:2px 0; text-align:right; text-transform:uppercase;">${data.payment_method || 'CASH'}</td>
-            </tr>
-          </table>
-          
-          <!-- Monospace line divider -->
-          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-          
-          <!-- Footer Slogan -->
-          <div style="text-align:center; font-size:11px; margin-top:8px; font-style:italic;">
-            Terima kasih atas kunjungan Anda!
+            </table>
+            
+            <!-- Footer Slogan -->
+            <div style="text-align: center; font-size: 11px; margin-top: 4px; font-style: italic; border-top: 1px dashed #000; padding-top: 2px;">
+              ${escHtml(shopFooter)}
+            </div>
           </div>
         </div>
       </body>
