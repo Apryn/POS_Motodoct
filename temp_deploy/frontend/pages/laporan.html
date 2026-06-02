@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <!-- Secure Route Guard & Role Access Control -->
+  <script>
+    (function() {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      const rolePages = {
+        admin: [
+          'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
+          'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
+          'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
+        ],
+        kasir: [
+          'transaksi.html', 'keranjang.html', 'sparepart.html'
+        ],
+        gudang: [
+          'sparepart.html', 'pembelian.html'
+        ],
+        owner: [
+          'dashboard.html', 'sparepart.html', 'pembelian.html', 'pengeluaran.html',
+          'kategori.html', 'servis.html', 'mekanik.html', 'pelanggan.html',
+          'laporan.html', 'notifikasi.html', 'user.html'
+        ]
+      };
+      
+      const roleDefaults = {
+        admin: 'dashboard.html',
+        kasir: 'transaksi.html',
+        gudang: 'sparepart.html',
+        owner: 'dashboard.html'
+      };
+      
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      
+      if (currentPage === 'index.html') {
+        window.location.href = roleDefaults[user.role] || 'login.html';
+        return;
+      }
+      
+      const allowedPages = rolePages[user.role] || [];
+      const isAllowed = allowedPages.some(page => currentPage.includes(page));
+      
+      if (!isAllowed) {
+        alert('Akses Ditolak: Role Anda (' + (user.role || 'user') + ') tidak memiliki izin untuk halaman ini!');
+        window.location.href = roleDefaults[user.role] || 'login.html';
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.sidebar nav a').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href) {
+              const linkPage = href.split('/').pop();
+              const isLinkAllowed = allowedPages.some(page => linkPage.includes(page));
+              if (!isLinkAllowed) {
+                a.style.display = 'none';
+              }
+            }
+          });
+        });
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Laporan - Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/table.css" />
+</head>
+<body>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
+      <a href="keranjang.html" class="nav-item"><i data-lucide="archive"></i><span class="nav-label">Keranjang Tersimpan</span></a>
+      <a href="sparepart.html" class="nav-item"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
+      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
+      <a href="pengeluaran.html" class="nav-item"><i data-lucide="wallet"></i><span class="nav-label">Pengeluaran</span></a>
+      <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
+      <a href="servis.html" class="nav-item"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
+      <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
+      <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
+      <a href="laporan.html" class="nav-item active"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="notifikasi.html" class="nav-item"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
+      <a href="user.html" class="nav-item"><i data-lucide="user-check"></i><span class="nav-label">Manajemen User</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Lap Header -->
+    <div class="lap-header">
+      <div>
+        <h1>Laporan Bengkel</h1>
+        <p>Ringkasan keuangan dan transaksi</p>
+      </div>
+      <div class="lap-header-right">
+        <div class="filter-periode">
+          <span>📅</span>
+          <input type="date" id="dateFrom" />
+          <span>—</span>
+          <input type="date" id="dateTo" />
+        </div>
+        <button class="btn-primary" onclick="applyFilter()">Terapkan</button>
+        <button class="btn-print" onclick="printLaporan()">🖨️ Cetak</button>
+      </div>
+    </div>
+
+    <!-- Lap Stats -->
+    <div class="lap-stats">
+      <div class="lap-card purple">
+        <div class="lap-card-icon">🧾</div>
+        <div>
+          <p>Total Transaksi</p>
+          <h2 id="statTrx">—</h2>
+        </div>
+      </div>
+      <div class="lap-card blue">
+        <div class="lap-card-icon">💰</div>
+        <div>
+          <p>Total Pendapatan</p>
+          <h2 id="statPendapatan">—</h2>
+        </div>
+      </div>
+      <div class="lap-card red">
+        <div class="lap-card-icon">🛒</div>
+        <div>
+          <p>Total Pengeluaran</p>
+          <h2 id="statPengeluaran">—</h2>
+        </div>
+      </div>
+      <div class="lap-card green">
+        <div class="lap-card-icon">📈</div>
+        <div>
+          <p>Laba Kotor</p>
+          <h2 id="statLaba">—</h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lap Tabs -->
+    <div class="lap-tabs">
+      <button class="lap-tab active" data-tab="Pendapatan" onclick="switchTab('Pendapatan')">📈 Pendapatan</button>
+      <button class="lap-tab" data-tab="Biaya" onclick="switchTab('Biaya')">📉 Biaya Operasional</button>
+      <button class="lap-tab" data-tab="Perbandingan" onclick="switchTab('Perbandingan')">📊 Perbandingan</button>
+    </div>
+
+    <!-- Tab: Pendapatan -->
+    <div class="chart-box" id="tabPendapatan">
+      <h3>Pendapatan Harian</h3>
+      <canvas id="chartPendapatan" height="80"></canvas>
+    </div>
+
+    <!-- Tab: Biaya Operasional -->
+    <div class="chart-box hidden" id="tabBiaya">
+      <h3>Biaya Operasional Harian</h3>
+      <canvas id="chartBiaya" height="80"></canvas>
+    </div>
+
+    <!-- Tab: Perbandingan -->
+    <div class="chart-box hidden" id="tabPerbandingan">
+      <h3>Perbandingan Pendapatan vs Pengeluaran</h3>
+      <canvas id="chartPerbandingan" height="80"></canvas>
+    </div>
+
+    <!-- Bottom: Donut + Bar Harian -->
+    <div class="lap-bottom">
+      <div class="chart-box">
+        <h3>Metode Pembayaran</h3>
+        <div class="donut-wrap">
+          <canvas id="chartDonut" width="160" height="160" style="max-width:160px;max-height:160px"></canvas>
+          <div class="donut-legend" id="donutLegend">
+            <div class="legend-item" style="color:#bbb;font-size:12px">Belum ada data</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h3>Transaksi Harian</h3>
+        <canvas id="chartTrxHarian" height="120"></canvas>
+      </div>
+    </div>
+
+    <!-- Transaction Table -->
+    <div class="table-wrap" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f0f0f0">
+        <h3 style="font-size:14px;color:#333">Riwayat Transaksi</h3>
+        <button class="btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Invoice</th>
+            <th>Tanggal</th>
+            <th>Pelanggan</th>
+            <th>Metode</th>
+            <th>Total</th>
+            <th>Kasir</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="trxTableBody">
+          <tr><td colspan="7" class="empty-state">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../js/laporan.js"></script>
+
+  <!-- Modal Detail Transaksi -->
+  <div class="modal hidden" id="modalDetail" style="z-index:1000;">
+    <div class="modal-box" style="max-width:520px;max-height:85vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3>Detail Transaksi</h3>
+        <button class="modal-close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="modal-body" id="detailContent"></div>
+      <div class="modal-footer">
+        <button class="btn-print-struk" id="btnPrintDetailStruk" onclick="printDetailStruk()" style="padding: 6px 12px; background: #27ae60; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: none;">🖨️ Cetak Struk 58mm</button>
+        <button class="btn-secondary" onclick="closeDetail()">Tutup</button>
+      </div>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
+
+
+
+

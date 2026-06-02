@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <!-- Secure Route Guard & Role Access Control -->
+  <script>
+    (function() {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      const rolePages = {
+        admin: [
+          'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
+          'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
+          'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
+        ],
+        kasir: [
+          'transaksi.html', 'keranjang.html', 'sparepart.html'
+        ],
+        gudang: [
+          'sparepart.html', 'pembelian.html'
+        ],
+        owner: [
+          'dashboard.html', 'sparepart.html', 'pembelian.html', 'pengeluaran.html',
+          'kategori.html', 'servis.html', 'mekanik.html', 'pelanggan.html',
+          'laporan.html', 'notifikasi.html', 'user.html'
+        ]
+      };
+      
+      const roleDefaults = {
+        admin: 'dashboard.html',
+        kasir: 'transaksi.html',
+        gudang: 'sparepart.html',
+        owner: 'dashboard.html'
+      };
+      
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      
+      if (currentPage === 'index.html') {
+        window.location.href = roleDefaults[user.role] || 'login.html';
+        return;
+      }
+      
+      const allowedPages = rolePages[user.role] || [];
+      const isAllowed = allowedPages.some(page => currentPage.includes(page));
+      
+      if (!isAllowed) {
+        alert('Akses Ditolak: Role Anda (' + (user.role || 'user') + ') tidak memiliki izin untuk halaman ini!');
+        window.location.href = roleDefaults[user.role] || 'login.html';
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.sidebar nav a').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href) {
+              const linkPage = href.split('/').pop();
+              const isLinkAllowed = allowedPages.some(page => linkPage.includes(page));
+              if (!isLinkAllowed) {
+                a.style.display = 'none';
+              }
+            }
+          });
+        });
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pengeluaran Operasional — Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/table.css" />
+</head>
+<body>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
+      <a href="keranjang.html" class="nav-item"><i data-lucide="archive"></i><span class="nav-label">Keranjang Tersimpan</span></a>
+      <a href="sparepart.html" class="nav-item"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
+      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
+      <a href="pengeluaran.html" class="nav-item active"><i data-lucide="wallet"></i><span class="nav-label">Pengeluaran</span></a>
+      <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
+      <a href="servis.html" class="nav-item"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
+      <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
+      <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
+      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="notifikasi.html" class="nav-item"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
+      <a href="user.html" class="nav-item"><i data-lucide="user-check"></i><span class="nav-label">Manajemen User</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-left">
+          <h1>Pengeluaran Operasional</h1>
+          <p>Pencatatan biaya harian bengkel (listrik, air, konsumsi, sewa, dll.)</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-badge">
+          <div class="user-avatar-sm" id="userAvatar">A</div>
+          <span class="user-badge-name" id="welcomeText">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom:20px;">
+      <div class="stat-card blue">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Pengeluaran Hari Ini</span>
+          <div class="stat-card-icon">💸</div>
+        </div>
+        <div class="stat-card-value" id="statHariIni">Rp 0</div>
+        <div class="stat-card-sub">operasional tercatat hari ini</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Total Pengeluaran (Bulan Ini)</span>
+          <div class="stat-card-icon">📊</div>
+        </div>
+        <div class="stat-card-value" id="statBulanIni">Rp 0</div>
+        <div class="stat-card-sub">total pengeluaran operasional</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input type="text" id="searchInput" placeholder="🔍 Cari deskripsi biaya..." oninput="filterTable()" />
+        <select id="filterKategori" onchange="filterTable()">
+          <option value="">Semua Kategori</option>
+          <option value="Listrik & Air">Listrik & Air</option>
+          <option value="Sewa Tempat">Sewa Tempat</option>
+          <option value="Konsumsi">Konsumsi</option>
+          <option value="Alat Bengkel">Alat Bengkel</option>
+          <option value="Gaji & Bonus">Gaji & Bonus</option>
+          <option value="Lain-lain">Lain-lain</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="openModal()">+ Tambah Pengeluaran</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 80px;">No</th>
+            <th>Tanggal</th>
+            <th>Kategori</th>
+            <th>Deskripsi Biaya</th>
+            <th>Jumlah (Rp)</th>
+            <th style="width: 200px; text-align: center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="expenseTableBody">
+          <tr><td colspan="6" class="empty-state">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Modal Tambah/Edit -->
+  <div class="modal hidden" id="modalExpense">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle">Tambah Pengeluaran</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <form id="formExpense" onsubmit="event.preventDefault(); saveExpense()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Kategori Pengeluaran <span class="required">*</span></label>
+            <select id="fieldKategori" required>
+              <option value="">-- Pilih Kategori --</option>
+              <option value="Listrik & Air">Listrik & Air</option>
+              <option value="Sewa Tempat">Sewa Tempat</option>
+              <option value="Konsumsi">Konsumsi</option>
+              <option value="Alat Bengkel">Alat Bengkel</option>
+              <option value="Gaji & Bonus">Gaji & Bonus</option>
+              <option value="Lain-lain">Lain-lain</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Deskripsi Biaya <span class="required">*</span></label>
+            <input type="text" id="fieldDeskripsi" placeholder="Contoh: Bayar token listrik bengkel, Galon air mineral" required />
+          </div>
+          <div class="form-group">
+            <label>Jumlah Pengeluaran (Rp) <span class="required">*</span></label>
+            <input type="number" id="fieldJumlah" placeholder="0" min="1" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Batal</button>
+          <button type="submit" class="btn-primary" id="btnSaveExpense">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Hapus -->
+  <div class="modal hidden" id="modalDelete">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3>Hapus Pengeluaran</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Yakin ingin menghapus catatan biaya <strong id="deleteItemName"></strong>?</p>
+        <p style="font-size:12px;color:#e74c3c;margin-top:4px;">Tindakan ini tidak dapat dibatalkan.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeDeleteModal()">Batal</button>
+        <button class="btn-danger" onclick="confirmDelete()">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="../js/pengeluaran.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
