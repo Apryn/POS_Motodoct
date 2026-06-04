@@ -21,6 +21,53 @@ exports.getSummary = async (req, res) => {
             FROM expenses WHERE DATE(created_at) BETWEEN ? AND ?
         `, [dateFrom, dateTo]);
 
+        // 1. Total Pendapatan Sparepart
+        const [[resPendSparepart]] = await db.execute(`
+            SELECT COALESCE(SUM(tsp.subtotal), 0) AS total
+            FROM transaction_spareparts tsp
+            JOIN transactions t ON tsp.transaction_id = t.id
+            WHERE DATE(t.created_at) BETWEEN ? AND ?
+        `, [dateFrom, dateTo]);
+
+        // 2. Total Pendapatan Jasa
+        const [[resPendJasa]] = await db.execute(`
+            SELECT COALESCE(SUM(ts.price), 0) AS total
+            FROM transaction_services ts
+            JOIN transactions t ON ts.transaction_id = t.id
+            WHERE DATE(t.created_at) BETWEEN ? AND ?
+        `, [dateFrom, dateTo]);
+
+        // 3. HPP Sparepart (Modal Sparepart Terjual)
+        const [[resHppSparepart]] = await db.execute(`
+            SELECT COALESCE(SUM(tsp.quantity * sp.buy_price), 0) AS total
+            FROM transaction_spareparts tsp
+            JOIN transactions t ON tsp.transaction_id = t.id
+            JOIN spareparts sp ON tsp.sparepart_id = sp.id
+            WHERE DATE(t.created_at) BETWEEN ? AND ?
+        `, [dateFrom, dateTo]);
+
+        // 4. Beban Komisi Mekanik
+        const [[resKomisiMekanik]] = await db.execute(`
+            SELECT COALESCE(SUM(ts.price * m.commission_rate / 100), 0) AS total
+            FROM transaction_services ts
+            JOIN transactions t ON ts.transaction_id = t.id
+            JOIN mechanics m ON ts.mechanic_id = m.id
+            WHERE DATE(t.created_at) BETWEEN ? AND ?
+        `, [dateFrom, dateTo]);
+
+        // 5. Rekapitulasi Komisi Mekanik
+        const [rekapMekanik] = await db.execute(`
+            SELECT m.name as nama_mekanik, COUNT(ts.id) as total_servis,
+                   COALESCE(SUM(ts.price), 0) as total_jasa,
+                   COALESCE(SUM(ts.price * m.commission_rate / 100), 0) as total_komisi
+            FROM mechanics m
+            JOIN transaction_services ts ON m.id = ts.mechanic_id
+            JOIN transactions t ON ts.transaction_id = t.id
+            WHERE DATE(t.created_at) BETWEEN ? AND ?
+            GROUP BY m.id, m.name
+            ORDER BY total_komisi DESC
+        `, [dateFrom, dateTo]);
+
         const [harian] = await db.execute(`
             SELECT DATE(created_at) as tanggal, SUM(total_amount) as pendapatan, COUNT(*) as jumlah_transaksi
             FROM transactions WHERE DATE(created_at) BETWEEN ? AND ?
@@ -44,15 +91,51 @@ exports.getSummary = async (req, res) => {
         `, [dateFrom, dateTo, dateFrom, dateTo]);
 
         const totalPendapatan = parseFloat(summary.total_pendapatan);
-        const totalPengeluaran = parseFloat(pembelian.total_pembelian) + parseFloat(biayaOps.total_biaya);
+        const totalBiayaOps = parseFloat(biayaOps.total_biaya);
+        const totalPembelianStok = parseFloat(pembelian.total_pembelian);
+        
+        const pendSparepart = parseFloat(resPendSparepart.total);
+        const pendJasa = parseFloat(resPendJasa.total);
+        const hppSparepart = parseFloat(resHppSparepart.total);
+        const komisiMekanik = parseFloat(resKomisiMekanik.total);
+        
+        const labaKotorSparepart = pendSparepart - hppSparepart;
+        const labaKotorJasa = pendJasa - komisiMekanik;
+        const labaKotorRiil = labaKotorSparepart + labaKotorJasa;
+        const labaBersihRiil = labaKotorRiil - totalBiayaOps;
+
+        const cashInflow = totalPendapatan;
+        const cashOutflow = totalPembelianStok + totalBiayaOps;
+        const netCashFlow = cashInflow - cashOutflow;
 
         res.json({
             success: true,
             data: {
                 total_transaksi: summary.total_transaksi,
                 total_pendapatan: totalPendapatan,
-                total_pengeluaran: totalPengeluaran,
-                laba_kotor: totalPendapatan - totalPengeluaran,
+                total_pengeluaran: cashOutflow,
+                laba_kotor: labaKotorRiil,
+                
+                // Detail Laba Rugi (Accrual basis)
+                pendapatan_sparepart: pendSparepart,
+                pendapatan_jasa: pendJasa,
+                hpp_sparepart: hppSparepart,
+                komisi_mekanik: komisiMekanik,
+                laba_kotor_sparepart: labaKotorSparepart,
+                laba_kotor_jasa: labaKotorJasa,
+                laba_kotor_riil: labaKotorRiil,
+                total_biaya_operasional: totalBiayaOps,
+                laba_bersih_riil: labaBersihRiil,
+
+                // Arus Kas (Cash Flow basis)
+                total_pembelian_stok: totalPembelianStok,
+                cash_inflow: cashInflow,
+                cash_outflow: cashOutflow,
+                net_cash_flow: netCashFlow,
+
+                // Rekap Komisi
+                rekap_mekanik: rekapMekanik,
+
                 harian, 
                 pengeluaran_harian: pengeluaranHarian, 
                 pembayaran,

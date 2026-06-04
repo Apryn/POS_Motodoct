@@ -112,13 +112,23 @@
         <p>Ringkasan keuangan dan transaksi</p>
       </div>
       <div class="lap-header-right">
-        <div class="filter-periode">
+        <select id="presetPeriode" onchange="setPresetPeriode(this.value)" style="border: 1.5px solid var(--border); border-radius: 10px; padding: 7px 14px; font-size: 13px; color: var(--text); background: var(--white); outline: none; cursor: pointer; font-family: inherit; font-weight: 600;">
+          <option value="custom">Pilih Manual</option>
+          <option value="today">Hari Ini</option>
+          <option value="yesterday">Kemarin</option>
+          <option value="this_week">Minggu Ini</option>
+          <option value="this_month" selected>Bulan Ini</option>
+          <option value="last_month">Bulan Lalu</option>
+          <option value="last_30_days">30 Hari Terakhir</option>
+          <option value="this_year">Tahun Ini</option>
+        </select>
+        <div class="filter-periode" style="display: none;">
           <span>📅</span>
           <input type="date" id="dateFrom" />
           <span>—</span>
           <input type="date" id="dateTo" />
         </div>
-        <button class="btn-primary" onclick="applyFilter()">Terapkan</button>
+        <button class="btn-primary" id="btnTerapkan" onclick="applyFilter()" style="display: none;">Terapkan</button>
         <button class="btn-print" onclick="printLaporan()">🖨️ Cetak</button>
       </div>
     </div>
@@ -133,23 +143,23 @@
         </div>
       </div>
       <div class="lap-card blue">
-        <div class="lap-card-icon">💰</div>
+        <div class="lap-card-icon">📥</div>
         <div>
-          <p>Total Pendapatan</p>
+          <p>Kas Masuk (Inflow)</p>
           <h2 id="statPendapatan">—</h2>
         </div>
       </div>
       <div class="lap-card red">
-        <div class="lap-card-icon">🛒</div>
+        <div class="lap-card-icon">📤</div>
         <div>
-          <p>Total Pengeluaran</p>
+          <p>Kas Keluar (Outflow)</p>
           <h2 id="statPengeluaran">—</h2>
         </div>
       </div>
       <div class="lap-card green">
-        <div class="lap-card-icon">📈</div>
+        <div class="lap-card-icon">💎</div>
         <div>
-          <p>Laba Kotor</p>
+          <p>Laba Bersih Riil</p>
           <h2 id="statLaba">—</h2>
         </div>
       </div>
@@ -157,13 +167,127 @@
 
     <!-- Lap Tabs -->
     <div class="lap-tabs">
-      <button class="lap-tab active" data-tab="Pendapatan" onclick="switchTab('Pendapatan')">📈 Pendapatan</button>
-      <button class="lap-tab" data-tab="Biaya" onclick="switchTab('Biaya')">📉 Biaya Operasional</button>
+      <button class="lap-tab active" data-tab="LabaRugi" onclick="switchTab('LabaRugi')">📋 Buku Laba Rugi</button>
+      <button class="lap-tab" data-tab="Komisi" onclick="switchTab('Komisi')">🔧 Komisi Mekanik</button>
+      <button class="lap-tab" data-tab="Pendapatan" onclick="switchTab('Pendapatan')">📈 Tren Pendapatan</button>
+      <button class="lap-tab" data-tab="Biaya" onclick="switchTab('Biaya')">📉 Tren Pengeluaran</button>
       <button class="lap-tab" data-tab="Perbandingan" onclick="switchTab('Perbandingan')">📊 Perbandingan</button>
     </div>
 
+    <!-- Tab: Buku Laba Rugi -->
+    <div class="chart-box" id="tabLabaRugi">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #f0f0f0; padding-bottom:8px;">
+        <h3 style="font-size:15px; color:#333;">Laporan Laba Rugi Bengkel (P&L Statement)</h3>
+        <span style="font-size:12px; color:#999; font-style:italic;">Berdasarkan penjualan & biaya operasional terakru</span>
+      </div>
+      <div style="background:#fff; border-radius:8px; padding:8px 0; overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px; color:#333;">
+          <tbody>
+            <!-- Pendapatan -->
+            <tr style="font-weight:bold; border-bottom:2px solid #ddd; background:#f9fbfd;">
+              <td style="padding:10px; font-size:13px; color:#2980b9;">1. PENDAPATAN OPERASIONAL</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:10px 10px 10px 24px;">Penjualan Suku Cadang / Sparepart</td>
+              <td id="plPendSparepart" style="text-align:right; padding:10px;">Rp 0</td>
+              <td></td>
+            </tr>
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:10px 10px 10px 24px; border-bottom:1px solid #bbb;">Penjualan Jasa Servis / Perbaikan</td>
+              <td id="plPendJasa" style="text-align:right; padding:10px; border-bottom:1px solid #bbb;">Rp 0</td>
+              <td></td>
+            </tr>
+            <tr style="font-weight:bold; color:#27ae60; background:#f4fbf7;">
+              <td style="padding:10px 10px 10px 24px;">Total Pendapatan Bersih</td>
+              <td></td>
+              <td id="plTotalPendapatan" style="text-align:right; padding:10px; font-size:14px;">Rp 0</td>
+            </tr>
+
+            <!-- Beban Pokok (HPP & Komisi) -->
+            <tr style="font-weight:bold; border-bottom:2px solid #ddd; background:#fffcf9; margin-top:10px;">
+              <td style="padding:10px; font-size:13px; color:#e67e22;">2. HARGA POKOK PENJUALAN & JASA (HPP)</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:10px 10px 10px 24px;">Harga Pokok Penjualan (HPP) Sparepart (Modal)</td>
+              <td id="plHppSparepart" style="text-align:right; padding:10px; color:#e74c3c;">- Rp 0</td>
+              <td></td>
+            </tr>
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:10px 10px 10px 24px; border-bottom:1px solid #bbb;">Beban Komisi / Bagi Hasil Mekanik</td>
+              <td id="plKomisiMekanik" style="text-align:right; padding:10px; color:#e74c3c; border-bottom:1px solid #bbb;">- Rp 0</td>
+              <td></td>
+            </tr>
+            <tr style="font-weight:bold; color:#e74c3c; background:#fdf5f5;">
+              <td style="padding:10px 10px 10px 24px;">Total Harga Pokok Penjualan</td>
+              <td></td>
+              <td id="plTotalBebanPokok" style="text-align:right; padding:10px; font-size:14px;">- Rp 0</td>
+            </tr>
+
+            <!-- Laba Kotor -->
+            <tr style="font-weight:bold; background:#eefaf2; color:#27ae60; font-size:14px; border-top:2px solid #27ae60; border-bottom:2px solid #27ae60;">
+              <td style="padding:12px 10px;">LABA KOTOR BENGKEL (GROSS PROFIT)</td>
+              <td></td>
+              <td id="plLabaKotor" style="text-align:right; padding:12px 10px; font-size:15px;">Rp 0</td>
+            </tr>
+
+            <!-- Beban Operasional -->
+            <tr style="font-weight:bold; border-bottom:2px solid #ddd; background:#fafafa;">
+              <td style="padding:10px; font-size:13px; color:#7f8c8d;">3. BIAYA OPERASIONAL UMUM</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr style="border-bottom:1px solid #bbb;">
+              <td style="padding:10px 10px 10px 24px; border-bottom:1px solid #bbb;">Biaya Operasional & Pengeluaran Kas Harian</td>
+              <td id="plBiayaOperasional" style="text-align:right; padding:10px; color:#e74c3c; border-bottom:1px solid #bbb;">- Rp 0</td>
+              <td></td>
+            </tr>
+            <tr style="font-weight:bold; color:#e74c3c; background:#fdf5f5;">
+              <td style="padding:10px 10px 10px 24px;">Total Biaya Operasional</td>
+              <td></td>
+              <td id="plTotalBiayaOperasional" style="text-align:right; padding:10px; font-size:14px;">- Rp 0</td>
+            </tr>
+
+            <!-- Laba Bersih -->
+            <tr style="font-weight:bold; background:#e8f4fd; color:#2980b9; font-size:15px; border-top:2px solid #2980b9; border-bottom:2px solid #2980b9;">
+              <td style="padding:14px 10px;">LABA BERSIH OPERASIONAL (NET PROFIT)</td>
+              <td></td>
+              <td id="plLabaBersih" style="text-align:right; padding:14px 10px; font-size:16px;">Rp 0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Komisi Mekanik -->
+    <div class="chart-box hidden" id="tabKomisi">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #f0f0f0; padding-bottom:8px;">
+        <h3 style="font-size:15px; color:#333;">Laporan Komisi & Rekap Pekerjaan Mekanik</h3>
+        <span style="font-size:12px; color:#999; font-style:italic;">Rincian bagi hasil jasa servis untuk periode terpilih</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f8f9fa;">
+              <th style="padding:10px; text-align:left;">Nama Mekanik</th>
+              <th style="padding:10px; text-align:center;">Jumlah Servis</th>
+              <th style="padding:10px; text-align:right;">Total Omset Jasa</th>
+              <th style="padding:10px; text-align:right;">Komisi Mekanik</th>
+              <th style="padding:10px; text-align:right;">Bagian Bengkel (Net Jasa)</th>
+            </tr>
+          </thead>
+          <tbody id="komisiTableBody">
+            <tr><td colspan="5" class="empty-state">Memuat data komisi...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Tab: Pendapatan -->
-    <div class="chart-box" id="tabPendapatan">
+    <div class="chart-box hidden" id="tabPendapatan">
       <h3>Pendapatan Harian</h3>
       <canvas id="chartPendapatan" height="80"></canvas>
     </div>
@@ -201,7 +325,7 @@
     <div class="table-wrap" style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f0f0f0">
         <h3 style="font-size:14px;color:#333">Riwayat Transaksi</h3>
-        <button class="btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn-secondary" onclick="exportCSV()">📥 Export Excel</button>
       </div>
       <table class="data-table">
         <thead>
@@ -225,6 +349,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="../js/laporan.js"></script>
 
   <!-- Modal Detail Transaksi -->

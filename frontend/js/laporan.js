@@ -50,6 +50,90 @@ const dateToEl = document.getElementById('dateTo');
 if (dateFromEl) dateFromEl.value = firstDay;
 if (dateToEl) dateToEl.value = today;
 
+if (dateFromEl) {
+  dateFromEl.addEventListener('change', () => {
+    const presetEl = document.getElementById('presetPeriode');
+    if (presetEl) presetEl.value = 'custom';
+    setPresetPeriode('custom');
+  });
+}
+if (dateToEl) {
+  dateToEl.addEventListener('change', () => {
+    const presetEl = document.getElementById('presetPeriode');
+    if (presetEl) presetEl.value = 'custom';
+    setPresetPeriode('custom');
+  });
+}
+
+function setPresetPeriode(preset) {
+  const dateFromEl = document.getElementById('dateFrom');
+  const dateToEl = document.getElementById('dateTo');
+  const filterPeriodeEl = document.querySelector('.filter-periode');
+  const btnTerapkanEl = document.getElementById('btnTerapkan');
+  
+  if (!dateFromEl || !dateToEl) return;
+
+  const now = new Date();
+  let fromDate, toDate;
+
+  // Toggle display of manual filters based on selection
+  if (preset === 'custom') {
+    if (filterPeriodeEl) filterPeriodeEl.style.display = 'flex';
+    if (btnTerapkanEl) btnTerapkanEl.style.display = 'inline-block';
+    return; // Don't reload yet, wait for user to click Terapkan
+  } else {
+    if (filterPeriodeEl) filterPeriodeEl.style.display = 'none';
+    if (btnTerapkanEl) btnTerapkanEl.style.display = 'none';
+  }
+
+  switch (preset) {
+    case 'today':
+      fromDate = getLocalDate(now);
+      toDate = getLocalDate(now);
+      break;
+    case 'yesterday':
+      const yesterday = new Date();
+      yesterday.setDate(now.getDate() - 1);
+      fromDate = getLocalDate(yesterday);
+      toDate = getLocalDate(yesterday);
+      break;
+    case 'this_week':
+      const currentDay = now.getDay();
+      const distance = currentDay === 0 ? 6 : currentDay - 1;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - distance);
+      fromDate = getLocalDate(monday);
+      toDate = getLocalDate(now);
+      break;
+    case 'this_month':
+      fromDate = getLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
+      toDate = getLocalDate(now);
+      break;
+    case 'last_month':
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      fromDate = getLocalDate(firstDayLastMonth);
+      toDate = getLocalDate(lastDayLastMonth);
+      break;
+    case 'last_30_days':
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      fromDate = getLocalDate(thirtyDaysAgo);
+      toDate = getLocalDate(now);
+      break;
+    case 'this_year':
+      fromDate = getLocalDate(new Date(now.getFullYear(), 0, 1));
+      toDate = getLocalDate(now);
+      break;
+    default:
+      return;
+  }
+
+  dateFromEl.value = fromDate;
+  dateToEl.value = toDate;
+  loadLaporan();
+}
+
 let chartPendapatan = null;
 let chartBiaya = null;
 let chartPerbandingan = null;
@@ -72,9 +156,48 @@ async function loadLaporan() {
     if (summaryData.success) {
       const d = summaryData.data;
       document.getElementById('statTrx').textContent = d.total_transaksi || 0;
-      document.getElementById('statPendapatan').textContent = rupiahShort(d.total_pendapatan);
-      document.getElementById('statPengeluaran').textContent = rupiahShort(d.total_pengeluaran);
-      document.getElementById('statLaba').textContent = rupiahShort(d.laba_kotor);
+      document.getElementById('statPendapatan').textContent = rupiahShort(d.cash_inflow);
+      document.getElementById('statPengeluaran').textContent = rupiahShort(d.cash_outflow);
+      document.getElementById('statLaba').textContent = rupiahShort(d.laba_bersih_riil);
+
+      // Populate Laba Rugi Table
+      if (document.getElementById('plPendSparepart')) {
+        document.getElementById('plPendSparepart').textContent = rupiah(d.pendapatan_sparepart);
+        document.getElementById('plPendJasa').textContent = rupiah(d.pendapatan_jasa);
+        document.getElementById('plTotalPendapatan').textContent = rupiah(d.pendapatan_sparepart + d.pendapatan_jasa);
+
+        document.getElementById('plHppSparepart').textContent = '- ' + rupiah(d.hpp_sparepart);
+        document.getElementById('plKomisiMekanik').textContent = '- ' + rupiah(d.komisi_mekanik);
+        document.getElementById('plTotalBebanPokok').textContent = '- ' + rupiah(d.hpp_sparepart + d.komisi_mekanik);
+
+        document.getElementById('plLabaKotor').textContent = rupiah(d.laba_kotor_riil);
+
+        document.getElementById('plBiayaOperasional').textContent = '- ' + rupiah(d.total_biaya_operasional);
+        document.getElementById('plTotalBiayaOperasional').textContent = '- ' + rupiah(d.total_biaya_operasional);
+
+        document.getElementById('plLabaBersih').textContent = rupiah(d.laba_bersih_riil);
+      }
+
+      // Populate Mechanic Commission Table
+      const komisiTbody = document.getElementById('komisiTableBody');
+      if (komisiTbody) {
+        if (d.rekap_mekanik && d.rekap_mekanik.length > 0) {
+          komisiTbody.innerHTML = d.rekap_mekanik.map(m => {
+            const netJasa = parseFloat(m.total_jasa) - parseFloat(m.total_komisi);
+            return `
+              <tr>
+                <td style="padding:10px;"><strong>${m.nama_mekanik}</strong></td>
+                <td style="padding:10px; text-align:center;">${m.total_servis}</td>
+                <td style="padding:10px; text-align:right;">${rupiah(m.total_jasa)}</td>
+                <td style="padding:10px; text-align:right; color:#e67e22; font-weight:bold;">${rupiah(m.total_komisi)}</td>
+                <td style="padding:10px; text-align:right; color:#27ae60; font-weight:bold;">${rupiah(netJasa)}</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          komisiTbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="text-align:center; padding:20px; color:#888;">Tidak ada aktivitas mekanik dalam periode ini.</td></tr>';
+        }
+      }
 
       renderCharts(d);
     }
@@ -275,7 +398,7 @@ function renderTransactionTable(data) {
 
 // Tab switching
 function switchTab(tab) {
-  ['Pendapatan', 'Biaya', 'Perbandingan'].forEach(t => {
+  ['LabaRugi', 'Komisi', 'Pendapatan', 'Biaya', 'Perbandingan'].forEach(t => {
     const box = document.getElementById(`tab${t}`);
     const btn = document.querySelector(`.lap-tab[data-tab="${t}"]`);
     if (box) box.classList.toggle('hidden', t !== tab);
@@ -288,7 +411,7 @@ function applyFilter() {
   loadLaporan();
 }
 
-// Export CSV
+// Export Excel (previously CSV)
 function exportCSV() {
   if (!currentTransactions.length) { alert('Tidak ada data!'); return; }
   const headers = ['No', 'Invoice', 'Tanggal', 'Pelanggan', 'Metode', 'Total', 'Kasir'];
@@ -301,12 +424,19 @@ function exportCSV() {
     t.total_amount || 0,
     t.username || ''
   ]);
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  // Combine headers and rows into an array of arrays
+  const ws_data = [headers, ...rows];
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
+  // Write workbook as binary array
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `laporan_${dateFromEl?.value || firstDay}_${dateToEl?.value || today}.csv`;
+  a.download = `laporan_${dateFromEl?.value || firstDay}_${dateToEl?.value || today}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -679,4 +809,4 @@ function printLaporan() {
 
 // Init
 loadLaporan();
-switchTab('Pendapatan');
+switchTab('LabaRugi');
