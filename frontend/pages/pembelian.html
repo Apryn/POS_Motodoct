@@ -241,9 +241,15 @@
               <input type="number" id="fieldTotal" placeholder="0" readonly style="background:#f8f8f8;color:#888" />
             </div>
           </div>
-          <div class="form-group">
-            <label>Harga Jual (auto +30%)</label>
-            <input type="number" id="fieldHargaJual" placeholder="0" min="0" />
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Markup Persen (%)</label>
+              <input type="number" id="fieldMarkup" placeholder="30" value="30" min="0" oninput="calcHargaJual()" />
+            </div>
+            <div class="form-group">
+              <label>Harga Jual (auto)</label>
+              <input type="number" id="fieldHargaJual" placeholder="0" min="0" />
+            </div>
           </div>
           <div class="form-group">
             <label>Catatan</label>
@@ -302,9 +308,30 @@
           <tbody id="previewTableBody"></tbody>
         </table>
       </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closePreviewModal()">Batal</button>
-        <button class="btn-primary" id="btnImportAll" onclick="submitImport()">📤 Import Semua</button>
+      <!-- Progress Bar Container -->
+      <div id="importProgressContainer" class="hidden" style="padding: 16px 24px; border-top: 1px solid #f0f0f0; background: #fafafa;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; font-size: 13px;">
+          <span id="importProgressText" style="color: #333;">Mengimpor data...</span>
+          <span id="importProgressPercent" style="color: #e87722;">0%</span>
+        </div>
+        <div style="width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 6px;">
+          <div id="importProgressBar" style="width: 0%; height: 100%; background: #e87722; transition: width 0.1s ease-out; border-radius: 5px;"></div>
+        </div>
+        <div style="display: flex; gap: 12px; font-size: 12px; color: #666;">
+          <span>Berhasil: <strong id="importSuccessCount" style="color: #27ae60;">0</strong></span>
+          <span>Gagal: <strong id="importFailedCount" style="color: #e74c3c;">0</strong></span>
+        </div>
+      </div>
+      <div class="modal-footer" id="importModalFooter" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 13px; font-weight: 600; color: #444;">Markup Impor Default:</label>
+          <input type="number" id="importMarkupPercent" value="30" min="0" style="width: 70px; padding: 6px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px;" />
+          <span style="font-size: 13px; color: #666;">%</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-secondary" id="btnImportCancel" onclick="closePreviewModal()">Batal</button>
+          <button class="btn-primary" id="btnImportAll" onclick="submitImport()">📤 Import Semua</button>
+        </div>
       </div>
     </div>
   </div>

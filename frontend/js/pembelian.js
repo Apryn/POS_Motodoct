@@ -56,6 +56,7 @@ let purchases = [];
 let spareparts = [];
 let deleteId = null;
 let importRows = [];
+let isImporting = false;
 
 async function loadData() {
   try {
@@ -120,7 +121,8 @@ function calcTotal() {
 // Calculate general selling price
 function calcHargaJual() {
   const harga = parseFloat(document.getElementById('fieldHargaBeli')?.value || 0);
-  const jual = roundToNearest500(harga * 1.3);
+  const markup = parseFloat(document.getElementById('fieldMarkup')?.value || 30);
+  const jual = roundToNearest500(harga * (1 + markup / 100));
   const el = document.getElementById('fieldHargaJual');
   if (el) el.value = jual;
 }
@@ -177,6 +179,9 @@ document.getElementById('filterTo')?.addEventListener('change', renderTable);
 
 function openAddModal() {
   document.getElementById('formPembelian').reset();
+  const savedMarkup = localStorage.getItem('default_markup') || '30';
+  const markupEl = document.getElementById('fieldMarkup');
+  if (markupEl) markupEl.value = savedMarkup;
   document.getElementById('fieldTotal').value = '';
   document.getElementById('fieldHargaJual').value = '';
   document.getElementById('modalPembelian').classList.remove('hidden');
@@ -191,9 +196,14 @@ async function savePembelian() {
   const supplier = document.getElementById('fieldSupplier').value.trim();
   const qty = parseInt(document.getElementById('fieldQty').value) || 0;
   const hargaBeli = parseFloat(document.getElementById('fieldHargaBeli').value) || 0;
+  const markupVal = document.getElementById('fieldMarkup')?.value || '30';
   const hargaJual = parseFloat(document.getElementById('fieldHargaJual').value) || 0;
   const rak = document.getElementById('fieldRak').value.trim();
   const catatan = document.getElementById('fieldCatatan').value.trim();
+
+  if (markupVal) {
+    localStorage.setItem('default_markup', markupVal);
+  }
 
   if (!sparepartId) { alert('Pilih sparepart!'); return; }
   if (!qty || qty <= 0) { alert('Qty harus lebih dari 0!'); return; }
@@ -360,6 +370,10 @@ function showImportPreview() {
   const tbody = document.getElementById('previewTableBody');
   document.getElementById('importCount').textContent = importRows.length;
 
+  const savedMarkup = localStorage.getItem('default_markup') || '30';
+  const importMarkupEl = document.getElementById('importMarkupPercent');
+  if (importMarkupEl) importMarkupEl.value = savedMarkup;
+
   tbody.innerHTML = importRows.map((r, i) => `
     <tr>
       <td>${i + 1}</td>
@@ -379,24 +393,54 @@ function showImportPreview() {
 }
 
 function closePreviewModal() {
+  if (isImporting) return;
   document.getElementById('modalPreview').classList.add('hidden');
 }
 
 async function submitImport() {
-  if (!importRows.length) return;
+  if (!importRows.length || isImporting) return;
 
+  const markupPercent = parseFloat(document.getElementById('importMarkupPercent')?.value || 30);
+  localStorage.setItem('default_markup', markupPercent);
+
+  isImporting = true;
+
+  // Hide action buttons in preview modal footer
+  const btnCancel = document.getElementById('btnImportCancel');
   const btnImport = document.getElementById('btnImportAll');
-  if (btnImport) { btnImport.disabled = true; btnImport.textContent = 'Mengimpor...'; }
+  if (btnCancel) btnCancel.style.display = 'none';
+  if (btnImport) btnImport.style.display = 'none';
+
+  // Hide close cross button in modal header
+  const closeBtn = document.querySelector('#modalPreview .modal-close');
+  if (closeBtn) closeBtn.style.display = 'none';
+
+  // Show progress container
+  const progressContainer = document.getElementById('importProgressContainer');
+  const progressBar = document.getElementById('importProgressBar');
+  const progressText = document.getElementById('importProgressText');
+  const progressPercent = document.getElementById('importProgressPercent');
+  const successCountEl = document.getElementById('importSuccessCount');
+  const failedCountEl = document.getElementById('importFailedCount');
+
+  if (progressContainer) progressContainer.classList.remove('hidden');
+  if (progressBar) progressBar.style.width = '0%';
+  if (progressText) progressText.textContent = `Memulai impor...`;
+  if (progressPercent) progressPercent.textContent = '0%';
+  if (successCountEl) successCountEl.textContent = '0';
+  if (failedCountEl) failedCountEl.textContent = '0';
 
   let success = 0;
   let failed = 0;
+  const total = importRows.length;
 
-  for (const row of importRows) {
+  for (let i = 0; i < total; i++) {
+    const row = importRows[i];
     try {
       let sparepartId = null;
       const existing = spareparts.find(s => s.code === row.kode);
 
-      const finalPrice = row.jualPcs || roundToNearest500(row.beliPcs * 1.3);
+      const finalPrice = row.jualPcs || roundToNearest500(row.beliPcs * (1 + markupPercent / 100));
 
       if (existing) {
         sparepartId = existing.id;
@@ -451,17 +495,44 @@ async function submitImport() {
           })
         });
         success++;
+      } else {
+        failed++;
       }
     } catch (err) {
       failed++;
       console.error('Import row error:', err);
     }
+
+    // Update progress bar
+    const currentProgress = Math.round(((i + 1) / total) * 100);
+    if (progressBar) progressBar.style.width = `${currentProgress}%`;
+    if (progressPercent) progressPercent.textContent = `${currentProgress}%`;
+    if (progressText) progressText.textContent = `Mengimpor ${i + 1} dari ${total} baris...`;
+    if (successCountEl) successCountEl.textContent = success;
+    if (failedCountEl) failedCountEl.textContent = failed;
   }
 
-  if (btnImport) { btnImport.disabled = false; btnImport.textContent = 'Import Semua'; }
+  // Ensure it shows 100% and final status
+  if (progressBar) progressBar.style.width = '100%';
+  if (progressPercent) progressPercent.textContent = '100%';
+  if (progressText) progressText.textContent = 'Impor selesai!';
+
+  // Wait 500ms for visual polish
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}`);
+
+  // Restore action buttons and close button
+  if (btnCancel) btnCancel.style.display = '';
+  if (btnImport) btnImport.style.display = '';
+  if (closeBtn) closeBtn.style.display = '';
+
+  // Hide progress container
+  if (progressContainer) progressContainer.classList.add('hidden');
+
+  isImporting = false;
   closePreviewModal();
   loadData();
-  alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}`);
 }
 
 function downloadTemplate() {
