@@ -117,7 +117,7 @@ exports.getTransactionById = async (req, res) => {
         `, [id]);
         if (!trx) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
         const [spareparts] = await db.execute(`
-            SELECT ts.*, s.name as sparepart_name, s.code as sparepart_code FROM transaction_spareparts ts
+            SELECT ts.*, s.name as sparepart_name, s.code as sparepart_code, s.unit as sparepart_unit FROM transaction_spareparts ts
             JOIN spareparts s ON ts.sparepart_id = s.id WHERE ts.transaction_id = ?
         `, [id]);
         const [services] = await db.execute(`
@@ -170,7 +170,7 @@ exports.getVehicleHistory = async (req, res) => {
 
         // 3. Get spareparts
         const [spareparts] = await db.execute(`
-            SELECT tsp.transaction_id, t.created_at, sp.name as sparepart_name, tsp.quantity, tsp.price
+            SELECT tsp.transaction_id, t.created_at, sp.name as sparepart_name, tsp.quantity, tsp.price, sp.unit as sparepart_unit
             FROM transaction_spareparts tsp
             JOIN transactions t ON tsp.transaction_id = t.id
             LEFT JOIN customers c ON t.customer_id = c.id

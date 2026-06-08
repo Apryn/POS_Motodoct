@@ -486,13 +486,13 @@ async function lihatDetail(id) {
             const returBtn = s.quantity > 0 
               ? `<button onclick="openReturnModal(${data.id}, ${s.sparepart_id}, '${s.sparepart_name.replace(/'/g, "\\'")}', ${s.quantity}, ${s.price})" style="padding:2px 6px;background:#fff5eb;color:#e87722;border:1px solid #ffd8b3;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Retur</button>`
               : `<span style="color:#aaa;font-size:11px;font-style:italic;">Habis Diretur</span>`;
-            return `
-            <tr style="border-bottom:1px solid #f0f0f0;">
-              <td style="padding:6px 10px;">${s.sparepart_name}</td>
-              <td style="padding:6px 10px;text-align:center;">${s.quantity}</td>
-              <td style="padding:6px 10px;text-align:right;">${rupiah(s.subtotal)}</td>
-              <td style="padding:6px 10px;text-align:center;">${returBtn}</td>
-            </tr>`;
+             return `
+             <tr style="border-bottom:1px solid #f0f0f0;">
+               <td style="padding:6px 10px;">${s.sparepart_name}</td>
+               <td style="padding:6px 10px;text-align:center;">${s.quantity} ${s.sparepart_unit || 'pcs'}</td>
+               <td style="padding:6px 10px;text-align:right;">${rupiah(s.subtotal)}</td>
+               <td style="padding:6px 10px;text-align:center;">${returBtn}</td>
+             </tr>`;
           }).join('')}
           </tbody>
         </table>`;

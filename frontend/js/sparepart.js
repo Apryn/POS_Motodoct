@@ -51,7 +51,7 @@ function exportExcel() {
     s.brand || '',
     s.supplier || '',
     s.rack_location || '',
-    Number(s.stock) || 0,
+    s.stock ? `${s.stock} ${s.unit || 'pcs'}` : '0 pcs',
     Number(s.buy_price) || 0,
     Number(s.price) || 0,
     Number(s.discount) || 0,
@@ -165,7 +165,7 @@ function renderTable() {
       <td>${p.category_name || '-'}</td>
       <td>${p.brand || '-'}</td>
       <td>${p.rack_location || '-'}</td>
-      <td><strong>${p.stock}</strong></td>
+      <td><strong>${p.stock} ${p.unit || 'pcs'}</strong></td>
       <td>${rupiah(p.price)}</td>
       <td>${getStatusBadge(p.stock)}</td>
       <td>
@@ -206,6 +206,7 @@ function openEditModal(id) {
   document.getElementById('fieldHarga').value = p.price;
   document.getElementById('fieldDiskon').value = p.discount || 0;
   document.getElementById('fieldMerk').value = p.brand || '';
+  document.getElementById('fieldSatuan').value = p.unit || 'pcs';
   document.getElementById('modalSparepart').classList.remove('hidden');
 }
 
@@ -224,7 +225,8 @@ async function saveSparepart() {
     stock: parseInt(document.getElementById('fieldStok').value) || 0,
     buy_price: parseFloat(document.getElementById('fieldHargaBeli').value) || 0,
     price: parseFloat(document.getElementById('fieldHarga').value) || 0,
-    discount: parseFloat(document.getElementById('fieldDiskon').value) || 0
+    discount: parseFloat(document.getElementById('fieldDiskon').value) || 0,
+    unit: document.getElementById('fieldSatuan').value
   };
 
   if (!payload.name) { alert('Nama wajib diisi!'); return; }

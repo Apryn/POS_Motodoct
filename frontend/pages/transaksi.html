@@ -91,7 +91,10 @@
           <span class="user-badge-name" id="userDisplay">Admin</span>
           <span class="user-badge-role" id="userRole">Kasir</span>
         </div>
-      </div>
+      <button class="btn-topbar btn-topbar-outline" onclick="openPriceCheck()" style="display: inline-flex; align-items: center; gap: 6px; background: #fffbeb; border-color: #fef3c7; color: #b45309;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg>
+        Cek Harga (F2)
+      </button>
       <button class="btn-topbar btn-topbar-outline" onclick="openReceiptSettings()" style="display: inline-flex; align-items: center; gap: 6px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         Pengaturan Struk
@@ -570,6 +573,37 @@
 
       <div class="struk-footer" style="padding:12px 20px; border-top:1px solid #f0f0f0; background:#f8fafc; flex-shrink:0; display:flex; justify-content:flex-end;">
         <button class="btn-close-struk" onclick="closeVehicleHistory()" style="background:#64748b; color:#fff; font-weight:600; border:none; padding:8px 16px; border-radius:8px; cursor:pointer;">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cek Harga -->
+  <div class="modal-struk hidden" id="modalPriceCheck" style="z-index: 1400;">
+    <div class="struk-box" style="max-width: 500px; width: 95%;">
+      <div class="struk-header">
+        <h3 style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #1e293b;">
+          <span>🔍 Pengecekan Harga & Stok</span>
+        </h3>
+        <button class="btn-close-struk" onclick="closePriceCheck()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div>
+          <label style="font-size:12px; font-weight:600; color:#444; display:block; margin-bottom:6px;">Scan Barcode atau Cari Nama Sparepart/Jasa</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="text" id="priceCheckInput" placeholder="Ketik nama / kode atau scan barcode..." autocomplete="off"
+              style="width:100%; padding:10px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:14px; outline:none;"
+              oninput="handlePriceCheckSearch()" />
+            <button onclick="clearPriceCheckInput()" style="position: absolute; right: 10px; background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 4px;">✕</button>
+          </div>
+        </div>
+        
+        <!-- Search Results Area -->
+        <div id="priceCheckResult" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; border: 1px solid #f0f0f0; border-radius: 8px; padding: 6px; background: #fafafa;">
+          <div style="text-align: center; padding: 30px 10px; color: #aaa; font-size: 13px;">Ketik nama barang atau scan kode di atas...</div>
+        </div>
+      </div>
+      <div class="struk-footer">
+        <button class="btn-close-struk" onclick="closePriceCheck()">Tutup</button>
       </div>
     </div>
   </div>

@@ -113,7 +113,7 @@ function renderProducts(filter = '') {
         <div class="product-code">${p.code || '-'}</div>
         <div class="product-name">${p.name}</div>
         <div class="product-price">${rupiah(p.price)}</div>
-        <div class="product-stock ${p.stock <= 5 ? 'low' : ''}">Stok: ${p.stock}</div>
+        <div class="product-stock ${p.stock <= 5 ? 'low' : ''}">Stok: ${p.stock} ${p.unit || 'pcs'}</div>
       </div>
     `;
   }).join('') : '<div class="empty-state">Tidak ada produk</div>';
@@ -169,14 +169,14 @@ function addToCartById(id, type) {
       }
       existing.qty++;
     } else {
-      cart.push({ id, type: 'sparepart', name: item.name, code: item.code || '-', brand: item.brand || '', price: item.price, qty: 1, maxQty: item.stock });
+      cart.push({ id, type: 'sparepart', name: item.name, code: item.code || '-', brand: item.brand || '', price: item.price, qty: 1, maxQty: item.stock, unit: item.unit || 'pcs' });
     }
   } else {
     const item = services.find(s => s.id === id);
     if (!item) return;
     const existing = cart.find(c => c.id === id && c.type === 'servis');
     if (existing) return; // servis tidak duplikat
-    cart.push({ id, type: 'servis', name: item.name, code: '-', price: item.price, qty: 1, mechanic_id: null });
+    cart.push({ id, type: 'servis', name: item.name, code: '-', price: item.price, qty: 1, mechanic_id: null, unit: '' });
   }
   renderCart();
 }
@@ -241,7 +241,7 @@ function renderCart() {
         <!-- Col 2: Kontrol Qty -->
         <div class="cart-col-qty">
           <button class="qty-btn" onclick="changeQty(${idx}, -1)">−</button>
-          <span class="qty-val">${item.qty}</span>
+          <span class="qty-val">${item.qty} ${item.type === 'sparepart' ? (item.unit || 'pcs') : ''}</span>
           <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
         </div>
         
@@ -761,7 +761,7 @@ function showStruk(trxData, total, subtotal, discountAmt) {
       <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${escHtml(itemCode)}">${escHtml(itemCode)}</td>
       <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;" title="${escHtml(i.name)}${typeLabel}">${escHtml(i.name)}${typeLabel}</td>
       <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000;">${escHtml(i.brand || '-')}</td>
-      <td style="padding: 1px 4px; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${i.qty}</td>
+      <td style="padding: 1px 4px; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${i.qty} ${i.type === 'sparepart' ? (i.unit || 'pcs') : ''}</td>
       <td style="padding: 1px 4px; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price)}</td>
       <td style="padding: 1px 0; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price * i.qty)}</td>
     </tr>
@@ -1344,7 +1344,7 @@ async function openVehicleHistory() {
             <tr style="border-bottom:1px solid #f1f5f9;">
               <td style="padding:10px; color:#475569; font-weight:500;">${dateStr}</td>
               <td style="padding:10px; color:#1e293b; font-weight:600;">${sp.sparepart_name}</td>
-              <td style="padding:10px; text-align:center; color:#1e293b; font-weight:700;"><span style="background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:800;">${sp.quantity}</span></td>
+              <td style="padding:10px; text-align:center; color:#1e293b; font-weight:700;"><span style="background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:800;">${sp.quantity} ${sp.sparepart_unit || 'pcs'}</span></td>
               <td style="padding:10px; text-align:right; color:#0369a1; font-weight:700;">${rupiah(sp.price)}</td>
             </tr>
           `;
@@ -1387,3 +1387,142 @@ if (pendingCartId) {
   // Tunggu data sparepart/mekanik selesai load dulu
   setTimeout(() => loadSavedCart(parseInt(pendingCartId)), 1000);
 }
+
+// ===== RECEIPT & PAYMENT SETTINGS END =====
+
+// ===== PRICE CHECK (CEK HARGA) LOGIC =====
+function openPriceCheck() {
+  const modal = document.getElementById('modalPriceCheck');
+  if (modal) {
+    modal.classList.remove('hidden');
+    const input = document.getElementById('priceCheckInput');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 100);
+    }
+    clearPriceCheckInput();
+  }
+}
+
+function closePriceCheck() {
+  const modal = document.getElementById('modalPriceCheck');
+  if (modal) modal.classList.add('hidden');
+}
+
+function clearPriceCheckInput() {
+  const input = document.getElementById('priceCheckInput');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  const resultArea = document.getElementById('priceCheckResult');
+  if (resultArea) {
+    resultArea.innerHTML = '<div style="text-align: center; padding: 30px 10px; color: #aaa; font-size: 13px;">Ketik nama barang atau scan kode di atas...</div>';
+  }
+}
+
+function handlePriceCheckSearch() {
+  const query = document.getElementById('priceCheckInput').value.trim().toLowerCase();
+  const resultArea = document.getElementById('priceCheckResult');
+  
+  if (!query) {
+    resultArea.innerHTML = '<div style="text-align: center; padding: 30px 10px; color: #aaa; font-size: 13px;">Ketik nama barang atau scan kode di atas...</div>';
+    return;
+  }
+  
+  // Search in spareparts
+  const matchedSp = spareparts.filter(sp => 
+    sp.name.toLowerCase().includes(query) || 
+    (sp.code || '').toLowerCase().includes(query) ||
+    (sp.brand || '').toLowerCase().includes(query)
+  );
+  
+  // Search in services
+  const matchedSv = services.filter(sv => 
+    sv.name.toLowerCase().includes(query)
+  );
+  
+  if (matchedSp.length === 0 && matchedSv.length === 0) {
+    resultArea.innerHTML = '<div style="text-align: center; padding: 30px 10px; color: #e74c3c; font-size: 13px; font-weight: 600;">Data tidak ditemukan!</div>';
+    return;
+  }
+  
+  let html = '';
+  
+  // Render spareparts
+  matchedSp.forEach(sp => {
+    const buyPriceHtml = (user.role === 'admin' || user.role === 'owner') 
+      ? `<span style="font-size:11px; color:#64748b; font-weight:500;">(Modal: ${rupiah(sp.buy_price)})</span>`
+      : '';
+      
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; box-shadow:0 1px 2px rgba(0,0,0,0.05); margin-bottom:8px;">
+        <div style="display:flex; flex-direction:column; gap:2px; flex:1; padding-right:10px; text-align:left;">
+          <div style="font-size:13px; font-weight:700; color:#1e293b;">${escHtml(sp.name)}</div>
+          <div style="font-size:11px; color:#64748b; font-family:monospace;">Kode: ${escHtml(sp.code || '-')} · Merk: ${escHtml(sp.brand || '-')}</div>
+          <div style="font-size:11px; color:#64748b;">Rak: <strong style="color:#0f766e;">${escHtml(sp.rack_location || '-')}</strong> · Stok: <strong style="${sp.stock <= 5 ? 'color:#ef4444;' : 'color:#10b981;'}">${sp.stock} ${sp.unit || 'pcs'}</strong></div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <div style="font-size:14px; font-weight:800; color:#e87722;">${rupiah(sp.price)}</div>
+          ${buyPriceHtml}
+          <button onclick="addToCartFromPriceCheck(this, ${sp.id}, 'sparepart')" 
+            style="padding:4px 8px; background:#fff8e6; color:#b45309; border:1px solid #fde68a; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;">
+            + Keranjang
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Render services
+  matchedSv.forEach(sv => {
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; box-shadow:0 1px 2px rgba(0,0,0,0.05); margin-bottom:8px;">
+        <div style="display:flex; flex-direction:column; gap:2px; flex:1; padding-right:10px; text-align:left;">
+          <div style="font-size:13px; font-weight:700; color:#1e293b;">${escHtml(sv.name)}</div>
+          <div style="font-size:11px; color:#3b82f6; font-weight:600; text-transform:uppercase;">Jasa Servis</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <div style="font-size:14px; font-weight:800; color:#3b82f6;">${rupiah(sv.price)}</div>
+          <button onclick="addToCartFromPriceCheck(this, ${sv.id}, 'servis')" 
+            style="padding:4px 8px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;">
+            + Keranjang
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  resultArea.innerHTML = html;
+}
+
+function addToCartFromPriceCheck(btn, id, type) {
+  addToCartById(id, type);
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '✅ Sukses';
+  btn.style.background = '#27ae60';
+  btn.style.color = '#fff';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.innerHTML = originalText;
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.disabled = false;
+  }, 1000);
+}
+
+// Global hotkey F2 untuk Cek Harga
+window.addEventListener('keydown', e => {
+  if (e.key === 'F2') {
+    e.preventDefault();
+    const modal = document.getElementById('modalPriceCheck');
+    if (modal) {
+      if (modal.classList.contains('hidden')) {
+        openPriceCheck();
+      } else {
+        closePriceCheck();
+      }
+    }
+  }
+});
+
