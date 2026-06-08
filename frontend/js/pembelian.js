@@ -334,7 +334,10 @@ function parseRows(sheetData) {
 
     if (!nama || !qty) return;
 
-    const key = `${kode}||${supplier}||${beliPcs}`;
+    const key = kode 
+      ? `code:${kode.toLowerCase()}` 
+      : `name:${nama.toLowerCase()}||${supplier}||${beliPcs}`;
+
     if (grouped[key]) {
       grouped[key].qty += qty;
       grouped[key].beliTotal += beliTotal;
