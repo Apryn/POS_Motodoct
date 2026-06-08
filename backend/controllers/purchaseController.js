@@ -94,3 +94,19 @@ exports.deletePurchase = async (req, res) => {
         res.status(500).json({ success: false, message: 'Gagal menghapus' });
     }
 };
+
+exports.deleteAllPurchases = async (req, res) => {
+    try {
+        const { password } = req.body;
+        const adminId = req.user?.id;
+        const [users] = await db.execute('SELECT * FROM users WHERE id = ?', [adminId]);
+        if (users.length === 0) return res.status(401).json({ success: false, message: 'User tidak ditemukan' });
+        const isValid = await require('bcrypt').compare(password, users[0].password);
+        if (!isValid) return res.status(401).json({ success: false, message: 'Password salah!' });
+        
+        await db.execute('TRUNCATE TABLE purchases');
+        res.json({ success: true, message: 'Semua data pembelian berhasil dihapus' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Gagal menghapus semua data pembelian' });
+    }
+};

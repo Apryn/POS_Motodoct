@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 exports.getAllMechanics = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM mechanics ORDER BY id DESC');
+        const [rows] = await db.execute('SELECT * FROM mechanics WHERE is_deleted = 0 ORDER BY id DESC');
         res.json({ success: true, data: rows });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server Error' });
@@ -35,7 +35,7 @@ exports.updateMechanic = async (req, res) => {
 exports.deleteMechanic = async (req, res) => {
     try {
         const { id } = req.params;
-        await db.execute('DELETE FROM mechanics WHERE id=?', [id]);
+        await db.execute('UPDATE mechanics SET is_deleted = 1 WHERE id=?', [id]);
         res.json({ success: true, message: 'Mekanik berhasil dihapus' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Gagal menghapus mekanik' });

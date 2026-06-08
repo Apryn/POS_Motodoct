@@ -39,7 +39,7 @@ function exportExcel() {
   if (!spareparts.length) { alert('Tidak ada data untuk diekspor!'); return; }
 
   const headers = [
-    'No', 'Kode', 'Nama Barang', 'Kategori', 'Supplier',
+    'No', 'Kode', 'Nama Barang', 'Kategori', 'Merk', 'Supplier',
     'Lokasi Rak', 'Stok', 'Harga Beli', 'Harga Jual', 'Diskon (%)', 'Status'
   ];
 
@@ -48,12 +48,13 @@ function exportExcel() {
     s.code || '',
     s.name,
     s.category_name || '',
+    s.brand || '',
     s.supplier || '',
     s.rack_location || '',
-    s.stock,
-    s.buy_price || 0,
-    s.price,
-    s.discount || 0,
+    Number(s.stock) || 0,
+    Number(s.buy_price) || 0,
+    Number(s.price) || 0,
+    Number(s.discount) || 0,
     s.stock === 0 ? 'Habis' : s.stock <= 5 ? 'Menipis' : 'Aman'
   ]);
 
@@ -61,7 +62,7 @@ function exportExcel() {
 
   // Set lebar kolom
   ws['!cols'] = [
-    { wch: 5 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 15 },
+    { wch: 5 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
     { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }
   ];
 
@@ -152,7 +153,7 @@ function renderTable() {
 
   const tbody = document.getElementById('sparepartTableBody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Tidak ada data sparepart</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Tidak ada data sparepart</td></tr>';
     return;
   }
 
@@ -162,6 +163,7 @@ function renderTable() {
       <td><span class="code-badge">${p.code || '-'}</span></td>
       <td>${p.name}</td>
       <td>${p.category_name || '-'}</td>
+      <td>${p.brand || '-'}</td>
       <td>${p.rack_location || '-'}</td>
       <td><strong>${p.stock}</strong></td>
       <td>${rupiah(p.price)}</td>
@@ -203,6 +205,7 @@ function openEditModal(id) {
   document.getElementById('fieldHargaBeli').value = p.buy_price || 0;
   document.getElementById('fieldHarga').value = p.price;
   document.getElementById('fieldDiskon').value = p.discount || 0;
+  document.getElementById('fieldMerk').value = p.brand || '';
   document.getElementById('modalSparepart').classList.remove('hidden');
 }
 
@@ -217,6 +220,7 @@ async function saveSparepart() {
     name: document.getElementById('fieldNama').value.trim(),
     category_id: document.getElementById('fieldKategori').value || null,
     supplier: document.getElementById('fieldSupplier').value.trim() || null,
+    brand: document.getElementById('fieldMerk').value.trim() || null,
     stock: parseInt(document.getElementById('fieldStok').value) || 0,
     buy_price: parseFloat(document.getElementById('fieldHargaBeli').value) || 0,
     price: parseFloat(document.getElementById('fieldHarga').value) || 0,
@@ -315,6 +319,93 @@ async function confirmDeleteAll() {
     alert('Koneksi error!');
   } finally {
     if (btnConfirm) { btnConfirm.disabled = false; btnConfirm.textContent = 'Hapus Semua'; }
+  }
+}
+
+function openBulkAdjustModal() {
+  const sel = document.getElementById('bulkAdjustCategory');
+  if (sel) {
+    sel.innerHTML = '<option value="">Semua Kategori</option>' +
+      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
+  document.getElementById('bulkAdjustValue').value = '';
+  document.getElementById('bulkAdjustPassword').value = '';
+  document.getElementById('bulkAdjustError').style.display = 'none';
+  const btnSave = document.getElementById('btnSaveBulkAdjust');
+  if (btnSave) {
+    btnSave.disabled = false;
+    btnSave.textContent = 'Terapkan Perubahan';
+  }
+  document.getElementById('modalBulkAdjust').classList.remove('hidden');
+  setTimeout(() => document.getElementById('bulkAdjustValue').focus(), 100);
+}
+
+function closeBulkAdjustModal() {
+  document.getElementById('modalBulkAdjust').classList.add('hidden');
+}
+
+async function submitBulkAdjust() {
+  const category_id = document.getElementById('bulkAdjustCategory').value;
+  const price_type = document.getElementById('bulkAdjustPriceType').value;
+  const adjust_type = document.getElementById('bulkAdjustType').value;
+  const adjust_value = parseFloat(document.getElementById('bulkAdjustValue').value);
+  const rounding = parseInt(document.getElementById('bulkAdjustRounding').value);
+  const password = document.getElementById('bulkAdjustPassword').value;
+  const errEl = document.getElementById('bulkAdjustError');
+
+  if (isNaN(adjust_value)) {
+    errEl.textContent = 'Nilai penyesuaian wajib diisi!';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!password) {
+    errEl.textContent = 'Password verifikasi wajib diisi!';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btnSave = document.getElementById('btnSaveBulkAdjust');
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.textContent = 'Memproses...';
+  }
+
+  try {
+    const res = await fetch(`${API}/spareparts/bulk-adjust`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        category_id: category_id ? parseInt(category_id) : null,
+        price_type,
+        adjust_type,
+        adjust_value,
+        rounding,
+        password
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeBulkAdjustModal();
+      loadData();
+      alert(data.message);
+    } else {
+      errEl.textContent = data.message || 'Gagal menyesuaikan harga';
+      errEl.style.display = 'block';
+      if (btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = 'Terapkan Perubahan';
+      }
+    }
+  } catch (err) {
+    errEl.textContent = 'Koneksi error!';
+    errEl.style.display = 'block';
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.textContent = 'Terapkan Perubahan';
+    }
   }
 }
 

@@ -7,6 +7,7 @@ router.use(auth);
 
 router.get('/', c.getAllPurchases);
 router.post('/', c.createPurchase);
+router.delete('/all', c.deleteAllPurchases);
 router.delete('/:id', c.deletePurchase);
 
 module.exports = router;

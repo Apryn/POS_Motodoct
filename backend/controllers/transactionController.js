@@ -126,7 +126,13 @@ exports.getTransactionById = async (req, res) => {
             JOIN services sv ON tsv.service_id = sv.id
             JOIN mechanics m ON tsv.mechanic_id = m.id WHERE tsv.transaction_id = ?
         `, [id]);
-        res.json({ success: true, data: { ...trx, spareparts, services } });
+        const [returns] = await db.execute(`
+            SELECT sr.*, s.name as sparepart_name, s.code as sparepart_code 
+            FROM sparepart_returns sr
+            JOIN spareparts s ON sr.sparepart_id = s.id
+            WHERE sr.transaction_id = ?
+        `, [id]);
+        res.json({ success: true, data: { ...trx, spareparts, services, returns } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
@@ -189,4 +195,149 @@ exports.getVehicleHistory = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
+
+exports.processReturn = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { transaction_id, sparepart_id, quantity, reason } = req.body;
+
+        if (!transaction_id || !sparepart_id || !quantity || quantity <= 0) {
+            return res.status(400).json({ success: false, message: 'Data retur tidak valid' });
+        }
+
+        // 1. Dapatkan info transaksi untuk diskon ratio
+        const [[trx]] = await conn.execute('SELECT * FROM transactions WHERE id = ?', [transaction_id]);
+        if (!trx) {
+            return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
+        }
+
+        // 2. Dapatkan item sparepart dalam transaksi tersebut
+        const [[item]] = await conn.execute(
+            'SELECT * FROM transaction_spareparts WHERE transaction_id = ? AND sparepart_id = ?',
+            [transaction_id, sparepart_id]
+        );
+        if (!item) {
+            return res.status(400).json({ success: false, message: 'Sparepart tidak ditemukan dalam transaksi ini' });
+        }
+
+        // 3. Hitung jumlah yang sudah diretur sebelumnya untuk sparepart ini
+        const [[resReturned]] = await conn.execute(
+            'SELECT COALESCE(SUM(quantity), 0) AS total_returned FROM sparepart_returns WHERE transaction_id = ? AND sparepart_id = ?',
+            [transaction_id, sparepart_id]
+        );
+        const totalReturned = Number(resReturned.total_returned);
+        const maxReturnable = item.quantity - totalReturned;
+
+        if (quantity > maxReturnable) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Jumlah retur (${quantity}) melebihi jumlah yang bisa diretur (maksimal: ${maxReturnable})` 
+            });
+        }
+
+        // 4. Hitung refund_amount dengan memperhitungkan diskon transaksi secara proporsional.
+        // Hitung subtotal seluruh transaksi dari database untuk mendapatkan diskon ratio asli
+        const [[resSubtotalSparepart]] = await conn.execute(
+            'SELECT COALESCE(SUM(subtotal), 0) AS total FROM transaction_spareparts WHERE transaction_id = ?',
+            [transaction_id]
+        );
+        const [[resSubtotalJasa]] = await conn.execute(
+            'SELECT COALESCE(SUM(price), 0) AS total FROM transaction_services WHERE transaction_id = ?',
+            [transaction_id]
+        );
+        
+        const currentSubtotal = Number(resSubtotalSparepart.total) + Number(resSubtotalJasa.total);
+        const discountRatio = currentSubtotal > 0 ? (Number(trx.total_amount) / currentSubtotal) : 1;
+
+        const originalReturnSubtotal = quantity * Number(item.price);
+        const refundAmount = Math.round(originalReturnSubtotal * discountRatio);
+
+        // 5. Catat log retur
+        await conn.execute(
+            'INSERT INTO sparepart_returns (transaction_id, sparepart_id, quantity, price, refund_amount, reason) VALUES (?, ?, ?, ?, ?, ?)',
+            [transaction_id, sparepart_id, quantity, item.price, refundAmount, reason || 'Retur Pelanggan']
+        );
+
+        // 6. Update stok sparepart di gudang
+        await conn.execute(
+            'UPDATE spareparts SET stock = stock + ? WHERE id = ?',
+            [quantity, sparepart_id]
+        );
+
+        // 7. Kurangi jumlah dan subtotal di detail transaksi
+        // Catatan: kita tidak mengubah original quantity di detail jika tidak mau,
+        // namun untuk mempermudah penghitungan report (yang men-sum subtotal), kita update:
+        const newQty = item.quantity - quantity;
+        const newSubtotal = newQty * Number(item.price);
+        
+        await conn.execute(
+            'UPDATE transaction_spareparts SET quantity = ?, subtotal = ? WHERE transaction_id = ? AND sparepart_id = ?',
+            [newQty, newSubtotal, transaction_id, sparepart_id]
+        );
+
+        // 8. Kurangi total_amount di master transaksi
+        const newTotalAmount = Math.max(0, Number(trx.total_amount) - refundAmount);
+        await conn.execute(
+            'UPDATE transactions SET total_amount = ? WHERE id = ?',
+            [newTotalAmount, transaction_id]
+        );
+
+        await conn.commit();
+        res.json({ 
+            success: true, 
+            message: 'Retur sparepart berhasil diproses', 
+            data: { refund_amount: refundAmount, new_total: newTotalAmount } 
+        });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error proses retur:", error);
+        res.status(500).json({ success: false, message: 'Gagal memproses retur sparepart' });
+    } finally {
+        conn.release();
+    }
+};
+
+exports.deleteTransaction = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { id } = req.params;
+
+        // 1. Dapatkan detail spareparts dalam transaksi ini
+        const [spareparts] = await conn.execute(
+            'SELECT sparepart_id, quantity FROM transaction_spareparts WHERE transaction_id = ?',
+            [id]
+        );
+
+        // 2. Kembalikan stok sparepart
+        for (const sp of spareparts) {
+            await conn.execute(
+                'UPDATE spareparts SET stock = stock + ? WHERE id = ?',
+                [sp.quantity, sp.sparepart_id]
+            );
+        }
+
+        // 3. Hapus data transaksi utama (detail sparepart, detail jasa, pengingat, dan retur akan terhapus otomatis karena CASCADE)
+        const [result] = await conn.execute(
+            'DELETE FROM transactions WHERE id = ?',
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            await conn.rollback();
+            return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: 'Transaksi berhasil dihapus dan stok sparepart telah dikembalikan' });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error hapus transaksi:", error);
+        res.status(500).json({ success: false, message: 'Gagal menghapus transaksi' });
+    } finally {
+        conn.release();
+    }
+};
+
 

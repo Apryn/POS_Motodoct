@@ -172,6 +172,7 @@
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn-secondary" onclick="exportExcel()">⬇ Export Excel</button>
+        <button class="btn-secondary" onclick="openBulkAdjustModal()">⚡ Ubah Harga Massal</button>
         <button class="btn-danger" onclick="openDeleteAllModal()">🗑 Hapus Semua</button>
         <button class="btn-primary" onclick="openAddModal()">+ Tambah</button>
       </div>
@@ -186,6 +187,7 @@
             <th>Kode</th>
             <th>Nama Barang</th>
             <th>Kategori</th>
+            <th>Merk</th>
             <th>Lokasi Rak</th>
             <th>Stok</th>
             <th>Harga Jual</th>
@@ -194,7 +196,7 @@
           </tr>
         </thead>
         <tbody id="sparepartTableBody">
-          <tr><td colspan="9" class="empty-state">Memuat data...</td></tr>
+          <tr><td colspan="10" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
     </div>
@@ -255,9 +257,9 @@
               <label>Diskon (%)</label>
               <input type="number" id="fieldDiskon" placeholder="0" min="0" max="100" value="0" />
             </div>
-            <div class="form-group" style="visibility: hidden; pointer-events: none;">
-              <label>Spacer</label>
-              <input type="text" />
+            <div class="form-group">
+              <label>Merk</label>
+              <input type="text" id="fieldMerk" placeholder="Contoh: Honda, Federal, dll" />
             </div>
           </div>
         </div>
@@ -284,6 +286,71 @@
         <button class="btn-secondary" onclick="closeDeleteModal()">Batal</button>
         <button class="btn-danger" onclick="confirmDelete()">Hapus</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Ubah Harga Massal -->
+  <div class="modal hidden" id="modalBulkAdjust">
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-header">
+        <h3>⚡ Ubah Harga Massal</h3>
+        <button class="modal-close" onclick="closeBulkAdjustModal()">✕</button>
+      </div>
+      <form id="formBulkAdjust" onsubmit="event.preventDefault(); submitBulkAdjust()">
+        <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+          <p style="font-size:12px; color:#555; line-height:1.4;">Sesuaikan harga beli/jual secara massal berdasarkan kategori dengan pembulatan kelipatan.</p>
+          
+          <div class="form-group">
+            <label for="bulkAdjustCategory">Kategori Target</label>
+            <select id="bulkAdjustCategory" style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="bulkAdjustPriceType">Harga yang Diubah</label>
+            <select id="bulkAdjustPriceType" style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none; font-weight:600;">
+              <option value="sell">Harga Jual (Price)</option>
+              <option value="buy">Harga Beli (Buy Price)</option>
+            </select>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="bulkAdjustType">Tipe Penyesuaian</label>
+              <select id="bulkAdjustType" style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
+                <option value="percentage">Persentase (%)</option>
+                <option value="nominal">Nominal Rupiah (Rp)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="bulkAdjustValue">Nilai (+ / -)</label>
+              <input type="number" id="bulkAdjustValue" placeholder="Contoh: 5 atau -5000" step="any" required
+                style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none; font-weight:700;" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="bulkAdjustRounding">Pembulatan Kelipatan</label>
+            <select id="bulkAdjustRounding" style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
+              <option value="0">Tanpa Pembulatan</option>
+              <option value="500">Kelipatan 500 terdekat (Contoh: 12.300 -> 12.500)</option>
+              <option value="1000">Kelipatan 1.000 terdekat (Contoh: 12.300 -> 12.000)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="bulkAdjustPassword">Password Verifikasi <span class="required">*</span></label>
+            <input type="password" id="bulkAdjustPassword" placeholder="Masukkan password Anda" required
+              style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;" />
+          </div>
+          <p id="bulkAdjustError" style="font-size:12px; color:#e74c3c; display:none; margin:0;"></p>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f0f0f0; padding-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-secondary" onclick="closeBulkAdjustModal()">Batal</button>
+          <button type="submit" class="btn-primary" id="btnSaveBulkAdjust">Terapkan Perubahan</button>
+        </div>
+      </form>
     </div>
   </div>
 

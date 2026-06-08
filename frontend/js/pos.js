@@ -59,6 +59,7 @@ let cart = [];
 let activeTab = 'sparepart';
 let paymentMethod = 'cash';
 let activeSavedCartId = null; // track keranjang tersimpan yang sedang aktif
+let adjustCartIndex = null;
 
 // Load data
 async function loadData() {
@@ -106,14 +107,16 @@ function renderProducts(filter = '') {
      (p.code || '').toLowerCase().includes(filter.toLowerCase()))
   );
 
-  spGrid.innerHTML = filteredSp.length ? filteredSp.map(p => `
-    <div class="product-card" onclick="addToCartById(${p.id}, 'sparepart')">
-      <div class="product-code">${p.code || '-'}</div>
-      <div class="product-name">${p.name}</div>
-      <div class="product-price">${rupiah(p.price)}</div>
-      <div class="product-stock ${p.stock <= 5 ? 'low' : ''}">Stok: ${p.stock}</div>
-    </div>
-  `).join('') : '<div class="empty-state">Tidak ada produk</div>';
+  spGrid.innerHTML = filteredSp.length ? filteredSp.map(p => {
+    return `
+      <div class="product-card" onclick="addToCartById(${p.id}, 'sparepart')">
+        <div class="product-code">${p.code || '-'}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-price">${rupiah(p.price)}</div>
+        <div class="product-stock ${p.stock <= 5 ? 'low' : ''}">Stok: ${p.stock}</div>
+      </div>
+    `;
+  }).join('') : '<div class="empty-state">Tidak ada produk</div>';
 
   const filteredSv = services.filter(s =>
     s.name.toLowerCase().includes(filter.toLowerCase())
@@ -166,7 +169,7 @@ function addToCartById(id, type) {
       }
       existing.qty++;
     } else {
-      cart.push({ id, type: 'sparepart', name: item.name, code: item.code || '-', price: item.price, qty: 1, maxQty: item.stock });
+      cart.push({ id, type: 'sparepart', name: item.name, code: item.code || '-', brand: item.brand || '', price: item.price, qty: 1, maxQty: item.stock });
     }
   } else {
     const item = services.find(s => s.id === id);
@@ -217,32 +220,43 @@ function renderCart() {
     return;
   }
 
-  cartList.innerHTML = cart.map((item, idx) => `
-    <div class="cart-item">
-      <!-- Col 1: Info (Nama & Subtitle Jasa/Part + Harga Satuan) -->
-      <div class="cart-col-info">
-        <span class="cart-item-name" title="${escHtml(item.name)}">${escHtml(item.name)}</span>
-        <span class="cart-item-sub">${item.type === 'servis' ? 'Servis' : 'Part'} · ${rupiah(item.price)}</span>
+  cartList.innerHTML = cart.map((item, idx) => {
+    const dbItem = item.type === 'sparepart'
+      ? spareparts.find(p => p.id === item.id)
+      : services.find(s => s.id === item.id);
+    const dbPrice = dbItem ? Number(dbItem.price) : Number(item.price);
+    const isCustom = Number(item.price) !== dbPrice;
+    const badgeHtml = isCustom
+      ? `<span class="badge-custom-price" style="background:#ffe4e6; color:#b91c1c; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:middle; border:1px solid #fecdd3; display:inline-block; line-height:1.2;">Manual</span>`
+      : '';
+
+    return `
+      <div class="cart-item">
+        <!-- Col 1: Info (Nama & Subtitle Jasa/Part + Harga Satuan) -->
+        <div class="cart-col-info">
+          <span class="cart-item-name" title="${escHtml(item.name)}">${escHtml(item.name)}</span>
+          <span class="cart-item-sub">${item.type === 'servis' ? 'Servis' : 'Part'} · ${rupiah(item.price)} <button type="button" onclick="openAdjustPriceModal(${idx})" title="Edit Harga" style="background:none; border:none; color:#e87722; cursor:pointer; font-size:11px; padding:0 2px; display:inline; vertical-align:middle; line-height:1;">✏️</button>${badgeHtml}</span>
+        </div>
+        
+        <!-- Col 2: Kontrol Qty -->
+        <div class="cart-col-qty">
+          <button class="qty-btn" onclick="changeQty(${idx}, -1)">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
+        </div>
+        
+        <!-- Col 3: Total Harga -->
+        <div class="cart-col-price">
+          ${rupiah(item.price * item.qty)}
+        </div>
+        
+        <!-- Col 4: Hapus Item -->
+        <div class="cart-col-del">
+          <button class="btn-remove" onclick="removeFromCart(${idx})" title="Hapus Item">✕</button>
+        </div>
       </div>
-      
-      <!-- Col 2: Kontrol Qty -->
-      <div class="cart-col-qty">
-        <button class="qty-btn" onclick="changeQty(${idx}, -1)">−</button>
-        <span class="qty-val">${item.qty}</span>
-        <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
-      </div>
-      
-      <!-- Col 3: Total Harga -->
-      <div class="cart-col-price">
-        ${rupiah(item.price * item.qty)}
-      </div>
-      
-      <!-- Col 4: Hapus Item -->
-      <div class="cart-col-del">
-        <button class="btn-remove" onclick="removeFromCart(${idx})" title="Hapus Item">✕</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   updateTotals();
 }
@@ -529,6 +543,92 @@ async function applyDiscount() {
   }
 }
 
+function formatAdjustPriceInput(input) {
+  const raw = input.value.replace(/\D/g, '');
+  input.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+}
+
+function openAdjustPriceModal(idx) {
+  const item = cart[idx];
+  if (!item) return;
+  adjustCartIndex = idx;
+  document.getElementById('adjustItemName').textContent = item.name;
+  document.getElementById('adjustCurrentPrice').textContent = rupiah(item.price);
+  document.getElementById('adjustNewPrice').value = Number(item.price || 0).toLocaleString('id-ID');
+  document.getElementById('adjustPassword').value = '';
+  document.getElementById('adjustPriceError').style.display = 'none';
+
+  const btnSave = document.getElementById('btnSaveAdjustPrice');
+  if (btnSave) {
+    btnSave.disabled = false;
+    btnSave.textContent = 'Simpan Harga';
+  }
+
+  document.getElementById('modalAdjustPrice').classList.remove('hidden');
+  setTimeout(() => document.getElementById('adjustPassword').focus(), 100);
+}
+
+function closeAdjustPriceModal() {
+  document.getElementById('modalAdjustPrice').classList.add('hidden');
+  adjustCartIndex = null;
+}
+
+async function applyManualPrice() {
+  if (adjustCartIndex === null) return;
+  const rawPrice = document.getElementById('adjustNewPrice').value.replace(/\./g, '').replace(',', '.');
+  const newPrice = parseFloat(rawPrice);
+  const password = document.getElementById('adjustPassword').value;
+  const errEl = document.getElementById('adjustPriceError');
+
+  if (isNaN(newPrice) || newPrice < 0) {
+    errEl.textContent = 'Harga baru tidak valid!';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!password) {
+    errEl.textContent = 'Password verifikasi wajib diisi!';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btnSave = document.getElementById('btnSaveAdjustPrice');
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.textContent = 'Memverifikasi...';
+  }
+
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      errEl.textContent = 'Password salah!';
+      errEl.style.display = 'block';
+      if (btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = 'Simpan Harga';
+      }
+      return;
+    }
+
+    // Update price in cart
+    cart[adjustCartIndex].price = newPrice;
+    closeAdjustPriceModal();
+    renderCart();
+  } catch (err) {
+    errEl.textContent = 'Tidak bisa terhubung ke server!';
+    errEl.style.display = 'block';
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.textContent = 'Simpan Harga';
+    }
+  }
+}
+
 function clearCart() {
   cart = [];
   activeSavedCartId = null;
@@ -660,7 +760,7 @@ function showStruk(trxData, total, subtotal, discountAmt) {
       <td style="padding: 1px 0; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${idx + 1}</td>
       <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${escHtml(itemCode)}">${escHtml(itemCode)}</td>
       <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;" title="${escHtml(i.name)}${typeLabel}">${escHtml(i.name)}${typeLabel}</td>
-      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000;">N/A</td>
+      <td style="padding: 1px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed #000;">${escHtml(i.brand || '-')}</td>
       <td style="padding: 1px 4px; text-align: center; vertical-align: top; border-bottom: 1px dashed #000;">${i.qty}</td>
       <td style="padding: 1px 4px; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price)}</td>
       <td style="padding: 1px 0; text-align: right; vertical-align: top; border-bottom: 1px dashed #000; white-space: nowrap;">${rupiah(i.price * i.qty)}</td>

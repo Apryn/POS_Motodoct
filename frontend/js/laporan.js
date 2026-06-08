@@ -421,7 +421,7 @@ function exportCSV() {
     t.created_at ? new Date(t.created_at).toLocaleDateString('id-ID') : '',
     t.customer_name || 'Umum',
     (t.payment_method || '').toUpperCase(),
-    t.total_amount || 0,
+    Number(t.total_amount) || 0,
     t.username || ''
   ]);
   // Combine headers and rows into an array of arrays
@@ -451,6 +451,14 @@ async function lihatDetail(id) {
     if (document.getElementById('btnPrintDetailStruk')) {
       document.getElementById('btnPrintDetailStruk').style.display = 'inline-block';
     }
+    const btnDel = document.getElementById('btnDeleteTransaction');
+    if (btnDel) {
+      if (user.role === 'admin' || user.role === 'owner') {
+        btnDel.style.display = 'inline-block';
+      } else {
+        btnDel.style.display = 'none';
+      }
+    }
 
     const tgl = new Date(data.created_at).toLocaleString('id-ID');
     let html = `
@@ -472,13 +480,20 @@ async function lihatDetail(id) {
             <th style="padding:6px 10px;text-align:left;">Nama</th>
             <th style="padding:6px 10px;text-align:center;">Qty</th>
             <th style="padding:6px 10px;text-align:right;">Subtotal</th>
+            <th style="padding:6px 10px;text-align:center;width:80px;">Aksi</th>
           </tr></thead>
-          <tbody>${data.spareparts.map(s => `
+          <tbody>${data.spareparts.map(s => {
+            const returBtn = s.quantity > 0 
+              ? `<button onclick="openReturnModal(${data.id}, ${s.sparepart_id}, '${s.sparepart_name.replace(/'/g, "\\'")}', ${s.quantity}, ${s.price})" style="padding:2px 6px;background:#fff5eb;color:#e87722;border:1px solid #ffd8b3;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Retur</button>`
+              : `<span style="color:#aaa;font-size:11px;font-style:italic;">Habis Diretur</span>`;
+            return `
             <tr style="border-bottom:1px solid #f0f0f0;">
               <td style="padding:6px 10px;">${s.sparepart_name}</td>
               <td style="padding:6px 10px;text-align:center;">${s.quantity}</td>
               <td style="padding:6px 10px;text-align:right;">${rupiah(s.subtotal)}</td>
-            </tr>`).join('')}
+              <td style="padding:6px 10px;text-align:center;">${returBtn}</td>
+            </tr>`;
+          }).join('')}
           </tbody>
         </table>`;
     }
@@ -501,6 +516,26 @@ async function lihatDetail(id) {
         </table>`;
     }
 
+    if (data.returns?.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:#e74c3c;text-transform:uppercase;letter-spacing:.5px;margin-top:12px;margin-bottom:6px;">Barang Diretur (Refund)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;background:#fdf5f5;border:1px solid #fcdbdb;border-radius:6px;">
+          <thead><tr style="background:#fde8e8;">
+            <th style="padding:6px 10px;text-align:left;color:#c0392b;">Nama</th>
+            <th style="padding:6px 10px;text-align:center;color:#c0392b;">Qty</th>
+            <th style="padding:6px 10px;text-align:right;color:#c0392b;">Refund</th>
+            <th style="padding:6px 10px;text-align:left;color:#c0392b;">Alasan</th>
+          </tr></thead>
+          <tbody>${data.returns.map(r => `
+            <tr style="border-bottom:1px solid #fcdbdb;color:#c0392b;">
+              <td style="padding:6px 10px;font-weight:600;">${r.sparepart_name}</td>
+              <td style="padding:6px 10px;text-align:center;font-weight:600;">${r.quantity}</td>
+              <td style="padding:6px 10px;text-align:right;font-weight:700;">-${rupiah(r.refund_amount)}</td>
+              <td style="padding:6px 10px;font-style:italic;">${r.reason || '-'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
     html += `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;padding:10px 0;border-top:2px solid #f0f0f0;">
       <span>TOTAL</span><span style="color:#e87722;">${rupiah(data.total_amount)}</span>
     </div>`;
@@ -512,11 +547,123 @@ async function lihatDetail(id) {
   }
 }
 
+function openReturnModal(transactionId, sparepartId, sparepartName, maxQty, price) {
+  document.getElementById('returTransactionId').value = transactionId;
+  document.getElementById('returSparepartId').value = sparepartId;
+  document.getElementById('returSparepartName').textContent = sparepartName;
+  document.getElementById('returSparepartPrice').textContent = rupiah(price);
+  document.getElementById('returMaxQty').textContent = maxQty;
+  
+  const qtyInput = document.getElementById('returQty');
+  qtyInput.max = maxQty;
+  qtyInput.value = 1;
+  document.getElementById('returReason').value = '';
+  
+  document.getElementById('modalRetur').classList.remove('hidden');
+}
+
+function closeReturnModal() {
+  document.getElementById('modalRetur').classList.add('hidden');
+}
+
+async function submitReturn() {
+  const transactionId = document.getElementById('returTransactionId').value;
+  const sparepartId = document.getElementById('returSparepartId').value;
+  const quantity = parseInt(document.getElementById('returQty').value);
+  const maxQty = parseInt(document.getElementById('returMaxQty').textContent);
+  const reason = document.getElementById('returReason').value.trim();
+
+  if (quantity <= 0 || quantity > maxQty) {
+    alert(`Jumlah retur tidak valid (Maksimal: ${maxQty})`);
+    return;
+  }
+
+  const btnSave = document.getElementById('btnSaveRetur');
+  btnSave.disabled = true;
+  btnSave.textContent = 'Menyimpan...';
+
+  try {
+    const res = await fetch(`${API}/transactions/return`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        transaction_id: transactionId,
+        sparepart_id: sparepartId,
+        quantity: quantity,
+        reason: reason
+      })
+    });
+    
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('Retur sparepart berhasil diproses!');
+      closeReturnModal();
+      
+      // Refresh transaction detail modal to show updated quantities & returns list
+      await lihatDetail(transactionId);
+      
+      // Refresh main laporan data (totals & tables)
+      loadLaporan();
+    } else {
+      alert('Gagal memproses retur: ' + (data.message || 'Server error'));
+    }
+  } catch (err) {
+    console.error('Error retur:', err);
+    alert('Terjadi kesalahan koneksi saat memproses retur');
+  } finally {
+    btnSave.disabled = false;
+    btnSave.textContent = 'Simpan Retur';
+  }
+}
+
 function closeDetail() {
   document.getElementById('modalDetail').classList.add('hidden');
   currentDetailTrx = null;
   if (document.getElementById('btnPrintDetailStruk')) {
     document.getElementById('btnPrintDetailStruk').style.display = 'none';
+  }
+  if (document.getElementById('btnDeleteTransaction')) {
+    document.getElementById('btnDeleteTransaction').style.display = 'none';
+  }
+}
+
+async function deleteTransactionClick() {
+  if (!currentDetailTrx) return;
+  const id = currentDetailTrx.id;
+  const invoice = currentDetailTrx.invoice_number;
+
+  const konfirmasi = confirm(`Apakah Anda yakin ingin menghapus transaksi ${invoice} secara permanen?\n\nTindakan ini:\n1. Akan menghapus transaksi ini selamanya.\n2. Akan mengembalikan stok sparepart yang terjual di transaksi ini.`);
+  if (!konfirmasi) return;
+
+  const btnDel = document.getElementById('btnDeleteTransaction');
+  btnDel.disabled = true;
+  btnDel.textContent = 'Menghapus...';
+
+  try {
+    const res = await fetch(`${API}/transactions/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('Transaksi berhasil dihapus dan stok sparepart telah dikembalikan!');
+      closeDetail();
+      loadLaporan();
+    } else {
+      alert('Gagal menghapus transaksi: ' + (data.message || 'Server error'));
+    }
+  } catch (err) {
+    console.error('Error delete transaction:', err);
+    alert('Terjadi kesalahan koneksi saat menghapus transaksi');
+  } finally {
+    btnDel.disabled = false;
+    btnDel.textContent = '🗑️ Hapus Transaksi';
   }
 }
 

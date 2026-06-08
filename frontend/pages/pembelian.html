@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <!-- Secure Route Guard & Role Access Control -->
@@ -173,6 +173,7 @@
           📤 Import Excel/CSV
           <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display:none" />
         </label>
+        <button class="btn-danger" onclick="openDeleteAllModal()" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:600; cursor:pointer;">🗑 Hapus Semua</button>
         <button class="btn-primary" onclick="openAddModal()">+ Catat Pembelian</button>
       </div>
     </div>
@@ -290,6 +291,7 @@
               <th>Supplier</th>
               <th>Kode</th>
               <th>Nama Barang</th>
+              <th>Merk</th>
               <th>Qty</th>
               <th>Beli/PCS</th>
               <th>Beli/Total</th>
@@ -304,6 +306,30 @@
         <button class="btn-secondary" onclick="closePreviewModal()">Batal</button>
         <button class="btn-primary" id="btnImportAll" onclick="submitImport()">📤 Import Semua</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Hapus Semua -->
+  <div class="modal hidden" id="modalDeleteAll">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3>Hapus Semua Pembelian</h3>
+        <button class="modal-close" onclick="closeDeleteAllModal()">✕</button>
+      </div>
+      <form id="formDeleteAll" onsubmit="event.preventDefault(); confirmDeleteAll()">
+        <div class="modal-body">
+          <p>Yakin ingin menghapus <strong>seluruh</strong> data pembelian?</p>
+          <p style="font-size:12px;color:#e74c3c;margin-bottom:12px">Tindakan ini tidak dapat dibatalkan.</p>
+          <div class="form-group">
+            <label>Masukkan Password Verifikasi <span class="required">*</span></label>
+            <input type="password" id="fieldDeleteAllPassword" placeholder="Password akun Anda" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeDeleteAllModal()">Batal</button>
+          <button type="submit" class="btn-danger" style="background:#e74c3c;color:#fff;">Hapus Semua</button>
+        </div>
+      </form>
     </div>
   </div>
 

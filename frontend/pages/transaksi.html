@@ -178,6 +178,8 @@
           <datalist id="customerDatalist"></datalist>
         </div>
 
+
+
         <!-- Mechanic Row (hidden by default) -->
         <div class="mechanic-row hidden" id="mechanicRow">
           <label>Mekanik <span style="color:#e74c3c">*</span></label>
@@ -348,6 +350,40 @@
         <button class="btn-print-struk" onclick="applyDiscount()">Terapkan Diskon</button>
         <button class="btn-close-struk" onclick="closeDiscountModal()">Batal</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Adjust Price -->
+  <div class="modal-struk hidden" id="modalAdjustPrice" style="z-index: 1200;">
+    <div class="struk-box" style="max-width:320px;">
+      <div class="struk-header">
+        <h3>Sesuaikan Harga Manual</h3>
+        <button class="btn-close-struk" onclick="closeAdjustPriceModal()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <form id="formAdjustPrice" onsubmit="event.preventDefault(); applyManualPrice();">
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+          <p style="font-size:12px;color:#555;line-height:1.4;">Sesuaikan harga barang "<strong id="adjustItemName"></strong>" secara manual. Tindakan ini memerlukan verifikasi password.</p>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Harga Saat Ini</label>
+            <div id="adjustCurrentPrice" style="font-weight:700;font-size:13px;color:#334155;background:#f8fafc;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;">Rp 0</div>
+          </div>
+          <div>
+            <label for="adjustNewPrice" style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Harga Baru (Rp) <span style="color:#e74c3c">*</span></label>
+            <input type="text" id="adjustNewPrice" placeholder="0" inputmode="numeric" autocomplete="off" required oninput="formatAdjustPriceInput(this)"
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-weight:700;" />
+          </div>
+          <div>
+            <label for="adjustPassword" style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Password Kasir <span style="color:#e74c3c">*</span></label>
+            <input type="password" id="adjustPassword" placeholder="Masukkan password Anda" required
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+          </div>
+          <p id="adjustPriceError" style="font-size:12px;color:#e74c3c;display:none;margin:0;"></p>
+        </div>
+        <div class="struk-footer">
+          <button type="submit" class="btn-print-struk" id="btnSaveAdjustPrice">Simpan Harga</button>
+          <button type="button" class="btn-close-struk" onclick="closeAdjustPriceModal()">Batal</button>
+        </div>
+      </form>
     </div>
   </div>
 

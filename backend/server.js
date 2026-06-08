@@ -206,6 +206,27 @@ app.listen(PORT, async () => {
     console.error("❌ Gagal memverifikasi tabel saved_carts:", err.message);
   }
 
+  // Auto-create sparepart_returns table if it doesn't exist
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sparepart_returns (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        transaction_id INT NOT NULL,
+        sparepart_id INT NOT NULL,
+        quantity INT NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        refund_amount DECIMAL(10,2) NOT NULL,
+        reason VARCHAR(255) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+        FOREIGN KEY (sparepart_id) REFERENCES spareparts(id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    );
+    console.log("✅ Tabel sparepart_returns terverifikasi!");
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi tabel sparepart_returns:", err.message);
+  }
+
   // Verify and add missing columns dynamically in a non-destructive way
   try {
     // 1. users.plain_password
@@ -233,6 +254,20 @@ app.listen(PORT, async () => {
     if (txPlateCols.length === 0) {
       await db.execute("ALTER TABLE transactions ADD COLUMN license_plate VARCHAR(20) DEFAULT NULL");
       console.log("🛠️  Kolom license_plate berhasil ditambahkan ke tabel transactions!");
+    }
+
+    // 4. spareparts.brand
+    const [sparepartCols] = await db.execute("SHOW COLUMNS FROM spareparts LIKE 'brand'");
+    if (sparepartCols.length === 0) {
+      await db.execute("ALTER TABLE spareparts ADD COLUMN brand VARCHAR(100) DEFAULT NULL");
+      console.log("🛠️  Kolom brand berhasil ditambahkan ke tabel spareparts!");
+    }
+
+    // 5. mechanics.is_deleted
+    const [mechDelCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'is_deleted'");
+    if (mechDelCols.length === 0) {
+      await db.execute("ALTER TABLE mechanics ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0");
+      console.log("🛠️  Kolom is_deleted berhasil ditambahkan ke tabel mechanics!");
     }
 
     console.log("✅ Kolom database tambahan terverifikasi!");

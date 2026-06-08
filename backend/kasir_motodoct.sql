@@ -25,6 +25,7 @@ CREATE TABLE `mechanics` (
   `name` varchar(100) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `commission_rate` decimal(5,2) NOT NULL DEFAULT 35.00,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -47,6 +48,7 @@ CREATE TABLE `spareparts` (
   `buy_price` decimal(10,2) DEFAULT 0,
   `buy_total` decimal(10,2) DEFAULT 0,
   `discount` decimal(5,2) DEFAULT 0,
+  `brand` varchar(100) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`),

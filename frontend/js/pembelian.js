@@ -34,6 +34,7 @@ function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
+// Rupiah Short format helper
 function rupiahShort(n) {
   n = Number(n || 0);
   if (n >= 1000000000) return 'Rp ' + (n / 1000000000).toFixed(1).replace('.', ',') + ' M';
@@ -107,6 +108,7 @@ function onSparepartChange() {
   calcHargaJual();
 }
 
+// Calculate total purchase amount
 function calcTotal() {
   const qty = parseFloat(document.getElementById('fieldQty')?.value || 0);
   const harga = parseFloat(document.getElementById('fieldHargaBeli')?.value || 0);
@@ -115,6 +117,7 @@ function calcTotal() {
   if (el) el.value = total;
 }
 
+// Calculate general selling price
 function calcHargaJual() {
   const harga = parseFloat(document.getElementById('fieldHargaBeli')?.value || 0);
   const jual = roundToNearest500(harga * 1.3);
@@ -172,7 +175,6 @@ document.getElementById('searchInput')?.addEventListener('input', renderTable);
 document.getElementById('filterFrom')?.addEventListener('change', renderTable);
 document.getElementById('filterTo')?.addEventListener('change', renderTable);
 
-// Add modal
 function openAddModal() {
   document.getElementById('formPembelian').reset();
   document.getElementById('fieldTotal').value = '';
@@ -218,7 +220,6 @@ async function savePembelian() {
     if (data.success) {
       closeModal();
       loadData();
-      // Tampilkan notifikasi kalau harga naik
       if (data.data?.harga_naik && data.data?.saran) {
         setTimeout(() => alert(`⚠️ ${data.data.saran}`), 300);
       }
@@ -232,7 +233,6 @@ async function savePembelian() {
   }
 }
 
-// Delete
 function openDeleteModal(id) {
   deleteId = id;
   document.getElementById('modalDelete').classList.remove('hidden');
@@ -262,9 +262,49 @@ async function confirmDelete() {
   }
 }
 
+function openDeleteAllModal() {
+  const passwordInput = document.getElementById('fieldDeleteAllPassword');
+  if (passwordInput) passwordInput.value = '';
+  document.getElementById('modalDeleteAll').classList.remove('hidden');
+}
+
+function closeDeleteAllModal() {
+  document.getElementById('modalDeleteAll').classList.add('hidden');
+}
+
+async function confirmDeleteAll() {
+  const passwordInput = document.getElementById('fieldDeleteAllPassword');
+  const password = passwordInput ? passwordInput.value : '';
+  if (!password) {
+    alert('Password wajib diisi!');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API}/purchases/all`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeDeleteAllModal();
+      loadData();
+    } else {
+      alert('Gagal: ' + data.message);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Koneksi error!');
+  }
+}
+
 // ===== IMPORT EXCEL =====
 function parseRows(sheetData) {
-  // Columns: No, Supplier, Kode, Nama, Qty, Beli/PCS, Beli/Total, Jual/PCS, Diskon, Lokasi Rak
+  // Columns: No, Supplier, Kode, Nama, Merk, Qty, Beli/PCS, Beli/Total, Jual/PCS, Diskon, Lokasi Rak
   const rows = [];
   const grouped = {};
 
@@ -274,23 +314,22 @@ function parseRows(sheetData) {
     const supplier = String(row[1] || '').trim();
     const kode = String(row[2] || '').trim();
     const nama = String(row[3] || '').trim();
-    const qty = parseInt(row[4]) || 0;
-    const beliPcs = parseFloat(row[5]) || 0;
-    const jualPcs = parseFloat(row[7]) || 0;
-    const diskon = parseFloat(row[8]) || 0;
-    const lokasiRak = String(row[9] || '').trim();
-
-    const beliTotal = parseFloat(row[6]) || (beliPcs * qty); // ambil dari kolom Beli/Total
+    const merk = String(row[4] || '').trim();
+    const qty = parseInt(row[5]) || 0;
+    const beliPcs = parseFloat(row[6]) || 0;
+    const beliTotal = parseFloat(row[7]) || (beliPcs * qty);
+    const jualPcs = parseFloat(row[8]) || 0;
+    const diskon = parseFloat(row[9]) || 0;
+    const lokasiRak = String(row[10] || '').trim();
 
     if (!nama || !qty) return;
 
-    // Group key: kode + supplier + harga beli (gabung hanya kalau sama persis)
     const key = `${kode}||${supplier}||${beliPcs}`;
     if (grouped[key]) {
       grouped[key].qty += qty;
-      grouped[key].beliTotal += beliTotal; // jumlahkan langsung dari Excel
+      grouped[key].beliTotal += beliTotal;
     } else {
-      grouped[key] = { supplier, kode, nama, qty, beliPcs, beliTotal, jualPcs, diskon, lokasiRak };
+      grouped[key] = { supplier, kode, nama, merk, qty, beliPcs, beliTotal, jualPcs, diskon, lokasiRak };
     }
   });
 
@@ -327,6 +366,7 @@ function showImportPreview() {
       <td>${r.supplier || '-'}</td>
       <td><span class="code-badge">${r.kode || '-'}</span></td>
       <td>${r.nama}</td>
+      <td>${r.merk || '-'}</td>
       <td>${r.qty}</td>
       <td>${rupiah(r.beliPcs)}</td>
       <td>${rupiah(r.beliTotal)}</td>
@@ -353,22 +393,23 @@ async function submitImport() {
 
   for (const row of importRows) {
     try {
-      // Cek existing sparepart by kode
       let sparepartId = null;
       const existing = spareparts.find(s => s.code === row.kode);
 
+      const finalPrice = row.jualPcs || roundToNearest500(row.beliPcs * 1.3);
+
       if (existing) {
         sparepartId = existing.id;
-        // Update sparepart
         await fetch(`${API}/spareparts/${sparepartId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             code: row.kode,
             name: row.nama,
+            brand: row.merk || null,
             supplier: row.supplier,
             buy_price: row.beliPcs,
-            price: row.jualPcs || roundToNearest500(row.beliPcs * 1.3),
+            price: finalPrice,
             rack_location: row.lokasiRak,
             stock: (existing.stock || 0) + row.qty,
             category_id: existing.category_id,
@@ -376,16 +417,16 @@ async function submitImport() {
           })
         });
       } else {
-        // Buat sparepart baru
         const resCreate = await fetch(`${API}/spareparts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             code: row.kode,
             name: row.nama,
+            brand: row.merk || null,
             supplier: row.supplier,
             buy_price: row.beliPcs,
-            price: row.jualPcs || roundToNearest500(row.beliPcs * 1.3),
+            price: finalPrice,
             rack_location: row.lokasiRak,
             stock: row.qty,
             discount: row.diskon
@@ -395,7 +436,6 @@ async function submitImport() {
         if (createData.success) sparepartId = createData.data.id;
       }
 
-      // Catat ke purchases
       if (sparepartId) {
         await fetch(`${API}/purchases`, {
           method: 'POST',
@@ -405,7 +445,7 @@ async function submitImport() {
             supplier: row.supplier,
             quantity: row.qty,
             buy_price: row.beliPcs,
-            sell_price: row.jualPcs || roundToNearest500(row.beliPcs * 1.3),
+            sell_price: finalPrice,
             rack_location: row.lokasiRak,
             note: 'Import Excel'
           })
@@ -424,17 +464,15 @@ async function submitImport() {
   alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}`);
 }
 
-// Download template
 function downloadTemplate() {
-  const headers = [['No', 'Supplier', 'Kode', 'Nama', 'Qty', 'Beli/PCS', 'Beli/Total', 'Jual/PCS', 'Diskon', 'Lokasi Rak']];
-  const example = [[1, 'Supplier A', 'SP001', 'Oli Mesin 1L', 10, 25000, 250000, 35000, 0, 'RAK-A1']];
+  const headers = [['No', 'Supplier', 'Kode', 'Nama', 'Merk', 'Qty', 'Beli/PCS', 'Beli/Total', 'Jual/PCS', 'Diskon', 'Lokasi Rak']];
+  const example = [[1, 'Supplier A', 'SP001', 'Oli Mesin 1L', 'Federal', 10, 25000, 250000, 35000, 0, 'RAK-A1']];
   const ws = XLSX.utils.aoa_to_sheet([...headers, ...example]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Template');
   XLSX.writeFile(wb, 'template_pembelian.xlsx');
 }
 
-// File input listener
 const importFileEl = document.getElementById('importFile');
 if (importFileEl) importFileEl.addEventListener('change', handleImportFile);
 

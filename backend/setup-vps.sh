@@ -107,7 +107,7 @@ rm -f /etc/nginx/sites-enabled/default
 cat <<EOT > /etc/nginx/sites-available/motodoct
 server {
     listen 80;
-    server_name _;
+    server_name motodoct.com www.motodoct.com;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -123,6 +123,17 @@ EOT
 ln -sf /etc/nginx/sites-available/motodoct /etc/nginx/sites-enabled/
 systemctl restart nginx
 echo -e "${GREEN}✓ Nginx berhasil dikonfigurasi sebagai Reverse Proxy!${NC}"
+
+# 7. Setup SSL Let's Encrypt menggunakan Certbot
+echo -e "\n${YELLOW}Menginstal Certbot dan Mengonfigurasi SSL Let's Encrypt...${NC}"
+apt install -y certbot python3-certbot-nginx
+
+echo -e "${YELLOW}Mendaftarkan sertifikat SSL Let's Encrypt untuk motodoct.com & www.motodoct.com...${NC}"
+certbot --nginx -d motodoct.com -d www.motodoct.com --non-interactive --agree-tos -m admin@motodoct.com --redirect || {
+    echo -e "${RED}⚠️  Gagal mendaftarkan SSL untuk kedua domain. Mencoba hanya untuk motodoct.com...${NC}"
+    certbot --nginx -d motodoct.com --non-interactive --agree-tos -m admin@motodoct.com --redirect || \
+    echo -e "${RED}⚠️  Pendaftaran SSL Certbot gagal total. Pastikan DNS A Record untuk domain motodoct.com sudah diarahkan ke IP VPS Anda!${NC}"
+}
 
 # Buka firewall untuk Nginx
 echo -e "${YELLOW}Membuka port firewall...${NC}"

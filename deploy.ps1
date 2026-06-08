@@ -32,9 +32,9 @@ New-Item -ItemType Directory -Path $TempDir | Out-Null
 # Salin frontend
 Copy-Item -Path "$PSScriptRoot\frontend" -Destination $TempDir -Recurse
 
-# Salin backend tanpa node_modules
+# Salin backend tanpa node_modules & .env
 New-Item -ItemType Directory -Path "$TempDir\backend" | Out-Null
-Get-ChildItem -Path "$PSScriptRoot\backend" | Where-Object { $_.Name -ne "node_modules" } | ForEach-Object {
+Get-ChildItem -Path "$PSScriptRoot\backend" -Force | Where-Object { $_.Name -ne "node_modules" -and $_.Name -ne ".env" } | ForEach-Object {
     Copy-Item -Path $_.FullName -Destination "$TempDir\backend" -Recurse
 }
 
@@ -44,7 +44,7 @@ Write-Host "[1/3] Membuat folder tujuan di VPS..." -ForegroundColor Yellow
 Write-Host "Silakan masukkan password VPS Anda jika diminta:" -ForegroundColor Gray
 ssh root@187.77.156.219 "mkdir -p /var/www/motodoct"
 
-# 4. Mengunggah folder backend dan frontend (Tanpa node_modules)
+# 4. Mengunggah folder backend dan frontend (Tanpa node_modules & .env)
 Write-Host ""
 Write-Host "[2/3] Mengunggah berkas aplikasi ke VPS (Proses sangat cepat!)..." -ForegroundColor Yellow
 Write-Host "Silakan masukkan password VPS Anda kembali:" -ForegroundColor Gray
@@ -57,9 +57,9 @@ if (Test-Path $TempDir) { Remove-Item -Recurse -Force $TempDir }
 Write-Host ""
 if ($pilihan -eq "1") {
     Write-Host "[3/3] Menjalankan Quick Update di VPS..." -ForegroundColor Yellow
-    Write-Host "Menginstal dependensi & me-restart PM2..." -ForegroundColor Gray
+    Write-Host "Menginstal dependensi, memverifikasi konfigurasi, & me-restart PM2..." -ForegroundColor Gray
     Write-Host "Silakan masukkan password VPS Anda untuk terakhir kalinya:" -ForegroundColor Gray
-    ssh root@187.77.156.219 "cd /var/www/motodoct/backend && npm install --production && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
+    ssh root@187.77.156.219 "cd /var/www/motodoct/backend && npm install --production && if grep -q 'DB_USER=root' .env 2>/dev/null; then echo 'Memulihkan konfigurasi database produksi (.env)...' && sed -i 's/DB_USER=root/DB_USER=motodoct_user/g' .env && sed -i 's/DB_PASSWORD=/DB_PASSWORD=motodoct123/g' .env; fi && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
 } else {
     Write-Host "[3/3] Menjalankan Full Setup di VPS..." -ForegroundColor Yellow
     Write-Host "Menyiapkan sistem database, Nginx, UFW firewall, PM2, dll..." -ForegroundColor Gray
@@ -72,5 +72,5 @@ Write-Host "====================================================" -ForegroundCol
 Write-Host " DEPLOYMENT SELESAI DENGAN SUKSES!                   " -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
 Write-Host "Sistem kasir Anda sekarang sudah LIVE di:" -ForegroundColor Green
-Write-Host "http://187.77.156.219" -ForegroundColor Yellow
+Write-Host "https://motodoct.com" -ForegroundColor Yellow
 Write-Host "====================================================" -ForegroundColor Green
