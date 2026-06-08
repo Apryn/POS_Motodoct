@@ -1,5 +1,17 @@
 const db = require('../config/db');
 
+const normalizeUnit = (u) => {
+    if (!u) return 'pcs';
+    const val = String(u).trim().toLowerCase();
+    if (['pcs', 'psc', 'pc', 'piece', 'pieces', 'pices'].includes(val)) return 'pcs';
+    if (['set', 'st'].includes(val)) return 'set';
+    if (['botol', 'btl'].includes(val)) return 'botol';
+    if (['liter', 'ltr'].includes(val)) return 'liter';
+    if (['pack', 'pak', 'pck'].includes(val)) return 'pack';
+    if (['dus', 'box', 'karton'].includes(val)) return 'dus';
+    return val;
+};
+
 exports.getAllSpareparts = async (req, res) => {
     try {
         const query = `SELECT s.*, c.name as category_name FROM spareparts s LEFT JOIN categories c ON s.category_id = c.id ORDER BY s.id DESC`;
@@ -27,7 +39,7 @@ exports.createSparepart = async (req, res) => {
         const buy_total = (buy_price || 0) * (stock || 0);
         const [result] = await db.execute(
             'INSERT INTO spareparts (category_id, code, name, price, stock, rack_location, supplier, buy_price, buy_total, discount, brand, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [category_id || null, code || null, name, price, stock || 0, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, unit || 'pcs']
+            [category_id || null, code || null, name, price, stock || 0, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, normalizeUnit(unit)]
         );
         res.status(201).json({ success: true, message: 'Sparepart berhasil ditambahkan', data: { id: result.insertId } });
     } catch (error) {
@@ -43,7 +55,7 @@ exports.updateSparepart = async (req, res) => {
         const buy_total = (buy_price || 0) * (stock || 0);
         await db.execute(
             'UPDATE spareparts SET category_id=?, code=?, name=?, price=?, stock=?, rack_location=?, supplier=?, buy_price=?, buy_total=?, discount=?, brand=?, unit=? WHERE id=?',
-            [category_id || null, code || null, name, price, stock, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, unit || 'pcs', id]
+            [category_id || null, code || null, name, price, stock, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, normalizeUnit(unit), id]
         );
         res.json({ success: true, message: 'Sparepart berhasil diupdate' });
     } catch (error) {

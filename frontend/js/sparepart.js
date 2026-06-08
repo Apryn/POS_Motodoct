@@ -35,6 +35,18 @@ function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
+function normalizeUnit(u) {
+  if (!u) return 'pcs';
+  const val = String(u).trim().toLowerCase();
+  if (['pcs', 'psc', 'pc', 'piece', 'pieces', 'pices'].includes(val)) return 'pcs';
+  if (['set', 'st'].includes(val)) return 'set';
+  if (['botol', 'btl'].includes(val)) return 'botol';
+  if (['liter', 'ltr'].includes(val)) return 'liter';
+  if (['pack', 'pak', 'pck'].includes(val)) return 'pack';
+  if (['dus', 'box', 'karton'].includes(val)) return 'dus';
+  return val;
+}
+
 function exportExcel() {
   if (!spareparts.length) { alert('Tidak ada data untuk diekspor!'); return; }
 
@@ -51,7 +63,7 @@ function exportExcel() {
     s.brand || '',
     s.supplier || '',
     s.rack_location || '',
-    s.stock ? `${s.stock} ${s.unit || 'pcs'}` : '0 pcs',
+    s.stock ? `${s.stock} ${normalizeUnit(s.unit)}` : '0 pcs',
     Number(s.buy_price) || 0,
     Number(s.price) || 0,
     Number(s.discount) || 0,
@@ -165,7 +177,7 @@ function renderTable() {
       <td>${p.category_name || '-'}</td>
       <td>${p.brand || '-'}</td>
       <td>${p.rack_location || '-'}</td>
-      <td><strong>${p.stock} ${p.unit || 'pcs'}</strong></td>
+      <td><strong>${p.stock} ${normalizeUnit(p.unit)}</strong></td>
       <td>${rupiah(p.price)}</td>
       <td>${getStatusBadge(p.stock)}</td>
       <td>
@@ -206,7 +218,7 @@ function openEditModal(id) {
   document.getElementById('fieldHarga').value = p.price;
   document.getElementById('fieldDiskon').value = p.discount || 0;
   document.getElementById('fieldMerk').value = p.brand || '';
-  document.getElementById('fieldSatuan').value = p.unit || 'pcs';
+  document.getElementById('fieldSatuan').value = normalizeUnit(p.unit);
   document.getElementById('modalSparepart').classList.remove('hidden');
 }
 
