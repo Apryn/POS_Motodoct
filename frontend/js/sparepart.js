@@ -44,6 +44,7 @@ function normalizeUnit(u) {
   if (['liter', 'ltr'].includes(val)) return 'liter';
   if (['pack', 'pak', 'pck'].includes(val)) return 'pack';
   if (['dus', 'box', 'karton'].includes(val)) return 'dus';
+  if (['kaleng', 'klg'].includes(val)) return 'kaleng';
   return val;
 }
 
