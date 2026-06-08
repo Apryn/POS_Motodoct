@@ -320,6 +320,7 @@ function parseRows(sheetData) {
 
   sheetData.forEach((row, idx) => {
     if (idx === 0) return; // skip header
+    const excelRowNumber = idx + 1; // row number in Excel (header is row 1)
     const no = row[0];
     const supplier = String(row[1] || '').trim();
     const kode = String(row[2] || '').trim();
@@ -341,8 +342,22 @@ function parseRows(sheetData) {
     if (grouped[key]) {
       grouped[key].qty += qty;
       grouped[key].beliTotal += beliTotal;
+      grouped[key].mergedRows.push(excelRowNumber);
     } else {
-      grouped[key] = { supplier, kode, nama, merk, qty, beliPcs, beliTotal, jualPcs, diskon, lokasiRak };
+      grouped[key] = { 
+        supplier, 
+        kode, 
+        nama, 
+        merk, 
+        qty, 
+        beliPcs, 
+        beliTotal, 
+        jualPcs, 
+        diskon, 
+        lokasiRak,
+        originalRow: excelRowNumber,
+        mergedRows: []
+      };
     }
   });
 
@@ -377,20 +392,65 @@ function showImportPreview() {
   const importMarkupEl = document.getElementById('importMarkupPercent');
   if (importMarkupEl) importMarkupEl.value = savedMarkup;
 
-  tbody.innerHTML = importRows.map((r, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${r.supplier || '-'}</td>
-      <td><span class="code-badge">${r.kode || '-'}</span></td>
-      <td>${r.nama}</td>
-      <td>${r.merk || '-'}</td>
-      <td>${r.qty}</td>
-      <td>${rupiah(r.beliPcs)}</td>
-      <td>${rupiah(r.beliTotal)}</td>
-      <td>${rupiah(r.jualPcs)}</td>
-      <td>${r.lokasiRak || '-'}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = importRows.map((r, i) => {
+    const existing = r.kode 
+      ? spareparts.find(s => s.code === r.kode)
+      : spareparts.find(s => s.name.toLowerCase() === r.nama.toLowerCase() && s.supplier === r.supplier && parseFloat(s.buy_price) === r.beliPcs);
+
+    let statusBadge = '';
+    if (existing) {
+      statusBadge = `<span class="badge badge-menipis" style="background:#fff8e6;color:#f39c12;font-size:10px;padding:2px 6px;margin-left:6px;font-weight:600;vertical-align:middle;">UPDATE</span>`;
+    } else {
+      statusBadge = `<span class="badge badge-aman" style="background:#e8f8f0;color:#27ae60;font-size:10px;padding:2px 6px;margin-left:6px;font-weight:600;vertical-align:middle;">BARU</span>`;
+    }
+
+    let mergeInfo = '';
+    if (r.mergedRows && r.mergedRows.length > 0) {
+      mergeInfo = `<div style="font-size:10.5px;color:#4a6cf7;margin-top:4px;font-weight:500;">ℹ️ Digabung dari baris Excel #${r.originalRow}, ${r.mergedRows.map(n => `#${n}`).join(', ')}</div>`;
+    }
+
+    let qtyHtml = '';
+    if (existing) {
+      qtyHtml = `<strong>${r.qty}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">Stok saat ini: ${existing.stock}</div>`;
+    } else {
+      qtyHtml = `<strong>${r.qty}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">Barang Baru</div>`;
+    }
+
+    let priceHtml = '';
+    if (existing) {
+      const dbPrice = parseFloat(existing.buy_price) || 0;
+      if (r.beliPcs > dbPrice) {
+        priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#ef4444;font-size:10.5px;font-weight:600;margin-top:3px;">▲ Naik ${rupiah(r.beliPcs - dbPrice)}</div>`;
+      } else if (r.beliPcs < dbPrice) {
+        priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#10b981;font-size:10.5px;font-weight:600;margin-top:3px;">▼ Turun ${rupiah(dbPrice - r.beliPcs)}</div>`;
+      } else {
+        priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">(Tetap)</div>`;
+      }
+    } else {
+      priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">Barang Baru</div>`;
+    }
+
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${r.supplier || '-'}</td>
+        <td><span class="code-badge">${r.kode || '-'}</span></td>
+        <td>
+          <div style="font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+            <span>${r.nama}</span>
+            ${statusBadge}
+          </div>
+          ${mergeInfo}
+        </td>
+        <td>${r.merk || '-'}</td>
+        <td>${qtyHtml}</td>
+        <td>${priceHtml}</td>
+        <td>${rupiah(r.beliTotal)}</td>
+        <td>${rupiah(r.jualPcs)}</td>
+        <td>${r.lokasiRak || '-'}</td>
+      </tr>
+    `;
+  }).join('');
 
   document.getElementById('modalPreview').classList.remove('hidden');
 }
