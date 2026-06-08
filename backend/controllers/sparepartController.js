@@ -4,7 +4,7 @@ const normalizeUnit = (u) => {
     if (!u) return 'pcs';
     const val = String(u).trim().toLowerCase();
     if (['pcs', 'psc', 'pc', 'piece', 'pieces', 'pices'].includes(val)) return 'pcs';
-    if (['set', 'st'].includes(val)) return 'set';
+    if (['set', 'st', 'sets'].includes(val)) return 'set';
     if (['botol', 'btl'].includes(val)) return 'botol';
     if (['liter', 'ltr'].includes(val)) return 'liter';
     if (['pack', 'pak', 'pck'].includes(val)) return 'pack';
