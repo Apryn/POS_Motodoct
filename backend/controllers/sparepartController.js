@@ -36,11 +36,11 @@ exports.getSparepartById = async (req, res) => {
 
 exports.createSparepart = async (req, res) => {
     try {
-        const { category_id, code, name, price, stock, supplier, buy_price, discount, rack_location, brand, unit } = req.body;
+        const { category_id, code, name, price, stock, supplier, buy_price, discount, rack_location, brand, type, unit } = req.body;
         const buy_total = (buy_price || 0) * (stock || 0);
         const [result] = await db.execute(
-            'INSERT INTO spareparts (category_id, code, name, price, stock, rack_location, supplier, buy_price, buy_total, discount, brand, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [category_id || null, code || null, name, price, stock || 0, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, normalizeUnit(unit)]
+            'INSERT INTO spareparts (category_id, code, name, price, stock, rack_location, supplier, buy_price, buy_total, discount, brand, type, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [category_id || null, code || null, name, price, stock || 0, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, type || null, normalizeUnit(unit)]
         );
         res.status(201).json({ success: true, message: 'Sparepart berhasil ditambahkan', data: { id: result.insertId } });
     } catch (error) {
@@ -52,11 +52,11 @@ exports.createSparepart = async (req, res) => {
 exports.updateSparepart = async (req, res) => {
     try {
         const { id } = req.params;
-        const { category_id, code, name, price, stock, supplier, buy_price, discount, rack_location, brand, unit } = req.body;
+        const { category_id, code, name, price, stock, supplier, buy_price, discount, rack_location, brand, type, unit } = req.body;
         const buy_total = (buy_price || 0) * (stock || 0);
         await db.execute(
-            'UPDATE spareparts SET category_id=?, code=?, name=?, price=?, stock=?, rack_location=?, supplier=?, buy_price=?, buy_total=?, discount=?, brand=?, unit=? WHERE id=?',
-            [category_id || null, code || null, name, price, stock, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, normalizeUnit(unit), id]
+            'UPDATE spareparts SET category_id=?, code=?, name=?, price=?, stock=?, rack_location=?, supplier=?, buy_price=?, buy_total=?, discount=?, brand=?, type=?, unit=? WHERE id=?',
+            [category_id || null, code || null, name, price, stock, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, type || null, normalizeUnit(unit), id]
         );
         res.json({ success: true, message: 'Sparepart berhasil diupdate' });
     } catch (error) {

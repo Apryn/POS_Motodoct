@@ -101,7 +101,7 @@ function openEdit(id) {
   editId = id;
   document.getElementById('modalTitle').textContent = 'Edit Servis';
   document.getElementById('fieldNama').value  = s.name;
-  document.getElementById('fieldHarga').value = s.price;
+  document.getElementById('fieldHarga').value = Math.round(s.price).toLocaleString('id-ID');
   document.getElementById('modalServis').classList.remove('hidden');
 }
 
@@ -110,9 +110,10 @@ function closeModal() {
 }
 
 async function saveService() {
+  const rawPrice = document.getElementById('fieldHarga').value.replace(/\./g, '');
   const payload = {
     name:  document.getElementById('fieldNama').value.trim(),
-    price: parseFloat(document.getElementById('fieldHarga').value) || 0
+    price: parseFloat(rawPrice) || 0
   };
 
   if (!payload.name)  { alert('Nama servis wajib diisi!'); return; }
@@ -173,5 +174,21 @@ async function confirmDelete() {
 function escHtml(str)  { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(str)  { return String(str).replace(/'/g,"\\'"); }
 
+// Helper to format text input to thousands separator with dots
+function formatNumberInput(inputEl) {
+  let val = inputEl.value.replace(/\D/g, ''); // keep only digits
+  if (val) {
+    val = Number(val).toLocaleString('id-ID'); // format as id-ID
+  }
+  inputEl.value = val;
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+const fieldHargaEl = document.getElementById('fieldHarga');
+if (fieldHargaEl) {
+  fieldHargaEl.addEventListener('input', function() {
+    formatNumberInput(this);
+  });
+}
+
 loadData();

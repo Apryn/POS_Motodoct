@@ -314,24 +314,64 @@ async function confirmDeleteAll() {
 
 // ===== IMPORT EXCEL =====
 function parseRows(sheetData) {
-  // Columns: No, Supplier, Kode, Nama, Merk, Qty, Beli/PCS, Beli/Total, Jual/PCS, Diskon, Lokasi Rak
-  const rows = [];
+  if (!sheetData || sheetData.length < 2) return [];
+  
+  const headers = sheetData[0].map(h => String(h || '').trim().toLowerCase());
+  
+  const supplierIdx = headers.indexOf('supplier');
+  const kodeIdx = headers.indexOf('kode');
+  
+  let namaIdx = headers.indexOf('nama');
+  if (namaIdx === -1) namaIdx = headers.indexOf('nama barang');
+  if (namaIdx === -1) namaIdx = 3; // fallback
+  
+  let merkIdx = headers.indexOf('merk');
+  if (merkIdx === -1) merkIdx = headers.indexOf('brand');
+  if (merkIdx === -1) merkIdx = 4; // fallback
+  
+  let tipeIdx = headers.indexOf('tipe');
+  if (tipeIdx === -1) tipeIdx = headers.indexOf('tipe motor');
+  if (tipeIdx === -1) tipeIdx = headers.indexOf('type');
+  
+  let qtyIdx = headers.indexOf('qty');
+  if (qtyIdx === -1) qtyIdx = headers.indexOf('quantity');
+  if (qtyIdx === -1) qtyIdx = 5; // fallback
+  
+  let beliPcsIdx = headers.indexOf('beli/pcs');
+  if (beliPcsIdx === -1) beliPcsIdx = headers.indexOf('harga beli');
+  if (beliPcsIdx === -1) beliPcsIdx = 6; // fallback
+  
+  let beliTotalIdx = headers.indexOf('beli/total');
+  if (beliTotalIdx === -1) beliTotalIdx = 7; // fallback
+  
+  let jualPcsIdx = headers.indexOf('jual/pcs');
+  if (jualPcsIdx === -1) jualPcsIdx = headers.indexOf('harga jual');
+  if (jualPcsIdx === -1) jualPcsIdx = 8; // fallback
+  
+  let diskonIdx = headers.indexOf('diskon');
+  if (diskonIdx === -1) diskonIdx = 9; // fallback
+  
+  let lokasiRakIdx = headers.indexOf('lokasi rak');
+  if (lokasiRakIdx === -1) lokasiRakIdx = headers.indexOf('rak');
+  if (lokasiRakIdx === -1) lokasiRakIdx = 10; // fallback
+
   const grouped = {};
 
   sheetData.forEach((row, idx) => {
     if (idx === 0) return; // skip header
-    const excelRowNumber = idx + 1; // row number in Excel (header is row 1)
-    const no = row[0];
-    const supplier = String(row[1] || '').trim();
-    const kode = String(row[2] || '').trim();
-    const nama = String(row[3] || '').trim();
-    const merk = String(row[4] || '').trim();
-    const qty = parseInt(row[5]) || 0;
-    const beliPcs = parseFloat(row[6]) || 0;
-    const beliTotal = parseFloat(row[7]) || (beliPcs * qty);
-    const jualPcs = parseFloat(row[8]) || 0;
-    const diskon = parseFloat(row[9]) || 0;
-    const lokasiRak = String(row[10] || '').trim();
+    const excelRowNumber = idx + 1;
+    
+    const supplier = supplierIdx !== -1 ? String(row[supplierIdx] || '').trim() : '';
+    const kode = kodeIdx !== -1 ? String(row[kodeIdx] || '').trim() : '';
+    const nama = String(row[namaIdx] || '').trim();
+    const merk = merkIdx !== -1 ? String(row[merkIdx] || '').trim() : '';
+    const tipe = tipeIdx !== -1 ? String(row[tipeIdx] || '').trim() : '';
+    const qty = parseInt(row[qtyIdx]) || 0;
+    const beliPcs = parseFloat(row[beliPcsIdx]) || 0;
+    const beliTotal = beliTotalIdx !== -1 && row[beliTotalIdx] !== undefined ? parseFloat(row[beliTotalIdx]) : (beliPcs * qty);
+    const jualPcs = jualPcsIdx !== -1 ? parseFloat(row[jualPcsIdx]) : 0;
+    const diskon = diskonIdx !== -1 ? parseFloat(row[diskonIdx]) : 0;
+    const lokasiRak = lokasiRakIdx !== -1 ? String(row[lokasiRakIdx] || '').trim() : '';
 
     if (!nama || !qty) return;
 
@@ -343,12 +383,16 @@ function parseRows(sheetData) {
       grouped[key].qty += qty;
       grouped[key].beliTotal += beliTotal;
       grouped[key].mergedRows.push(excelRowNumber);
+      grouped[key].allRows.push({
+        excelRowNumber, supplier, kode, nama, merk, tipe, qty, beliPcs, beliTotal, jualPcs, diskon, lokasiRak
+      });
     } else {
       grouped[key] = { 
         supplier, 
         kode, 
         nama, 
         merk, 
+        tipe,
         qty, 
         beliPcs, 
         beliTotal, 
@@ -356,7 +400,11 @@ function parseRows(sheetData) {
         diskon, 
         lokasiRak,
         originalRow: excelRowNumber,
-        mergedRows: []
+        mergedRows: [],
+        allRows: [{
+          excelRowNumber, supplier, kode, nama, merk, tipe, qty, beliPcs, beliTotal, jualPcs, diskon, lokasiRak
+        }],
+        selectedRowIndex: 0
       };
     }
   });
@@ -399,35 +447,35 @@ function showImportPreview() {
 
     let statusBadge = '';
     if (existing) {
-      statusBadge = `<span class="badge badge-menipis" style="background:#fff8e6;color:#f39c12;font-size:10px;padding:2px 6px;margin-left:6px;font-weight:600;vertical-align:middle;">UPDATE</span>`;
+      statusBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #d97706; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.2); vertical-align: middle;">UPDATE</span>`;
     } else {
-      statusBadge = `<span class="badge badge-aman" style="background:#e8f8f0;color:#27ae60;font-size:10px;padding:2px 6px;margin-left:6px;font-weight:600;vertical-align:middle;">BARU</span>`;
+      statusBadge = `<span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.2); vertical-align: middle;">BARU</span>`;
     }
 
     let mergeInfo = '';
     if (r.mergedRows && r.mergedRows.length > 0) {
-      mergeInfo = `<div style="font-size:10.5px;color:#4a6cf7;margin-top:4px;font-weight:500;">ℹ️ Digabung dari baris Excel #${r.originalRow}, ${r.mergedRows.map(n => `#${n}`).join(', ')}</div>`;
+      mergeInfo = `<button class="btn-merge-detail" onclick="openMergeConflictModal(${i})" style="font-size:10px;color:#3b82f6;margin-top:4px;font-weight:600;background:rgba(59,130,246,0.06);padding:4px 8px;border-radius:6px;display:inline-block;border:1px solid rgba(59,130,246,0.12);cursor:pointer; transition: all 0.2s; outline: none; font-family: inherit;">ℹ️ Digabung dari ${1 + r.mergedRows.length} baris (Klik untuk pilih data utama)</button>`;
     }
 
     let qtyHtml = '';
     if (existing) {
-      qtyHtml = `<strong>${r.qty}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">Stok saat ini: ${existing.stock}</div>`;
+      qtyHtml = `<div style="font-weight:600; font-size:13px; color:#0f172a;">${r.qty}</div><div style="color:#64748b;font-size:10px;margin-top:2px;font-weight:500;">Stok saat ini: ${existing.stock}</div>`;
     } else {
-      qtyHtml = `<strong>${r.qty}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">Barang Baru</div>`;
+      qtyHtml = `<div style="font-weight:600; font-size:13px; color:#0f172a;">${r.qty}</div><span style="display:inline-block; font-size:9.5px; font-weight:600; padding:1px 6px; border-radius:12px; margin-top:3px; background:rgba(16, 185, 129, 0.08); color:#059669; border: 1px solid rgba(16, 185, 129, 0.15)">Barang Baru</span>`;
     }
 
     let priceHtml = '';
     if (existing) {
       const dbPrice = parseFloat(existing.buy_price) || 0;
       if (r.beliPcs > dbPrice) {
-        priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#ef4444;font-size:10.5px;font-weight:600;margin-top:3px;">▲ Naik ${rupiah(r.beliPcs - dbPrice)}</div>`;
+        priceHtml = `<div style="font-weight:600; font-size:13px; color:#0f172a;">${rupiah(r.beliPcs)}</div><span style="display:inline-block; font-size:9.5px; font-weight:600; padding:1px 6px; border-radius:12px; margin-top:3px; background:rgba(239, 68, 68, 0.08); color:#dc2626; border: 1px solid rgba(239, 68, 68, 0.15)">▲ Naik ${rupiah(r.beliPcs - dbPrice)}</span>`;
       } else if (r.beliPcs < dbPrice) {
-        priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#10b981;font-size:10.5px;font-weight:600;margin-top:3px;">▼ Turun ${rupiah(dbPrice - r.beliPcs)}</div>`;
+        priceHtml = `<div style="font-weight:600; font-size:13px; color:#0f172a;">${rupiah(r.beliPcs)}</div><span style="display:inline-block; font-size:9.5px; font-weight:600; padding:1px 6px; border-radius:12px; margin-top:3px; background:rgba(16, 185, 129, 0.08); color:#059669; border: 1px solid rgba(16, 185, 129, 0.15)">▼ Turun ${rupiah(dbPrice - r.beliPcs)}</span>`;
       } else {
-        priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">(Tetap)</div>`;
+        priceHtml = `<div style="font-weight:600; font-size:13px; color:#0f172a;">${rupiah(r.beliPcs)}</div><span style="display:inline-block; font-size:9.5px; font-weight:600; padding:1px 6px; border-radius:12px; margin-top:3px; background:#f1f5f9; color:#64748b; border: 1px solid #e2e8f0;">(Tetap)</span>`;
       }
     } else {
-      priceHtml = `<strong>${rupiah(r.beliPcs)}</strong> <div style="color:#64748b;font-size:10.5px;margin-top:3px;font-weight:500;">Barang Baru</div>`;
+      priceHtml = `<div style="font-weight:600; font-size:13px; color:#0f172a;">${rupiah(r.beliPcs)}</div><span style="display:inline-block; font-size:9.5px; font-weight:600; padding:1px 6px; border-radius:12px; margin-top:3px; background:rgba(16, 185, 129, 0.08); color:#059669; border: 1px solid rgba(16, 185, 129, 0.15)">Barang Baru</span>`;
     }
 
     return `
@@ -443,6 +491,7 @@ function showImportPreview() {
           ${mergeInfo}
         </td>
         <td>${r.merk || '-'}</td>
+        <td>${r.tipe || '-'}</td>
         <td>${qtyHtml}</td>
         <td>${priceHtml}</td>
         <td>${rupiah(r.beliTotal)}</td>
@@ -458,6 +507,155 @@ function showImportPreview() {
 function closePreviewModal() {
   if (isImporting) return;
   document.getElementById('modalPreview').classList.add('hidden');
+}
+
+let currentMergeIndex = null;
+let currentMergeSelectedIndices = {
+  supplier: 0,
+  kode: 0,
+  nama: 0,
+  merk: 0,
+  tipe: 0,
+  beliPcs: 0,
+  jualPcs: 0,
+  lokasiRak: 0
+};
+
+function isAllFieldsFromRow(idx) {
+  return currentMergeSelectedIndices.supplier === idx &&
+         currentMergeSelectedIndices.kode === idx &&
+         currentMergeSelectedIndices.nama === idx &&
+         currentMergeSelectedIndices.merk === idx &&
+         currentMergeSelectedIndices.tipe === idx &&
+         currentMergeSelectedIndices.beliPcs === idx &&
+         currentMergeSelectedIndices.jualPcs === idx &&
+         currentMergeSelectedIndices.lokasiRak === idx;
+}
+
+function selectAllFieldsFromRow(idx) {
+  currentMergeSelectedIndices.supplier = idx;
+  currentMergeSelectedIndices.kode = idx;
+  currentMergeSelectedIndices.nama = idx;
+  currentMergeSelectedIndices.merk = idx;
+  currentMergeSelectedIndices.tipe = idx;
+  currentMergeSelectedIndices.beliPcs = idx;
+  currentMergeSelectedIndices.jualPcs = idx;
+  currentMergeSelectedIndices.lokasiRak = idx;
+  renderMergeDetailTable();
+}
+
+function selectMergeCell(field, idx) {
+  currentMergeSelectedIndices[field] = idx;
+  renderMergeDetailTable();
+}
+
+function renderMergeDetailTable() {
+  const r = importRows[currentMergeIndex];
+  const tbody = document.getElementById('mergeDetailTableBody');
+  tbody.innerHTML = r.allRows.map((row, idx) => {
+    return `
+      <tr>
+        <td style="text-align: center; vertical-align: middle;">
+          <input type="radio" name="rowSelectAll" value="${idx}" ${isAllFieldsFromRow(idx) ? 'checked' : ''} onclick="selectAllFieldsFromRow(${idx})" style="cursor: pointer; width: 18px; height: 18px; accent-color: #10b981;" />
+        </td>
+        <td style="text-align: center; font-weight: 600; color: #64748b;">#${row.excelRowNumber}</td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.supplier === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('supplier', ${idx})">
+          ${row.supplier || '-'}
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.kode === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('kode', ${idx})">
+          <span class="code-badge">${row.kode || '-'}</span>
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.nama === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('nama', ${idx})">
+          ${row.nama || '-'}
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.merk === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('merk', ${idx})">
+          ${row.merk || '-'}
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.tipe === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('tipe', ${idx})">
+          ${row.tipe || '-'}
+        </td>
+        
+        <td style="text-align: center; font-weight: 600; background: #fafafa; color: #64748b;">
+          ${row.qty}
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.beliPcs === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('beliPcs', ${idx})" style="text-align: right;">
+          ${rupiah(row.beliPcs)}
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.jualPcs === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('jualPcs', ${idx})" style="text-align: right;">
+          ${rupiah(row.jualPcs)}
+        </td>
+        
+        <td class="selectable-cell ${currentMergeSelectedIndices.lokasiRak === idx ? 'selected' : ''}" 
+            onclick="selectMergeCell('lokasiRak', ${idx})" style="text-align: center;">
+          ${row.lokasiRak || '-'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openMergeConflictModal(index) {
+  currentMergeIndex = index;
+  const r = importRows[index];
+  
+  if (!r.selectedIndices) {
+    r.selectedIndices = {
+      supplier: r.selectedRowIndex || 0,
+      kode: r.selectedRowIndex || 0,
+      nama: r.selectedRowIndex || 0,
+      merk: r.selectedRowIndex || 0,
+      tipe: r.selectedRowIndex || 0,
+      beliPcs: r.selectedRowIndex || 0,
+      jualPcs: r.selectedRowIndex || 0,
+      lokasiRak: r.selectedRowIndex || 0
+    };
+  }
+  
+  currentMergeSelectedIndices = { ...r.selectedIndices };
+  renderMergeDetailTable();
+  
+  document.getElementById('modalMergeDetail').classList.remove('hidden');
+}
+
+function closeMergeDetailModal() {
+  document.getElementById('modalMergeDetail').classList.add('hidden');
+  currentMergeIndex = null;
+}
+
+function saveMergeDetailSelection() {
+  if (currentMergeIndex === null) return;
+  
+  const r = importRows[currentMergeIndex];
+  r.selectedIndices = { ...currentMergeSelectedIndices };
+  
+  // Ambil nilai masing-masing kolom dari index baris terpilihnya
+  r.supplier = r.allRows[currentMergeSelectedIndices.supplier].supplier;
+  r.kode = r.allRows[currentMergeSelectedIndices.kode].kode;
+  r.nama = r.allRows[currentMergeSelectedIndices.nama].nama;
+  r.merk = r.allRows[currentMergeSelectedIndices.merk].merk;
+  r.tipe = r.allRows[currentMergeSelectedIndices.tipe].tipe;
+  r.beliPcs = r.allRows[currentMergeSelectedIndices.beliPcs].beliPcs;
+  r.jualPcs = r.allRows[currentMergeSelectedIndices.jualPcs].jualPcs;
+  r.lokasiRak = r.allRows[currentMergeSelectedIndices.lokasiRak].lokasiRak;
+  r.diskon = r.allRows[currentMergeSelectedIndices.beliPcs].diskon; // default diskon ikut dengan baris harga beli
+  
+  // Re-run preview table render to update values
+  showImportPreview();
+  closeMergeDetailModal();
 }
 
 async function submitImport() {
@@ -514,6 +712,7 @@ async function submitImport() {
             code: row.kode,
             name: row.nama,
             brand: row.merk || null,
+            type: row.tipe || null,
             supplier: row.supplier,
             buy_price: row.beliPcs,
             price: finalPrice,
@@ -531,6 +730,7 @@ async function submitImport() {
             code: row.kode,
             name: row.nama,
             brand: row.merk || null,
+            type: row.tipe || null,
             supplier: row.supplier,
             buy_price: row.beliPcs,
             price: finalPrice,
@@ -599,8 +799,8 @@ async function submitImport() {
 }
 
 function downloadTemplate() {
-  const headers = [['No', 'Supplier', 'Kode', 'Nama', 'Merk', 'Qty', 'Beli/PCS', 'Beli/Total', 'Jual/PCS', 'Diskon', 'Lokasi Rak']];
-  const example = [[1, 'Supplier A', 'SP001', 'Oli Mesin 1L', 'Federal', 10, 25000, 250000, 35000, 0, 'RAK-A1']];
+  const headers = [['No', 'Supplier', 'Kode', 'Nama', 'Merk', 'Tipe Motor', 'Qty', 'Beli/PCS', 'Beli/Total', 'Jual/PCS', 'Diskon', 'Lokasi Rak']];
+  const example = [[1, 'Supplier A', 'SP001', 'Oli Mesin 1L', 'Federal', 'Beat, Vario', 10, 25000, 250000, 35000, 0, 'RAK-A1']];
   const ws = XLSX.utils.aoa_to_sheet([...headers, ...example]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Template');

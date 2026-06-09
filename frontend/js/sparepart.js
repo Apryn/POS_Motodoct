@@ -52,7 +52,7 @@ function exportExcel() {
   if (!spareparts.length) { alert('Tidak ada data untuk diekspor!'); return; }
 
   const headers = [
-    'No', 'Kode', 'Nama Barang', 'Kategori', 'Merk', 'Supplier',
+    'No', 'Kode', 'Nama Barang', 'Kategori', 'Merk', 'Tipe Motor', 'Supplier',
     'Lokasi Rak', 'Stok', 'Harga Beli', 'Harga Jual', 'Diskon (%)', 'Status'
   ];
 
@@ -62,6 +62,7 @@ function exportExcel() {
     s.name,
     s.category_name || '',
     s.brand || '',
+    s.type || '',
     s.supplier || '',
     s.rack_location || '',
     s.stock ? `${s.stock} ${normalizeUnit(s.unit)}` : '0 pcs',
@@ -75,7 +76,7 @@ function exportExcel() {
 
   // Set lebar kolom
   ws['!cols'] = [
-    { wch: 5 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+    { wch: 5 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
     { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }
   ];
 
@@ -155,7 +156,8 @@ function renderTable() {
     const matchSearch = !search ||
       p.name.toLowerCase().includes(search) ||
       (p.code || '').toLowerCase().includes(search) ||
-      (p.rack_location || '').toLowerCase().includes(search);
+      (p.rack_location || '').toLowerCase().includes(search) ||
+      (p.type || '').toLowerCase().includes(search);
     const matchKat = !katFilter || String(p.category_id) === katFilter;
     const matchStok = !stokFilter ||
       (stokFilter === 'aman' && p.stock > 5) ||
@@ -166,7 +168,7 @@ function renderTable() {
 
   const tbody = document.getElementById('sparepartTableBody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Tidak ada data sparepart</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Tidak ada data sparepart</td></tr>';
     return;
   }
 
@@ -177,6 +179,7 @@ function renderTable() {
       <td>${p.name}</td>
       <td>${p.category_name || '-'}</td>
       <td>${p.brand || '-'}</td>
+      <td>${p.type || '-'}</td>
       <td>${p.rack_location || '-'}</td>
       <td><strong>${p.stock} ${normalizeUnit(p.unit)}</strong></td>
       <td>${rupiah(p.price)}</td>
@@ -219,6 +222,7 @@ function openEditModal(id) {
   document.getElementById('fieldHarga').value = p.price;
   document.getElementById('fieldDiskon').value = p.discount || 0;
   document.getElementById('fieldMerk').value = p.brand || '';
+  document.getElementById('fieldTipe').value = p.type || '';
   document.getElementById('fieldSatuan').value = normalizeUnit(p.unit);
   document.getElementById('modalSparepart').classList.remove('hidden');
 }
@@ -235,6 +239,7 @@ async function saveSparepart() {
     category_id: document.getElementById('fieldKategori').value || null,
     supplier: document.getElementById('fieldSupplier').value.trim() || null,
     brand: document.getElementById('fieldMerk').value.trim() || null,
+    type: document.getElementById('fieldTipe').value.trim() || null,
     stock: parseInt(document.getElementById('fieldStok').value) || 0,
     buy_price: parseFloat(document.getElementById('fieldHargaBeli').value) || 0,
     price: parseFloat(document.getElementById('fieldHarga').value) || 0,

@@ -72,6 +72,150 @@
   <title>Pembelian Stok — Motodoct</title>
   <link rel="stylesheet" href="../css/dashboard.css" />
   <link rel="stylesheet" href="../css/table.css" />
+  <style>
+    /* Styling khusus Modal Preview Import agar sangat premium */
+    .import-modal-box {
+      max-width: 1200px !important;
+      width: 95vw;
+      border-radius: 16px;
+      box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25);
+    }
+    
+    .preview-table-container {
+      padding: 0;
+      max-height: 70vh;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 24px 10px;
+    }
+    
+    .preview-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    
+    .preview-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    .preview-table thead tr {
+      background: #f8fafc !important;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .preview-table th {
+      padding: 14px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid #e2e8f0;
+      background: #f8fafc;
+      white-space: nowrap;
+    }
+    
+    .preview-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+      vertical-align: middle;
+      background: #ffffff;
+    }
+    
+    .preview-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .preview-table tbody tr:hover td {
+      background: #f8fafc;
+    }
+    
+    /* Column alignments and widths */
+    .preview-table th:nth-child(1), .preview-table td:nth-child(1) { width: 50px; text-align: center; font-weight: 600; color: #64748b; }
+    .preview-table th:nth-child(2), .preview-table td:nth-child(2) { width: 100px; }
+    .preview-table th:nth-child(3), .preview-table td:nth-child(3) { width: 120px; }
+    .preview-table th:nth-child(4), .preview-table td:nth-child(4) { min-width: 250px; }
+    .preview-table th:nth-child(5), .preview-table td:nth-child(5) { width: 90px; text-align: center; }
+    .preview-table th:nth-child(6), .preview-table td:nth-child(6) { width: 110px; text-align: center; }
+    .preview-table th:nth-child(7), .preview-table td:nth-child(7) { width: 90px; text-align: center; }
+    .preview-table th:nth-child(8), .preview-table td:nth-child(8) { width: 120px; text-align: right; }
+    .preview-table th:nth-child(9), .preview-table td:nth-child(9) { width: 120px; text-align: right; font-weight: 600; }
+    .preview-table th:nth-child(10), .preview-table td:nth-child(10) { width: 120px; text-align: right; }
+    .preview-table th:nth-child(11), .preview-table td:nth-child(11) { width: 90px; text-align: center; }
+    
+    /* Custom Scrollbar for preview container */
+    .preview-table-container::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .preview-table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .preview-table-container::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .preview-table-container::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    .import-markup-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      padding: 6px 14px;
+      border-radius: 30px;
+      border: 1px solid #e2e8f0;
+    }
+    .import-markup-container label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+    }
+    .import-markup-container input {
+      width: 60px;
+      padding: 4px 8px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      color: #0f172a;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+    .import-markup-container input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.15);
+    }
+    .btn-merge-detail:hover {
+      background: rgba(59, 130, 246, 0.12) !important;
+      border-color: rgba(59, 130, 246, 0.25) !important;
+      color: #2563eb !important;
+    }
+    .selectable-cell {
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .selectable-cell:hover {
+      background: #f1f5f9 !important;
+      color: #0f172a;
+    }
+    .selectable-cell.selected {
+      background: #ecfdf5 !important;
+      color: #047857 !important;
+      font-weight: 600;
+      box-shadow: inset 0 0 0 2px #10b981;
+    }
+  </style>
 </head>
 <body>
 
@@ -284,13 +428,13 @@
 
   <!-- Modal Preview Import -->
   <div class="modal hidden" id="modalPreview">
-    <div class="modal-box" style="max-width:900px;width:95vw">
+    <div class="modal-box import-modal-box">
       <div class="modal-header">
         <h3>Preview Import — <span id="importCount">0</span> baris</h3>
         <button class="modal-close" onclick="closePreviewModal()">✕</button>
       </div>
-      <div class="modal-body" style="padding:0;max-height:60vh;overflow-y:auto">
-        <table class="data-table">
+      <div class="preview-table-container">
+        <table class="preview-table">
           <thead>
             <tr>
               <th>No</th>
@@ -323,15 +467,53 @@
         </div>
       </div>
       <div class="modal-footer" id="importModalFooter" style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <label style="font-size: 13px; font-weight: 600; color: #444;">Markup Impor Default:</label>
-          <input type="number" id="importMarkupPercent" value="30" min="0" style="width: 70px; padding: 6px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px;" />
-          <span style="font-size: 13px; color: #666;">%</span>
+        <div class="import-markup-container">
+          <label for="importMarkupPercent">Markup Impor Default:</label>
+          <input type="number" id="importMarkupPercent" value="30" min="0" />
+          <span>%</span>
         </div>
         <div style="display: flex; gap: 10px;">
           <button class="btn-secondary" id="btnImportCancel" onclick="closePreviewModal()">Batal</button>
           <button class="btn-primary" id="btnImportAll" onclick="submitImport()">📤 Import Semua</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pilih Detail Gabungan (Merge Conflict resolver) -->
+  <div class="modal hidden" id="modalMergeDetail" style="z-index: 1000;">
+    <div class="modal-box" style="max-width: 1000px; width: 95vw; border-radius: 16px; box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.3);">
+      <div class="modal-header">
+        <h3>Pilih Data Utama Penggabungan</h3>
+        <button class="modal-close" onclick="closeMergeDetailModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 20px 24px;">
+        <p style="margin-bottom: 12px; color: #475569; font-size: 13.5px; line-height: 1.5;">
+          Beberapa baris Excel memiliki kode barang yang sama sehingga digabungkan. Anda dapat memilih baris acuan utama menggunakan tombol radio, atau <strong>klik sel mana saja untuk melakukan mix-and-match data secara mandiri</strong> dari baris yang berbeda (sel terpilih ditandai dengan warna hijau):
+        </p>
+        <div class="preview-table-container" style="margin: 0; max-height: 50vh;">
+          <table class="preview-table" id="mergeDetailTable">
+            <thead>
+              <tr>
+                <th style="width: 70px; text-align: center;">Pilih</th>
+                <th style="width: 80px; text-align: center;">Baris</th>
+                <th>Supplier</th>
+                <th>Kode</th>
+                <th>Nama Barang</th>
+                <th>Merk</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Beli/PCS</th>
+                <th style="text-align: right;">Jual/PCS</th>
+                <th>Lokasi Rak</th>
+              </tr>
+            </thead>
+            <tbody id="mergeDetailTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeMergeDetailModal()">Batal</button>
+        <button class="btn-primary" onclick="saveMergeDetailSelection()">Gunakan Data Terpilih</button>
       </div>
     </div>
   </div>

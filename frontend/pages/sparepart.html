@@ -188,6 +188,7 @@
             <th>Nama Barang</th>
             <th>Kategori</th>
             <th>Merk</th>
+            <th>Tipe Motor</th>
             <th>Lokasi Rak</th>
             <th>Stok</th>
             <th>Harga Jual</th>
@@ -196,7 +197,7 @@
           </tr>
         </thead>
         <tbody id="sparepartTableBody">
-          <tr><td colspan="10" class="empty-state">Memuat data...</td></tr>
+          <tr><td colspan="11" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
     </div>
@@ -276,7 +277,8 @@
               </select>
             </div>
             <div class="form-group">
-              <!-- Empty slot to keep grid aligned -->
+              <label>Tipe Motor</label>
+              <input type="text" id="fieldTipe" placeholder="Contoh: Beat, Vario, Vespa" />
             </div>
           </div>
         </div>

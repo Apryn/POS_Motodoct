@@ -125,7 +125,7 @@ function openEdit(id) {
   document.getElementById('modalTitle').textContent = 'Edit Pengeluaran';
   document.getElementById('fieldKategori').value = e.category;
   document.getElementById('fieldDeskripsi').value = e.description;
-  document.getElementById('fieldJumlah').value = Math.round(e.amount);
+  document.getElementById('fieldJumlah').value = Math.round(e.amount).toLocaleString('id-ID');
   document.getElementById('modalExpense').classList.remove('hidden');
 }
 
@@ -134,10 +134,11 @@ function closeModal() {
 }
 
 async function saveExpense() {
+  const rawAmount = document.getElementById('fieldJumlah').value.replace(/\./g, '');
   const payload = {
     category: document.getElementById('fieldKategori').value,
     description: document.getElementById('fieldDeskripsi').value.trim(),
-    amount: parseFloat(document.getElementById('fieldJumlah').value) || 0
+    amount: parseFloat(rawAmount) || 0
   };
 
   if (!payload.category) { alert('Pilih kategori terlebih dahulu!'); return; }
@@ -199,5 +200,21 @@ async function confirmDelete() {
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(str) { return String(str).replace(/'/g,"\\'"); }
 
+// Helper to format text input to thousands separator with dots
+function formatNumberInput(inputEl) {
+  let val = inputEl.value.replace(/\D/g, ''); // keep only digits
+  if (val) {
+    val = Number(val).toLocaleString('id-ID'); // format as id-ID (thousands separator is dot)
+  }
+  inputEl.value = val;
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+const fieldJumlahEl = document.getElementById('fieldJumlah');
+if (fieldJumlahEl) {
+  fieldJumlahEl.addEventListener('input', function() {
+    formatNumberInput(this);
+  });
+}
+
 loadData();
