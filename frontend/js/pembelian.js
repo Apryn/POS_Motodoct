@@ -53,7 +53,7 @@ function roundToNearest500(val) {
 }
 
 function getMarkupForProduct(name, defaultMarkup, banMarkup, oliMarkup) {
-  if (/\bban\b/i.test(name)) {
+  if (/\b(ban|bl|bd)\b/i.test(name)) {
     return banMarkup;
   }
   if (/\b(oli|oil|yamalube|mpx\d*|spx\d*|castrol|motul|enduro|evalube|mesran|ultratec|top1|top\s1|federal\s+matic|federal\s+oil|federal\s+oli|shell|repsol|idemitsu|bm1|bm\s1|xten|x-ten|liqui\s*moly|pennzoil|valvoline|mobil1|mobil\s1|mobil\s+super|fastron|total\s+hi-perf|total\s+oil|total\s+oli|elf|kixx|gulf|amsoil|maxima|ipone|deltalube|jumbo|ecstar|kgo|ahm\s+oil|ahm\s+oli)\b/i.test(name)) {
