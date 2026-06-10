@@ -52,6 +52,16 @@ function roundToNearest500(val) {
   return Math.ceil(val / 500) * 500;
 }
 
+function getMarkupForProduct(name, defaultMarkup, banMarkup, oliMarkup) {
+  if (/\bban\b/i.test(name)) {
+    return banMarkup;
+  }
+  if (/\b(oli|oil|yamalube|mpx\d*|spx\d*|castrol|motul|enduro|evalube|mesran|ultratec|top1|top\s1|federal\s+matic|federal\s+oil|federal\s+oli|shell|repsol|idemitsu|bm1|bm\s1|xten|x-ten|liqui\s*moly|pennzoil|valvoline|mobil1|mobil\s1|mobil\s+super|fastron|total\s+hi-perf|total\s+oil|total\s+oli|elf|kixx|gulf|amsoil|maxima|ipone|deltalube|jumbo|ecstar|kgo|ahm\s+oil|ahm\s+oli)\b/i.test(name)) {
+    return oliMarkup;
+  }
+  return defaultMarkup;
+}
+
 let purchases = [];
 let spareparts = [];
 let deleteId = null;
@@ -176,6 +186,9 @@ function resetFilter() {
 document.getElementById('searchInput')?.addEventListener('input', renderTable);
 document.getElementById('filterFrom')?.addEventListener('change', renderTable);
 document.getElementById('filterTo')?.addEventListener('change', renderTable);
+document.getElementById('importMarkupPercent')?.addEventListener('input', showImportPreview);
+document.getElementById('importMarkupBan')?.addEventListener('input', showImportPreview);
+document.getElementById('importMarkupOli')?.addEventListener('input', showImportPreview);
 
 function openAddModal() {
   document.getElementById('formPembelian').reset();
@@ -362,7 +375,10 @@ function parseRows(sheetData) {
     const excelRowNumber = idx + 1;
     
     const supplier = supplierIdx !== -1 ? String(row[supplierIdx] || '').trim() : '';
-    const kode = kodeIdx !== -1 ? String(row[kodeIdx] || '').trim() : '';
+    let kode = kodeIdx !== -1 ? String(row[kodeIdx] || '').trim() : '';
+    if (kode === '-' || kode.toLowerCase() === 'n/a' || kode.toLowerCase() === 'null') {
+      kode = '';
+    }
     const nama = String(row[namaIdx] || '').trim();
     const merk = merkIdx !== -1 ? String(row[merkIdx] || '').trim() : '';
     const tipe = tipeIdx !== -1 ? String(row[tipeIdx] || '').trim() : '';
@@ -377,7 +393,7 @@ function parseRows(sheetData) {
 
     const key = kode 
       ? `code:${kode.toLowerCase()}` 
-      : `name:${nama.toLowerCase()}||${supplier}||${beliPcs}`;
+      : `name:${nama.toLowerCase()}||brand:${merk.toLowerCase()}||${supplier}||${beliPcs}`;
 
     if (grouped[key]) {
       grouped[key].qty += qty;
@@ -437,13 +453,38 @@ function showImportPreview() {
   document.getElementById('importCount').textContent = importRows.length;
 
   const savedMarkup = localStorage.getItem('default_markup') || '30';
+  const savedBanMarkup = localStorage.getItem('ban_markup') || '20';
+  const savedOliMarkup = localStorage.getItem('oli_markup') || '15';
+
   const importMarkupEl = document.getElementById('importMarkupPercent');
-  if (importMarkupEl) importMarkupEl.value = savedMarkup;
+  if (importMarkupEl && !importMarkupEl.dataset.initialized) {
+    importMarkupEl.value = savedMarkup;
+    importMarkupEl.dataset.initialized = 'true';
+  }
+  const importBanMarkupEl = document.getElementById('importMarkupBan');
+  if (importBanMarkupEl && !importBanMarkupEl.dataset.initialized) {
+    importBanMarkupEl.value = savedBanMarkup;
+    importBanMarkupEl.dataset.initialized = 'true';
+  }
+  const importOliMarkupEl = document.getElementById('importMarkupOli');
+  if (importOliMarkupEl && !importOliMarkupEl.dataset.initialized) {
+    importOliMarkupEl.value = savedOliMarkup;
+    importOliMarkupEl.dataset.initialized = 'true';
+  }
+
+  const markupPercent = parseFloat(importMarkupEl?.value || 30);
+  const banMarkup = parseFloat(importBanMarkupEl?.value || 20);
+  const oliMarkup = parseFloat(importOliMarkupEl?.value || 15);
 
   tbody.innerHTML = importRows.map((r, i) => {
     const existing = r.kode 
       ? spareparts.find(s => s.code === r.kode)
-      : spareparts.find(s => s.name.toLowerCase() === r.nama.toLowerCase() && s.supplier === r.supplier && parseFloat(s.buy_price) === r.beliPcs);
+      : spareparts.find(s => 
+          s.name.toLowerCase() === r.nama.toLowerCase() && 
+          (s.brand || '').toLowerCase() === (r.merk || '').toLowerCase() &&
+          s.supplier === r.supplier && 
+          parseFloat(s.buy_price) === r.beliPcs
+        );
 
     let statusBadge = '';
     if (existing) {
@@ -495,7 +536,7 @@ function showImportPreview() {
         <td>${qtyHtml}</td>
         <td>${priceHtml}</td>
         <td>${rupiah(r.beliTotal)}</td>
-        <td>${rupiah(r.jualPcs)}</td>
+        <td>${rupiah(r.jualPcs || roundToNearest500(r.beliPcs * (1 + getMarkupForProduct(r.nama, markupPercent, banMarkup, oliMarkup) / 100)))}</td>
         <td>${r.lokasiRak || '-'}</td>
       </tr>
     `;
@@ -566,8 +607,10 @@ function renderMergeDetailTable() {
         </td>
         
         <td class="selectable-cell ${currentMergeSelectedIndices.kode === idx ? 'selected' : ''}" 
-            onclick="selectMergeCell('kode', ${idx})">
-          <span class="code-badge">${row.kode || '-'}</span>
+            onclick="if(event.target.tagName !== 'INPUT') selectMergeCell('kode', ${idx})">
+          <input type="text" value="${row.kode || ''}" placeholder="Tanpa Kode"
+                 onchange="updateImportRowKode(${currentMergeIndex}, ${idx}, this.value)"
+                 style="width: 110px; padding: 4px 6px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-family: monospace; text-align: center; background: #ffffff; color: #0f172a;" />
         </td>
         
         <td class="selectable-cell ${currentMergeSelectedIndices.nama === idx ? 'selected' : ''}" 
@@ -606,6 +649,70 @@ function renderMergeDetailTable() {
       </tr>
     `;
   }).join('');
+}
+
+function updateImportRowKode(mergeIndex, rowIdx, newKode) {
+  newKode = String(newKode || '').trim();
+  const r = importRows[mergeIndex];
+  const targetRow = r.allRows[rowIdx];
+  const oldKode = targetRow.kode;
+
+  if (newKode === oldKode) return;
+
+  if (newKode === '-' || newKode.toLowerCase() === 'n/a' || newKode.toLowerCase() === 'null') {
+    newKode = '';
+  }
+
+  targetRow.kode = newKode;
+
+  // Split targetRow into its own new import item if it's different from the group's code
+  if (newKode.toLowerCase() !== r.kode.toLowerCase()) {
+    r.allRows.splice(rowIdx, 1);
+    r.qty -= targetRow.qty;
+    r.beliTotal -= targetRow.beliTotal;
+    r.mergedRows = r.allRows.slice(1).map(x => x.excelRowNumber);
+
+    const newImportItem = {
+      supplier: targetRow.supplier,
+      kode: targetRow.kode,
+      nama: targetRow.nama,
+      merk: targetRow.merk,
+      tipe: targetRow.tipe,
+      qty: targetRow.qty,
+      beliPcs: targetRow.beliPcs,
+      beliTotal: targetRow.beliTotal,
+      jualPcs: targetRow.jualPcs,
+      diskon: targetRow.diskon,
+      lokasiRak: targetRow.lokasiRak,
+      originalRow: targetRow.excelRowNumber,
+      mergedRows: [],
+      allRows: [targetRow],
+      selectedRowIndex: 0
+    };
+    importRows.push(newImportItem);
+
+    if (r.allRows.length === 1) {
+      const remainingRow = r.allRows[0];
+      r.supplier = remainingRow.supplier;
+      r.kode = remainingRow.kode;
+      r.nama = remainingRow.nama;
+      r.merk = remainingRow.merk;
+      r.tipe = remainingRow.tipe;
+      r.qty = remainingRow.qty;
+      r.beliPcs = remainingRow.beliPcs;
+      r.beliTotal = remainingRow.beliTotal;
+      r.jualPcs = remainingRow.jualPcs;
+      r.diskon = remainingRow.diskon;
+      r.lokasiRak = remainingRow.lokasiRak;
+      r.mergedRows = [];
+    }
+
+    closeMergeDetailModal();
+    showImportPreview();
+    alert(`Baris #${targetRow.excelRowNumber} diubah kodenya menjadi "${newKode || 'Tanpa Kode'}" dan telah dipisahkan.`);
+  } else {
+    renderMergeDetailTable();
+  }
 }
 
 function openMergeConflictModal(index) {
@@ -662,7 +769,12 @@ async function submitImport() {
   if (!importRows.length || isImporting) return;
 
   const markupPercent = parseFloat(document.getElementById('importMarkupPercent')?.value || 30);
+  const banMarkup = parseFloat(document.getElementById('importMarkupBan')?.value || 20);
+  const oliMarkup = parseFloat(document.getElementById('importMarkupOli')?.value || 15);
+
   localStorage.setItem('default_markup', markupPercent);
+  localStorage.setItem('ban_markup', banMarkup);
+  localStorage.setItem('oli_markup', oliMarkup);
 
   isImporting = true;
 
@@ -699,9 +811,17 @@ async function submitImport() {
     const row = importRows[i];
     try {
       let sparepartId = null;
-      const existing = spareparts.find(s => s.code === row.kode);
+      const existing = row.kode 
+        ? spareparts.find(s => s.code === row.kode)
+        : spareparts.find(s => 
+            s.name.toLowerCase() === row.nama.toLowerCase() && 
+            (s.brand || '').toLowerCase() === (row.merk || '').toLowerCase() &&
+            s.supplier === row.supplier && 
+            parseFloat(s.buy_price) === row.beliPcs
+          );
 
-      const finalPrice = row.jualPcs || roundToNearest500(row.beliPcs * (1 + markupPercent / 100));
+      const markupVal = getMarkupForProduct(row.nama, markupPercent, banMarkup, oliMarkup);
+      const finalPrice = row.jualPcs || roundToNearest500(row.beliPcs * (1 + markupVal / 100));
 
       if (existing) {
         sparepartId = existing.id;

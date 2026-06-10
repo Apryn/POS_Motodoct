@@ -442,6 +442,7 @@
               <th>Kode</th>
               <th>Nama Barang</th>
               <th>Merk</th>
+              <th>Tipe</th>
               <th>Qty</th>
               <th>Beli/PCS</th>
               <th>Beli/Total</th>
@@ -466,11 +467,23 @@
           <span>Gagal: <strong id="importFailedCount" style="color: #e74c3c;">0</strong></span>
         </div>
       </div>
-      <div class="modal-footer" id="importModalFooter" style="display: flex; justify-content: space-between; align-items: center;">
-        <div class="import-markup-container">
-          <label for="importMarkupPercent">Markup Impor Default:</label>
-          <input type="number" id="importMarkupPercent" value="30" min="0" />
-          <span>%</span>
+      <div class="modal-footer" id="importModalFooter" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <div class="import-markup-container">
+            <label for="importMarkupPercent">Markup Umum:</label>
+            <input type="number" id="importMarkupPercent" value="30" min="0" style="width: 50px;" />
+            <span>%</span>
+          </div>
+          <div class="import-markup-container">
+            <label for="importMarkupBan">Markup Ban:</label>
+            <input type="number" id="importMarkupBan" value="20" min="0" style="width: 50px;" />
+            <span>%</span>
+          </div>
+          <div class="import-markup-container">
+            <label for="importMarkupOli">Markup Oli:</label>
+            <input type="number" id="importMarkupOli" value="15" min="0" style="width: 50px;" />
+            <span>%</span>
+          </div>
         </div>
         <div style="display: flex; gap: 10px;">
           <button class="btn-secondary" id="btnImportCancel" onclick="closePreviewModal()">Batal</button>
@@ -501,6 +514,7 @@
                 <th>Kode</th>
                 <th>Nama Barang</th>
                 <th>Merk</th>
+                <th>Tipe</th>
                 <th style="text-align: center;">Qty</th>
                 <th style="text-align: right;">Beli/PCS</th>
                 <th style="text-align: right;">Jual/PCS</th>
