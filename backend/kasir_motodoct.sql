@@ -50,6 +50,8 @@ CREATE TABLE `spareparts` (
   `buy_total` decimal(10,2) DEFAULT 0,
   `discount` decimal(5,2) DEFAULT 0,
   `brand` varchar(100) DEFAULT NULL,
+  `price_bengkel` decimal(10,2) DEFAULT 0.00,
+  `type` varchar(100) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`),
