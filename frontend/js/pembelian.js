@@ -805,6 +805,7 @@ async function submitImport() {
 
   let success = 0;
   let failed = 0;
+  let firstError = null;
   const total = importRows.length;
 
   for (let i = 0; i < total; i++) {
@@ -825,7 +826,7 @@ async function submitImport() {
 
       if (existing) {
         sparepartId = existing.id;
-        await fetch(`${API}/spareparts/${sparepartId}`, {
+        const resUpdate = await fetch(`${API}/spareparts/${sparepartId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
@@ -842,6 +843,10 @@ async function submitImport() {
             discount: row.diskon
           })
         });
+        const updateData = await resUpdate.json();
+        if (!updateData.success && !firstError) {
+          firstError = updateData.message || 'Gagal mengupdate sparepart';
+        }
       } else {
         const resCreate = await fetch(`${API}/spareparts`, {
           method: 'POST',
@@ -860,11 +865,17 @@ async function submitImport() {
           })
         });
         const createData = await resCreate.json();
-        if (createData.success) sparepartId = createData.data.id;
+        if (createData.success) {
+          sparepartId = createData.data.id;
+        } else {
+          if (!firstError) {
+            firstError = createData.message || 'Gagal mendaftarkan sparepart baru';
+          }
+        }
       }
 
       if (sparepartId) {
-        await fetch(`${API}/purchases`, {
+        const resPur = await fetch(`${API}/purchases`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
@@ -877,13 +888,24 @@ async function submitImport() {
             note: 'Import Excel'
           })
         });
-        success++;
+        const purData = await resPur.json();
+        if (purData.success) {
+          success++;
+        } else {
+          failed++;
+          if (!firstError) {
+            firstError = purData.message || 'Gagal mencatat riwayat pembelian';
+          }
+        }
       } else {
         failed++;
       }
     } catch (err) {
       failed++;
       console.error('Import row error:', err);
+      if (!firstError) {
+        firstError = err.message || err;
+      }
     }
 
     // Update progress bar
@@ -903,7 +925,11 @@ async function submitImport() {
   // Wait 500ms for visual polish
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}`);
+  if (failed > 0) {
+    alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}.\n\nError pertama: ${firstError}`);
+  } else {
+    alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}`);
+  }
 
   // Restore action buttons and close button
   if (btnCancel) btnCancel.style.display = '';
