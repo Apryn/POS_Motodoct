@@ -552,13 +552,6 @@ window.enableInlineEdit = function(id, spanEl) {
   input.type = 'text';
   input.value = currentValue;
   input.className = 'inline-edit-input';
-  input.style.width = '100%';
-  input.style.padding = '4px 8px';
-  input.style.border = '1px solid #3b82f6';
-  input.style.borderRadius = '4px';
-  input.style.boxSizing = 'border-box';
-  input.style.fontFamily = 'inherit';
-  input.style.fontSize = 'inherit';
   
   const parent = spanEl.parentNode;
   parent.innerHTML = '';
@@ -645,13 +638,6 @@ window.enableInlineCategoryEdit = function(id, spanEl) {
   
   const select = document.createElement('select');
   select.className = 'inline-edit-select';
-  select.style.width = '100%';
-  select.style.padding = '4px 8px';
-  select.style.border = '1px solid #3b82f6';
-  select.style.borderRadius = '4px';
-  select.style.boxSizing = 'border-box';
-  select.style.fontFamily = 'inherit';
-  select.style.fontSize = 'inherit';
   
   // Populate options
   let optionsHtml = '<option value="">-- Tanpa Kategori --</option>';
