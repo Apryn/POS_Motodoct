@@ -783,6 +783,7 @@ function printDetailStruk() {
           }
           .receipt-container {
             font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
             color: #000;
             font-size: 13px;
             line-height: 1.3;
@@ -873,10 +874,10 @@ function printDetailStruk() {
               <thead>
                 <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold;">
                   <th style="padding: 3px 0; text-align: center; width: 4%;">No</th>
-                  <th style="padding: 3px 4px; text-align: left; width: 20%;">No Part Number</th>
+                  <th style="padding: 3px 4px; text-align: left; width: 16%;">No Part Number</th>
                   <th style="padding: 3px 4px; text-align: left; width: 36%;">Nama Barang / Layanan</th>
-                  <th style="padding: 3px 4px; text-align: left; width: 8%;">Merek</th>
-                  <th style="padding: 3px 4px; text-align: center; width: 6%;">Qty</th>
+                  <th style="padding: 3px 4px; text-align: left; width: 6%;">Merek</th>
+                  <th style="padding: 3px 4px; text-align: center; width: 12%;">Qty</th>
                   <th style="padding: 3px 4px; text-align: right; width: 13%;">Harga</th>
                   <th style="padding: 3px 0; text-align: right; width: 13%;">Jlh Harga</th>
                 </tr>

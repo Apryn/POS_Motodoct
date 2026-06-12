@@ -123,7 +123,8 @@ function onSparepartChange() {
   const opt = sel.options[sel.selectedIndex];
   if (!opt || !opt.value) return;
   document.getElementById('fieldSupplier').value = opt.dataset.supplier || '';
-  document.getElementById('fieldHargaBeli').value = opt.dataset.buy || '';
+  const buyPriceRaw = parseFloat(opt.dataset.buy) || 0;
+  document.getElementById('fieldHargaBeli').value = buyPriceRaw ? Math.round(buyPriceRaw).toLocaleString('id-ID') : '';
   document.getElementById('fieldRak').value = opt.dataset.rack || '';
   calcTotal();
   calcHargaJual();
@@ -132,19 +133,21 @@ function onSparepartChange() {
 // Calculate total purchase amount
 function calcTotal() {
   const qty = parseFloat(document.getElementById('fieldQty')?.value || 0);
-  const harga = parseFloat(document.getElementById('fieldHargaBeli')?.value || 0);
+  const rawHarga = document.getElementById('fieldHargaBeli')?.value.replace(/\./g, '') || '0';
+  const harga = parseFloat(rawHarga);
   const total = qty * harga;
   const el = document.getElementById('fieldTotal');
-  if (el) el.value = total;
+  if (el) el.value = total ? Math.round(total).toLocaleString('id-ID') : '0';
 }
 
 // Calculate general selling price
 function calcHargaJual() {
-  const harga = parseFloat(document.getElementById('fieldHargaBeli')?.value || 0);
+  const rawHarga = document.getElementById('fieldHargaBeli')?.value.replace(/\./g, '') || '0';
+  const harga = parseFloat(rawHarga);
   const markup = parseFloat(document.getElementById('fieldMarkup')?.value || 30);
   const jual = roundToNearest500(harga * (1 + markup / 100));
   const el = document.getElementById('fieldHargaJual');
-  if (el) el.value = jual;
+  if (el) el.value = jual ? Math.round(jual).toLocaleString('id-ID') : '0';
 }
 
 function renderTable() {
@@ -200,11 +203,31 @@ document.getElementById('importMarkupPercent')?.addEventListener('input', showIm
 document.getElementById('importMarkupBan')?.addEventListener('input', showImportPreview);
 document.getElementById('importMarkupOli')?.addEventListener('input', showImportPreview);
 
+// Helper to format text input to thousands separator with dots
+function formatNumberInput(inputEl) {
+  let val = inputEl.value.replace(/\D/g, ''); // keep only digits
+  if (val) {
+    val = Number(val).toLocaleString('id-ID');
+  }
+  inputEl.value = val;
+}
+
+// Event listeners for real-time price formatting
+document.getElementById('fieldHargaBeli')?.addEventListener('input', function() {
+  formatNumberInput(this);
+  calcTotal();
+  calcHargaJual();
+});
+document.getElementById('fieldHargaJual')?.addEventListener('input', function() {
+  formatNumberInput(this);
+});
+
 function openAddModal() {
   document.getElementById('formPembelian').reset();
   const savedMarkup = localStorage.getItem('default_markup') || '30';
   const markupEl = document.getElementById('fieldMarkup');
   if (markupEl) markupEl.value = savedMarkup;
+  document.getElementById('fieldHargaBeli').value = '';
   document.getElementById('fieldTotal').value = '';
   document.getElementById('fieldHargaJual').value = '';
   document.getElementById('modalPembelian').classList.remove('hidden');
@@ -218,9 +241,11 @@ async function savePembelian() {
   const sparepartId = document.getElementById('fieldSparepart').value;
   const supplier = document.getElementById('fieldSupplier').value.trim();
   const qty = parseInt(document.getElementById('fieldQty').value) || 0;
-  const hargaBeli = parseFloat(document.getElementById('fieldHargaBeli').value) || 0;
+  const rawHargaBeli = document.getElementById('fieldHargaBeli').value.replace(/\./g, '');
+  const rawHargaJual = document.getElementById('fieldHargaJual').value.replace(/\./g, '');
+  const hargaBeli = parseFloat(rawHargaBeli) || 0;
   const markupVal = document.getElementById('fieldMarkup')?.value || '30';
-  const hargaJual = parseFloat(document.getElementById('fieldHargaJual').value) || 0;
+  const hargaJual = parseFloat(rawHargaJual) || 0;
   const rak = document.getElementById('fieldRak').value.trim();
   const catatan = document.getElementById('fieldCatatan').value.trim();
 
@@ -268,6 +293,8 @@ async function savePembelian() {
 
 function openDeleteModal(id) {
   deleteId = id;
+  const checkbox = document.getElementById('fieldDeleteAdjustStock');
+  if (checkbox) checkbox.checked = true;
   document.getElementById('modalDelete').classList.remove('hidden');
 }
 
@@ -278,8 +305,9 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
   if (!deleteId) return;
+  const adjustStock = document.getElementById('fieldDeleteAdjustStock')?.checked !== false;
   try {
-    const res = await fetch(`${API}/purchases/${deleteId}`, {
+    const res = await fetch(`${API}/purchases/${deleteId}?adjustStock=${adjustStock}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -295,36 +323,68 @@ async function confirmDelete() {
   }
 }
 
-function openDeleteAllModal() {
-  const passwordInput = document.getElementById('fieldDeleteAllPassword');
+function openDeleteBySupplierModal() {
+  const supplierSelect = document.getElementById('fieldDeleteSupplier');
+  const passwordInput = document.getElementById('fieldDeleteSupplierPassword');
+  const checkbox = document.getElementById('fieldDeleteSupplierAdjustStock');
+  
   if (passwordInput) passwordInput.value = '';
-  document.getElementById('modalDeleteAll').classList.remove('hidden');
+  if (checkbox) checkbox.checked = true;
+  
+  if (supplierSelect) {
+    const uniqueSuppliers = Array.from(
+      new Set(purchases.map(p => p.supplier).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+    
+    supplierSelect.innerHTML = '<option value="">-- Pilih Supplier --</option>' +
+      uniqueSuppliers.map(s => `<option value="${s}">${s}</option>`).join('');
+  }
+  
+  document.getElementById('modalDeleteBySupplier').classList.remove('hidden');
 }
 
-function closeDeleteAllModal() {
-  document.getElementById('modalDeleteAll').classList.add('hidden');
+function closeDeleteBySupplierModal() {
+  document.getElementById('modalDeleteBySupplier').classList.add('hidden');
 }
 
-async function confirmDeleteAll() {
-  const passwordInput = document.getElementById('fieldDeleteAllPassword');
+async function confirmDeleteBySupplier() {
+  const supplierSelect = document.getElementById('fieldDeleteSupplier');
+  const passwordInput = document.getElementById('fieldDeleteSupplierPassword');
+  const checkbox = document.getElementById('fieldDeleteSupplierAdjustStock');
+  
+  const supplier = supplierSelect ? supplierSelect.value : '';
   const password = passwordInput ? passwordInput.value : '';
+  const adjustStock = checkbox ? checkbox.checked : true;
+  
+  if (!supplier) {
+    alert('Silakan pilih supplier!');
+    return;
+  }
   if (!password) {
-    alert('Password wajib diisi!');
+    alert('Password verifikasi wajib diisi!');
+    return;
+  }
+  
+  const confirmMsg = `Yakin ingin menghapus SEMUA data pembelian dari supplier "${supplier}"?\n\n` + 
+                     (adjustStock ? 'Stok gudang barang terkait akan dikurangi secara otomatis sesuai data pembelian tersebut.' : 'Stok gudang barang terkait TIDAK akan disesuaikan.');
+                     
+  if (!confirm(confirmMsg)) {
     return;
   }
   
   try {
-    const res = await fetch(`${API}/purchases/all`, {
+    const res = await fetch(`${API}/purchases/by-supplier`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ supplier, adjustStock, password })
     });
     const data = await res.json();
     if (data.success) {
-      closeDeleteAllModal();
+      alert(data.message);
+      closeDeleteBySupplierModal();
       loadData();
     } else {
       alert('Gagal: ' + data.message);
@@ -459,6 +519,20 @@ function handleImportFile(e) {
 }
 
 function showImportPreview() {
+  // Sembunyikan progress container dan reset progress state dari impor sebelumnya
+  const progressContainer = document.getElementById('importProgressContainer');
+  if (progressContainer) progressContainer.classList.add('hidden');
+  const progressBar = document.getElementById('importProgressBar');
+  if (progressBar) progressBar.style.width = '0%';
+  const progressText = document.getElementById('importProgressText');
+  if (progressText) progressText.textContent = 'Mengimpor data...';
+  const progressPercent = document.getElementById('importProgressPercent');
+  if (progressPercent) progressPercent.textContent = '0%';
+  const successCountEl = document.getElementById('importSuccessCount');
+  if (successCountEl) successCountEl.textContent = '0';
+  const failedCountEl = document.getElementById('importFailedCount');
+  if (failedCountEl) failedCountEl.textContent = '0';
+
   const tbody = document.getElementById('previewTableBody');
   document.getElementById('importCount').textContent = importRows.length;
 
@@ -788,13 +862,11 @@ async function submitImport() {
 
   isImporting = true;
 
-  // Hide action buttons in preview modal footer
-  const btnCancel = document.getElementById('btnImportCancel');
-  const btnImport = document.getElementById('btnImportAll');
-  if (btnCancel) btnCancel.style.display = 'none';
-  if (btnImport) btnImport.style.display = 'none';
+  // Sembunyikan kontrol default di preview modal footer
+  document.getElementById('defaultImportControls')?.classList.add('hidden');
+  document.getElementById('failedImportControls')?.classList.add('hidden');
 
-  // Hide close cross button in modal header
+  // Sembunyikan tombol close silang di header modal selama impor
   const closeBtn = document.querySelector('#modalPreview .modal-close');
   if (closeBtn) closeBtn.style.display = 'none';
 
@@ -816,10 +888,12 @@ async function submitImport() {
   let success = 0;
   let failed = 0;
   let firstError = null;
+  const failedRowsList = [];
   const total = importRows.length;
 
   for (let i = 0; i < total; i++) {
     const row = importRows[i];
+    let rowError = null;
     try {
       let sparepartId = null;
       const existing = row.kode 
@@ -850,12 +924,15 @@ async function submitImport() {
             rack_location: row.lokasiRak,
             stock: (existing.stock || 0) + row.qty,
             category_id: existing.category_id || getCategoryIdForProduct(row.nama),
-            discount: row.diskon
+            discount: row.diskon,
+            nama_lain: existing.nama_lain || null,
+            unit: existing.unit || 'pcs'
           })
         });
         const updateData = await resUpdate.json();
-        if (!updateData.success && !firstError) {
-          firstError = updateData.message || 'Gagal mengupdate sparepart';
+        if (!updateData.success) {
+          rowError = updateData.message || 'Gagal mengupdate sparepart';
+          if (!firstError) firstError = rowError;
         }
       } else {
         const resCreate = await fetch(`${API}/spareparts`, {
@@ -879,13 +956,12 @@ async function submitImport() {
         if (createData.success) {
           sparepartId = createData.data.id;
         } else {
-          if (!firstError) {
-            firstError = createData.message || 'Gagal mendaftarkan sparepart baru';
-          }
+          rowError = createData.message || 'Gagal mendaftarkan sparepart baru';
+          if (!firstError) firstError = rowError;
         }
       }
 
-      if (sparepartId) {
+      if (sparepartId && !rowError) {
         const resPur = await fetch(`${API}/purchases`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -903,10 +979,9 @@ async function submitImport() {
         if (purData.success) {
           success++;
         } else {
+          rowError = purData.message || 'Gagal mencatat riwayat pembelian';
+          if (!firstError) firstError = rowError;
           failed++;
-          if (!firstError) {
-            firstError = purData.message || 'Gagal mencatat riwayat pembelian';
-          }
         }
       } else {
         failed++;
@@ -914,9 +989,13 @@ async function submitImport() {
     } catch (err) {
       failed++;
       console.error('Import row error:', err);
-      if (!firstError) {
-        firstError = err.message || err;
-      }
+      rowError = err.message || String(err);
+      if (!firstError) firstError = rowError;
+    }
+
+    if (rowError) {
+      row.error = rowError;
+      failedRowsList.push(row);
     }
 
     // Update progress bar
@@ -936,23 +1015,151 @@ async function submitImport() {
   // Wait 500ms for visual polish
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  if (failed > 0) {
-    alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}.\n\nError pertama: ${firstError}`);
-  } else {
-    alert(`Import selesai! Berhasil: ${success}, Gagal: ${failed}`);
-  }
-
-  // Restore action buttons and close button
-  if (btnCancel) btnCancel.style.display = '';
-  if (btnImport) btnImport.style.display = '';
-  if (closeBtn) closeBtn.style.display = '';
-
   // Hide progress container
   if (progressContainer) progressContainer.classList.add('hidden');
 
   isImporting = false;
-  closePreviewModal();
-  loadData();
+
+  if (failed > 0) {
+    alert(`Import selesai!\n\nBerhasil: ${success}\nGagal: ${failed}\n\nBaris yang gagal akan ditampilkan di tabel preview. Anda dapat mengunduh daftar baris gagal ini sebagai berkas Excel.`);
+    
+    // Tampilkan hanya baris yang gagal
+    importRows = failedRowsList;
+    showFailedImportPreview();
+    
+    // Kembalikan tombol close silang di header modal agar bisa ditutup
+    if (closeBtn) closeBtn.style.display = '';
+    
+    loadData(); // Reload data valid di background
+  } else {
+    alert(`Import selesai! Semua data (${success} baris) berhasil diimpor.`);
+    if (closeBtn) closeBtn.style.display = '';
+    closePreviewModal();
+    loadData();
+  }
+}
+
+function closePreviewModal() {
+  if (isImporting) return;
+  document.getElementById('modalPreview').classList.add('hidden');
+  // Kembalikan visibilitas kontrol footer ke default
+  document.getElementById('defaultImportControls')?.classList.remove('hidden');
+  document.getElementById('failedImportControls')?.classList.add('hidden');
+}
+
+function showFailedImportPreview() {
+  const tbody = document.getElementById('previewTableBody');
+  document.getElementById('importCount').textContent = importRows.length;
+
+  tbody.innerHTML = importRows.map((r, i) => {
+    return `
+      <tr style="background: rgba(239, 68, 68, 0.03);">
+        <td>${i + 1}</td>
+        <td>
+          <input type="text" value="${r.supplier || ''}" oninput="updateFailedField(${i}, 'supplier', this.value)" />
+        </td>
+        <td>
+          <input type="text" value="${r.kode || ''}" oninput="updateFailedField(${i}, 'kode', this.value)" style="font-family: monospace;" />
+        </td>
+        <td>
+          <input type="text" value="${r.nama || ''}" oninput="updateFailedField(${i}, 'nama', this.value)" style="font-weight: 600;" />
+          <div style="color: #ef4444; font-size: 11px; margin-top: 6px; font-weight: 600; padding-left: 2px;">
+            ❌ ${r.error || 'Gagal diproses'}
+          </div>
+        </td>
+        <td>
+          <input type="text" value="${r.merk || ''}" oninput="updateFailedField(${i}, 'merk', this.value)" />
+        </td>
+        <td>
+          <input type="text" value="${r.tipe || ''}" oninput="updateFailedField(${i}, 'tipe', this.value)" />
+        </td>
+        <td>
+          <input type="number" value="${r.qty}" oninput="updateFailedField(${i}, 'qty', this.value)" style="text-align: center;" min="1" />
+        </td>
+        <td>
+          <input type="number" value="${r.beliPcs}" oninput="updateFailedField(${i}, 'beliPcs', this.value)" style="text-align: right;" min="0" />
+        </td>
+        <td id="beliTotal-${i}" style="text-align: right; font-weight: 600; color: #475569; padding-top: 17px; vertical-align: top;">
+          ${rupiah(r.beliTotal)}
+        </td>
+        <td>
+          <input type="number" value="${r.jualPcs}" oninput="updateFailedField(${i}, 'jualPcs', this.value)" style="text-align: right;" min="0" />
+        </td>
+        <td>
+          <input type="text" value="${r.lokasiRak || ''}" oninput="updateFailedField(${i}, 'lokasiRak', this.value)" style="text-align: center;" />
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Tampilkan kontrol footer gagal impor dan sembunyikan kontrol default
+  document.getElementById('defaultImportControls')?.classList.add('hidden');
+  document.getElementById('failedImportControls')?.classList.remove('hidden');
+  document.getElementById('failedCountText').textContent = importRows.length;
+}
+
+window.updateFailedField = function(index, field, value) {
+  const row = importRows[index];
+  if (!row) return;
+
+  if (field === 'qty') {
+    row.qty = parseInt(value) || 0;
+    row.beliTotal = row.qty * row.beliPcs;
+    const totalEl = document.getElementById(`beliTotal-${index}`);
+    if (totalEl) totalEl.textContent = rupiah(row.beliTotal);
+  } else if (field === 'beliPcs') {
+    row.beliPcs = parseFloat(value) || 0;
+    row.beliTotal = row.qty * row.beliPcs;
+    const totalEl = document.getElementById(`beliTotal-${index}`);
+    if (totalEl) totalEl.textContent = rupiah(row.beliTotal);
+  } else if (field === 'jualPcs') {
+    row.jualPcs = parseFloat(value) || 0;
+  } else if (field === 'diskon') {
+    row.diskon = parseFloat(value) || 0;
+  } else {
+    row[field] = value;
+  }
+};
+
+function downloadFailedRowsExcel() {
+  if (!importRows.length) {
+    alert('Tidak ada data gagal untuk diunduh.');
+    return;
+  }
+  
+  const headers = [
+    'Supplier', 'Kode', 'Nama', 'Merk', 'Tipe Motor', 'Qty', 'Beli/PCS', 'Beli/Total', 'Jual/PCS', 'Diskon', 'Lokasi Rak', 'Penyebab Gagal'
+  ];
+  
+  const dataRows = importRows.map(r => [
+    r.supplier || '',
+    r.kode || '',
+    r.nama || '',
+    r.merk || '',
+    r.tipe || '',
+    r.qty || 0,
+    r.beliPcs || 0,
+    r.beliTotal || 0,
+    r.jualPcs || 0,
+    r.diskon || 0,
+    r.lokasiRak || '',
+    r.error || 'Gagal diproses'
+  ]);
+  
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+  
+  // Set lebar kolom
+  ws['!cols'] = [
+    { wch: 15 }, { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, 
+    { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 45 }
+  ];
+  
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Gagal Impor');
+  
+  const now = new Date();
+  const tgl = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `gagal_impor_barang_${tgl}.xlsx`);
 }
 
 function downloadTemplate() {
@@ -962,6 +1169,119 @@ function downloadTemplate() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Template');
   XLSX.writeFile(wb, 'template_pembelian.xlsx');
+}
+
+window.openUndoImportModal = async function() {
+  document.getElementById('fieldUndoImportPassword').value = '';
+  
+  // Show modal and reset layout elements
+  document.getElementById('modalUndoImport').classList.remove('hidden');
+  document.getElementById('undoImportLoading').classList.remove('hidden');
+  document.getElementById('undoImportError').classList.add('hidden');
+  document.getElementById('undoImportContent').classList.add('hidden');
+  document.getElementById('undoImportModalFooter').style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/purchases/undo-last-import/preview`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    const data = await res.json();
+    document.getElementById('undoImportLoading').classList.add('hidden');
+
+    if (data.success) {
+      // Set metadata
+      const dateStr = new Date(data.import_time).toLocaleString('id-ID', { 
+        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+      });
+      document.getElementById('undoImportTimeText').textContent = dateStr;
+      document.getElementById('undoImportTotalItems').textContent = data.total_items;
+      document.getElementById('undoImportTotalQty').textContent = data.total_quantity;
+      document.getElementById('undoImportTotalAmount').textContent = rupiah(data.total_amount);
+
+      // Render table
+      const tbody = document.getElementById('undoImportTableBody');
+      tbody.innerHTML = data.data.map((p, idx) => `
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 12px; color: #64748b;">${idx + 1}</td>
+          <td style="padding: 10px 12px; font-family: monospace;">${p.sparepart_code || '-'}</td>
+          <td style="padding: 10px 12px; font-weight: 500;">${escHtml(p.sparepart_name)}</td>
+          <td style="padding: 10px 12px; color: #475569;">${escHtml(p.supplier || '-')}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 600;">${p.quantity}</td>
+          <td style="padding: 10px 12px; text-align: right;">${rupiah(p.buy_price)}</td>
+          <td style="padding: 10px 12px; text-align: right; font-weight: 600; color: #475569;">${rupiah(p.total)}</td>
+        </tr>
+      `).join('');
+
+      // Show content and footer
+      document.getElementById('undoImportContent').classList.remove('hidden');
+      document.getElementById('undoImportModalFooter').style.display = 'flex';
+    } else {
+      document.getElementById('undoImportErrorText').textContent = data.message || 'Gagal memuat preview.';
+      document.getElementById('undoImportError').classList.remove('hidden');
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('undoImportLoading').classList.add('hidden');
+    document.getElementById('undoImportErrorText').textContent = 'Koneksi error saat mengambil data preview.';
+    document.getElementById('undoImportError').classList.remove('hidden');
+  }
+};
+
+window.closeUndoImportModal = function() {
+  document.getElementById('modalUndoImport').classList.add('hidden');
+};
+
+window.confirmUndoImport = async function() {
+  const password = document.getElementById('fieldUndoImportPassword').value;
+  if (!password) {
+    alert('Password verifikasi wajib diisi!');
+    return;
+  }
+
+  const btnSubmit = document.querySelector('#formUndoImport button[type="submit"]');
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Memproses...';
+  }
+
+  try {
+    const res = await fetch(`${API}/purchases/undo-last-import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ password })
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      closeUndoImportModal();
+      loadData();
+    } else {
+      alert(data.message || 'Gagal membatalkan impor terakhir.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Koneksi error!');
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Revert / Batalkan Impor';
+    }
+  }
+};
+
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 const importFileEl = document.getElementById('importFile');

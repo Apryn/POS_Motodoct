@@ -173,7 +173,6 @@
       <div style="display:flex;gap:8px;">
         <button class="btn-secondary" onclick="exportExcel()">⬇ Export Excel</button>
         <button class="btn-secondary" onclick="openBulkAdjustModal()">⚡ Ubah Harga Massal</button>
-        <button class="btn-danger" onclick="openDeleteAllModal()">🗑 Hapus Semua</button>
         <button class="btn-primary" onclick="openAddModal()">+ Tambah</button>
       </div>
     </div>
@@ -186,6 +185,7 @@
             <th>No</th>
             <th>Kode</th>
             <th>Nama Barang</th>
+            <th style="width: 140px;">Nama Lain</th>
             <th>Kategori</th>
             <th>Merk</th>
             <th>Tipe Motor</th>
@@ -197,7 +197,7 @@
           </tr>
         </thead>
         <tbody id="sparepartTableBody">
-          <tr><td colspan="11" class="empty-state">Memuat data...</td></tr>
+          <tr><td colspan="12" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
     </div>
@@ -223,6 +223,10 @@
               <input type="text" id="fieldNama" placeholder="Nama sparepart" required />
             </div>
           </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label>Nama Lain (Alias / Sinonim)</label>
+            <input type="text" id="fieldNamaLain" placeholder="Contoh: Kampas Rem (untuk Dispad)" />
+          </div>
           <div class="form-row-2">
             <div class="form-group">
               <label>Kategori</label>
@@ -243,14 +247,18 @@
               <input type="number" id="fieldStok" placeholder="0" min="0" required />
             </div>
           </div>
-          <div class="form-row-2">
+          <div class="form-row-3">
             <div class="form-group">
               <label>Harga Beli (Rp) <span class="required">*</span></label>
-              <input type="number" id="fieldHargaBeli" placeholder="0" min="0" required />
+              <input type="text" id="fieldHargaBeli" placeholder="0" required />
+            </div>
+            <div class="form-group">
+              <label>Markup (%)</label>
+              <input type="number" id="fieldMarkup" placeholder="30" value="30" min="0" />
             </div>
             <div class="form-group">
               <label>Harga Jual (Rp) <span class="required">*</span></label>
-              <input type="number" id="fieldHarga" placeholder="0" min="0" required />
+              <input type="text" id="fieldHarga" placeholder="0" required />
             </div>
           </div>
           <div class="form-row-2">
@@ -304,6 +312,40 @@
       <div class="modal-footer">
         <button class="btn-secondary" onclick="closeDeleteModal()">Batal</button>
         <button class="btn-danger" onclick="confirmDelete()">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kartu Stok -->
+  <div class="modal hidden" id="modalStockCard">
+    <div class="modal-box modal-lg" style="max-width: 800px; width: 90vw;">
+      <div class="modal-header">
+        <div>
+          <h3 id="stockCardTitle" style="font-weight: 700;">📋 Kartu Stok Sparepart</h3>
+          <p id="stockCardSubtitle" style="font-size: 12px; color: #64748b; margin-top: 4px;"></p>
+        </div>
+        <button class="modal-close" onclick="closeStockCardModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 20px 24px; max-height: 65vh; overflow-y: auto;">
+        <div class="table-wrap" style="box-shadow: none; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <table class="data-table" style="font-size: 12px;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="width: 150px; padding: 10px 12px;">Tanggal</th>
+                <th style="width: 100px; text-align: center; padding: 10px 12px;">Tipe</th>
+                <th style="padding: 10px 12px;">Keterangan / Referensi</th>
+                <th style="width: 85px; text-align: center; padding: 10px 12px;">Mutasi</th>
+                <th style="width: 90px; text-align: center; padding: 10px 12px;">Saldo</th>
+              </tr>
+            </thead>
+            <tbody id="stockCardTableBody">
+              <tr><td colspan="5" class="empty-state">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeStockCardModal()">Tutup</button>
       </div>
     </div>
   </div>
@@ -373,26 +415,7 @@
     </div>
   </div>
 
-  <!-- Modal Hapus Semua -->
-  <div class="modal hidden" id="modalDeleteAll">
-    <div class="modal-box modal-sm">
-      <div class="modal-header">
-        <h3>🔐 Hapus Semua Data</h3>
-        <button class="modal-close" onclick="closeDeleteAllModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="color:#e74c3c;font-weight:600;margin-bottom:12px;">⚠️ Semua data sparepart akan dihapus permanen.</p>
-        <div class="form-group">
-          <label>Masukkan Password <span class="required">*</span></label>
-          <input type="password" id="deleteAllPassword" placeholder="Password akun Anda" />
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeDeleteAllModal()">Batal</button>
-        <button class="btn-danger" id="btnConfirmDeleteAll" onclick="confirmDeleteAll()">Hapus Semua</button>
-      </div>
-    </div>
-  </div>
+
 
   <script src="../js/sparepart.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>

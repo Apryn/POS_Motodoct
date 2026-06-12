@@ -270,6 +270,13 @@ app.listen(PORT, async () => {
       console.log("🛠️  Kolom unit berhasil ditambahkan ke tabel spareparts!");
     }
 
+    // 6. spareparts.nama_lain
+    const [namaLainCols] = await db.execute("SHOW COLUMNS FROM spareparts LIKE 'nama_lain'");
+    if (namaLainCols.length === 0) {
+      await db.execute("ALTER TABLE spareparts ADD COLUMN nama_lain VARCHAR(150) DEFAULT NULL");
+      console.log("🛠️  Kolom nama_lain berhasil ditambahkan ke tabel spareparts!");
+    }
+
     // 5. mechanics.is_deleted
     const [mechDelCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'is_deleted'");
     if (mechDelCols.length === 0) {

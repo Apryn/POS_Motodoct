@@ -7,7 +7,9 @@ router.use(auth);
 
 router.get('/', c.getAllPurchases);
 router.post('/', c.createPurchase);
-router.delete('/all', c.deleteAllPurchases);
+router.delete('/by-supplier', c.deletePurchasesBySupplier);
+router.get('/undo-last-import/preview', c.previewUndoLastImport);
+router.post('/undo-last-import', c.undoLastImport);
 router.delete('/:id', c.deletePurchase);
 
 module.exports = router;

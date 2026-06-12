@@ -42,6 +42,7 @@ CREATE TABLE `spareparts` (
   `supplier` varchar(100) DEFAULT NULL,
   `code` varchar(50) DEFAULT NULL,
   `name` varchar(150) NOT NULL,
+  `nama_lain` varchar(150) DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
   `stock` int(11) NOT NULL DEFAULT 0,
   `unit` varchar(20) NOT NULL DEFAULT 'pcs',
