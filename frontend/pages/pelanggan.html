@@ -11,23 +11,16 @@
         return;
       }
       
+      const allPages = [
+        'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
+        'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
+        'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
+      ];
       const rolePages = {
-        admin: [
-          'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
-          'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
-          'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
-        ],
-        kasir: [
-          'transaksi.html', 'keranjang.html', 'sparepart.html'
-        ],
-        gudang: [
-          'sparepart.html', 'pembelian.html'
-        ],
-        owner: [
-          'dashboard.html', 'sparepart.html', 'pembelian.html', 'pengeluaran.html',
-          'kategori.html', 'servis.html', 'mekanik.html', 'pelanggan.html',
-          'laporan.html', 'notifikasi.html', 'user.html'
-        ]
+        admin: allPages,
+        kasir: allPages,
+        gudang: allPages,
+        owner: allPages
       };
       
       const roleDefaults = {

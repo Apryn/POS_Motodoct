@@ -21,6 +21,17 @@ const avatarEl = document.getElementById('userAvatar');
 if (welcomeEl) welcomeEl.textContent = user.username || 'Admin';
 if (avatarEl) avatarEl.textContent = (user.username || 'A')[0].toUpperCase();
 
+const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
+
+// Hide delete by supplier and undo last import buttons if not admin/owner
+if (!isAdminOrOwner) {
+  const delSupBtn = document.querySelector('button[onclick="openDeleteBySupplierModal()"]');
+  if (delSupBtn) delSupBtn.style.display = 'none';
+
+  const undoBtn = document.querySelector('button[onclick="openUndoImportModal()"]');
+  if (undoBtn) undoBtn.style.display = 'none';
+}
+
 function openSidebar() {
   document.getElementById('sidebar')?.classList.add('open');
   document.getElementById('sidebarOverlay')?.classList.add('open');
@@ -183,7 +194,7 @@ function renderTable() {
       <td>${rupiah(p.total)}</td>
       <td>${p.note || '-'}</td>
       <td>
-        <button class="btn-del-row" onclick="openDeleteModal(${p.id})">Hapus</button>
+        ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDeleteModal(${p.id})">Hapus</button>` : ''}
       </td>
     </tr>
   `).join('');

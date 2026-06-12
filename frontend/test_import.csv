@@ -1,0 +1,4 @@
+No,Supplier,Kode,Nama,Merk,Tipe Motor,Qty,Beli/PCS,Beli/Total,Jual/PCS,Diskon,Lokasi Rak
+1,Supplier A,54P-E2119-00,YSP,Yamaha,Mio,10,27000,270000,35000,0,Rak Y
+2,Supplier B,THIS_IS_A_VERY_LONG_CODE_THAT_EXCEEDS_FIFTY_CHARACTERS_LIMIT_FOR_TESTING_PURPOSE,Oli Mesin Test,Yamalube,Mio,5,45000,225000,55000,0,Rak Oli
+3,Supplier C,TEST_FAIL_DISCOUNT,Product Fail Discount,Merk C,Tipe C,2,50000,100000,65000,9999,Rak C

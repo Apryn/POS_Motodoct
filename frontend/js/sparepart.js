@@ -16,6 +16,14 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 
 if (!token) window.location.href = 'login.html';
 
+const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
+
+// Hide bulk adjust button if not admin/owner
+if (!isAdminOrOwner) {
+  const bulkBtn = document.querySelector('button[onclick="openBulkAdjustModal()"]');
+  if (bulkBtn) bulkBtn.style.display = 'none';
+}
+
 // Set user info
 const welcomeEl = document.getElementById('welcomeText');
 const avatarEl = document.getElementById('userAvatar');
@@ -204,7 +212,7 @@ function renderTable() {
       <td>
         <div class="action-btns">
           <button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button>
-          <button class="btn-del-row" onclick="openDeleteModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')">Hapus</button>
+          ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDeleteModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')">Hapus</button>` : ''}
         </div>
       </td>
     </tr>

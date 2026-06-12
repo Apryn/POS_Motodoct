@@ -47,7 +47,10 @@ exports.getMechanicJobs = async (req, res) => {
         const { id } = req.params;
         const [rows] = await db.execute(`
             SELECT 
+                ts.id as transaction_service_id,
                 ts.price as service_price,
+                ts.commission_status,
+                ts.claimed_at,
                 sv.name as service_name,
                 t.invoice_number,
                 t.created_at,
@@ -66,5 +69,40 @@ exports.getMechanicJobs = async (req, res) => {
     } catch (error) {
         console.error("Error get mechanic jobs:", error);
         res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+exports.claimMechanicCommissions = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { id } = req.params;
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Pilih setidaknya satu pekerjaan untuk dicairkan!' });
+        }
+
+        const placeholders = ids.map(() => '?').join(',');
+        const query = `
+            UPDATE transaction_services 
+            SET commission_status = 'paid', claimed_at = NOW() 
+            WHERE id IN (${placeholders}) AND mechanic_id = ? AND commission_status = 'unpaid'
+        `;
+        
+        const [result] = await conn.execute(query, [...ids, id]);
+
+        await conn.commit();
+        res.json({ 
+            success: true, 
+            message: `Berhasil mencairkan komisi untuk ${result.affectedRows} pekerjaan!`,
+            affectedRows: result.affectedRows 
+        });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error claim mechanic commissions:", error);
+        res.status(500).json({ success: false, message: 'Gagal mencairkan komisi mekanik' });
+    } finally {
+        conn.release();
     }
 };

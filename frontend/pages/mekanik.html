@@ -11,23 +11,16 @@
         return;
       }
       
+      const allPages = [
+        'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
+        'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
+        'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
+      ];
       const rolePages = {
-        admin: [
-          'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
-          'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
-          'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html'
-        ],
-        kasir: [
-          'transaksi.html', 'keranjang.html', 'sparepart.html'
-        ],
-        gudang: [
-          'sparepart.html', 'pembelian.html'
-        ],
-        owner: [
-          'dashboard.html', 'sparepart.html', 'pembelian.html', 'pengeluaran.html',
-          'kategori.html', 'servis.html', 'mekanik.html', 'pelanggan.html',
-          'laporan.html', 'notifikasi.html', 'user.html'
-        ]
+        admin: allPages,
+        kasir: allPages,
+        gudang: allPages,
+        owner: allPages
       };
       
       const roleDefaults = {
@@ -263,7 +256,7 @@
           </div>
           <div class="form-group">
             <label>Persentase Komisi (%) <span class="required">*</span></label>
-            <input type="number" id="fieldKomisi" placeholder="Default: 35" min="0" max="100" step="0.1" value="35" required />
+            <input type="number" id="fieldKomisi" placeholder="Default: 90" min="0" max="100" step="0.1" value="90" required />
           </div>
         </div>
         <div class="modal-footer">
@@ -294,53 +287,83 @@
 
   <!-- Modal Detail Pekerjaan Mekanik -->
   <div class="modal hidden" id="modalJobs" style="z-index: 1050;">
-    <div class="modal-box" style="max-width: 700px; width: 90%;">
+    <div class="modal-box" style="max-width: 1050px; width: 95%;">
       <div class="modal-header">
-        <h3>🛠️ Histori Pekerjaan & Gaji: <span id="jobsMechanicName"></span></h3>
+        <h3>🛠️ Histori Pekerjaan, Komisi & Pencairan Gaji: <span id="jobsMechanicName"></span></h3>
         <button class="modal-close" onclick="closeJobsModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:20px;">
-          <!-- Card 1 -->
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:14px 18px; border-radius:10px; display:flex; align-items:center; gap:12px;">
-            <div style="font-size:24px; background:#eff6ff; padding:10px; border-radius:8px; line-height:1;">🏍️</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:20px;">
+          <!-- Card 1: Belum Dicairkan -->
+          <div style="background:#fffbeb; border:1px solid #fde68a; padding:14px 18px; border-radius:10px; display:flex; align-items:center; gap:12px;">
+            <div style="font-size:24px; background:#fef3c7; padding:10px; border-radius:8px; line-height:1;">⏳</div>
             <div>
-              <span style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; display:block; letter-spacing:0.5px;">Total Motor Dikerjakan</span>
-              <strong style="font-size:18px; color:#1e293b; display:block; margin-top:2px;" id="totalMotorDisplay">0</strong>
-              <span style="font-size:11px; color:#94a3b8; display:block; margin-top:1px;" id="totalServisDetail">0 kali servis</span>
+              <span style="font-size:11px; text-transform:uppercase; color:#b45309; font-weight:600; display:block; letter-spacing:0.5px;">Komisi Belum Cair (Unpaid)</span>
+              <strong style="font-size:18px; color:#d97706; display:block; margin-top:2px;" id="unpaidWagesDisplay">Rp 0</strong>
+              <span style="font-size:11px; color:#b45309; display:block; margin-top:1px;" id="unpaidJobsDetail">0 servis belum diambil</span>
             </div>
           </div>
-          <!-- Card 2 -->
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:14px 18px; border-radius:10px; display:flex; align-items:center; gap:12px;">
-            <div style="font-size:24px; background:#ecfdf5; padding:10px; border-radius:8px; line-height:1;">💰</div>
+          <!-- Card 2: Sudah Dicairkan -->
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; padding:14px 18px; border-radius:10px; display:flex; align-items:center; gap:12px;">
+            <div style="font-size:24px; background:#d1fae5; padding:10px; border-radius:8px; line-height:1;">✅</div>
             <div>
-              <span style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; display:block; letter-spacing:0.5px;">Komisi Bersih Mekanik</span>
-              <strong style="font-size:18px; color:#10b981; display:block; margin-top:2px;" id="totalWagesDisplay">Rp 0</strong>
-              <span style="font-size:11px; color:#64748b; font-weight: 500; display:block; margin-top:1px;" id="wagesDetailDisplay">Komisi 35% dari Rp 0 kotor</span>
+              <span style="font-size:11px; text-transform:uppercase; color:#065f46; font-weight:600; display:block; letter-spacing:0.5px;">Komisi Sudah Cair (Paid)</span>
+              <strong style="font-size:18px; color:#059669; display:block; margin-top:2px;" id="paidWagesDisplay">Rp 0</strong>
+              <span style="font-size:11px; color:#065f46; display:block; margin-top:1px;" id="paidJobsDetail">0 servis sudah diambil</span>
+            </div>
+          </div>
+          <!-- Card 3: Total Akumulatif -->
+          <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:14px 18px; border-radius:10px; display:flex; align-items:center; gap:12px;">
+            <div style="font-size:24px; background:#dbeafe; padding:10px; border-radius:8px; line-height:1;">📊</div>
+            <div>
+              <span style="font-size:11px; text-transform:uppercase; color:#1e40af; font-weight:600; display:block; letter-spacing:0.5px;">Total Komisi Bersih</span>
+              <strong style="font-size:18px; color:#2563eb; display:block; margin-top:2px;" id="totalWagesDisplay">Rp 0</strong>
+              <span style="font-size:11px; color:#1e40af; display:block; margin-top:1px;" id="totalJobsDetail">0 servis terdaftar</span>
             </div>
           </div>
         </div>
-        <div class="table-wrap" style="max-height: 300px; overflow-y: auto;">
-          <table class="data-table" style="font-size: 12.5px; min-width: 600px;">
+        <div class="table-wrap" style="max-height: 320px; overflow-y: auto;">
+          <table class="data-table" style="font-size: 12px; min-width: 950px; table-layout: fixed; width: 100%;">
+            <colgroup>
+              <col style="width: 40px;">
+              <col style="width: 105px;">
+              <col style="width: 110px;">
+              <col style="width: 100px;">
+              <col style="width: 95px;">
+              <col style="width: 130px;">
+              <col style="width: 85px;">
+              <col style="width: 80px;">
+              <col style="width: 85px;">
+              <col style="width: 90px;">
+              <col style="width: 105px;">
+            </colgroup>
             <thead>
               <tr>
-                <th>No</th>
+                <th style="text-align:center;"><input type="checkbox" id="selectAllJobs" onclick="toggleSelectAllJobs()" style="cursor:pointer; transform: scale(1.1);"></th>
                 <th>Tanggal</th>
                 <th>Invoice</th>
                 <th>Pelanggan</th>
                 <th>Plat Motor</th>
                 <th>Nama Servis</th>
-                <th style="text-align:right">Harga Servis</th>
+                <th style="text-align:right">Total Jasa</th>
+                <th style="text-align:right">Toko (10%)</th>
+                <th style="text-align:right">Komisi (90%)</th>
+                <th style="text-align:center">Status</th>
+                <th>Tgl Cair</th>
               </tr>
             </thead>
             <tbody id="jobsTableBody">
-              <tr><td colspan="7" class="empty-state">Tidak ada histori pekerjaan</td></tr>
+              <tr><td colspan="11" class="empty-state">Tidak ada histori pekerjaan</td></tr>
             </tbody>
           </table>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="closeJobsModal()">Tutup</button>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:12px; color:#64748b; font-weight:500;">* Harap cocokkan dengan bon fisik 3-ply sebelum mencairkan.</div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-primary" id="btnClaimCommissions" onclick="claimSelectedCommissions()" disabled style="background:#e87722; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;">Cairkan Komisi Terpilih (Total: Rp 0)</button>
+          <button type="button" class="btn-secondary" onclick="closeJobsModal()">Tutup</button>
+        </div>
       </div>
     </div>
   </div>

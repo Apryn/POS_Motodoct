@@ -239,8 +239,11 @@ app.listen(PORT, async () => {
     // 2. mechanics.commission_rate
     const [mechCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'commission_rate'");
     if (mechCols.length === 0) {
-      await db.execute("ALTER TABLE mechanics ADD COLUMN commission_rate DECIMAL(5,2) NOT NULL DEFAULT 35.00");
+      await db.execute("ALTER TABLE mechanics ADD COLUMN commission_rate DECIMAL(5,2) NOT NULL DEFAULT 90.00");
       console.log("🛠️  Kolom commission_rate berhasil ditambahkan ke tabel mechanics!");
+    } else {
+      // Pastikan default-nya diubah ke 90.00
+      await db.execute("ALTER TABLE mechanics MODIFY COLUMN commission_rate DECIMAL(5,2) NOT NULL DEFAULT 90.00");
     }
 
     // 3. transactions.customer_name & license_plate
@@ -277,11 +280,24 @@ app.listen(PORT, async () => {
       console.log("🛠️  Kolom nama_lain berhasil ditambahkan ke tabel spareparts!");
     }
 
-    // 5. mechanics.is_deleted
+    // 7. mechanics.is_deleted
     const [mechDelCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'is_deleted'");
     if (mechDelCols.length === 0) {
       await db.execute("ALTER TABLE mechanics ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0");
       console.log("🛠️  Kolom is_deleted berhasil ditambahkan ke tabel mechanics!");
+    }
+
+    // 8. transaction_services.commission_status & claimed_at
+    const [statusCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'commission_status'");
+    if (statusCols.length === 0) {
+      await db.execute("ALTER TABLE transaction_services ADD COLUMN commission_status VARCHAR(20) DEFAULT 'unpaid'");
+      console.log("🛠️  Kolom commission_status berhasil ditambahkan ke tabel transaction_services!");
+    }
+
+    const [claimedCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'claimed_at'");
+    if (claimedCols.length === 0) {
+      await db.execute("ALTER TABLE transaction_services ADD COLUMN claimed_at TIMESTAMP NULL DEFAULT NULL");
+      console.log("🛠️  Kolom claimed_at berhasil ditambahkan ke tabel transaction_services!");
     }
 
     console.log("✅ Kolom database tambahan terverifikasi!");

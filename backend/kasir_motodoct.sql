@@ -24,7 +24,7 @@ CREATE TABLE `mechanics` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
-  `commission_rate` decimal(5,2) NOT NULL DEFAULT 35.00,
+  `commission_rate` decimal(5,2) NOT NULL DEFAULT 90.00,
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -107,6 +107,8 @@ CREATE TABLE `transaction_services` (
   `service_id` int(11) NOT NULL,
   `mechanic_id` int(11) NOT NULL,
   `price` decimal(10,2) NOT NULL,
+  `commission_status` varchar(20) DEFAULT 'unpaid',
+  `claimed_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `transaction_services_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `transaction_services_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`),

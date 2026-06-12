@@ -18,6 +18,14 @@ if (!token) window.location.href = 'login.html';
 document.getElementById('welcomeText').textContent = user.username || 'Admin';
 document.getElementById('userAvatar').textContent = (user.username || 'A')[0].toUpperCase();
 
+const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
+
+// Hide "+ Tambah Templat" button if not admin/owner
+if (!isAdminOrOwner) {
+  const addTmplBtn = document.querySelector('button[onclick="openTemplateModal()"]');
+  if (addTmplBtn) addTmplBtn.style.display = 'none';
+}
+
 const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
 // Riwayat notif disimpan di localStorage
@@ -185,9 +193,11 @@ async function loadOilReminders() {
            </button>`
         : `<span style="color:#15803d; font-size:11px; font-weight:700; background:#f0fdf4; padding:2px 8px; border-radius:12px;">Selesai</span>`;
 
-      const deleteBtn = `<button class="btn-danger" onclick="deleteReminder(${r.id})" style="padding:4px; font-size:11px; background:#e74c3c; border:1px solid #e74c3c; display:inline-flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; border-radius:6px; width:22px; height:22px;" title="Hapus Pengingat">
-          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-         </button>`;
+      const deleteBtn = isAdminOrOwner 
+        ? `<button class="btn-danger" onclick="deleteReminder(${r.id})" style="padding:4px; font-size:11px; background:#e74c3c; border:1px solid #e74c3c; display:inline-flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; border-radius:6px; width:22px; height:22px;" title="Hapus Pengingat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+           </button>`
+        : '';
 
       return `
         <tr>
@@ -457,10 +467,12 @@ function renderTemplates() {
       <td style="font-size:11.5px; color:#555; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 10px;" title="${escHtml(t.wa_template)}">${t.wa_template}</td>
       <td style="text-align:center; padding: 10px;">
         <div style="display:flex; gap:6px; align-items:center; justify-content:center;">
-          <button onclick="openTemplateModal(${t.id})" class="btn-primary" style="padding:4px 8px; font-size:11px; background:#f39c12; border-color:#f39c12; color:#fff; font-weight:700; cursor:pointer; border-radius:6px; display:inline-flex; align-items:center; gap:2px; height:22px;">Edit</button>
-          <button onclick="deleteTemplate(${t.id})" class="btn-danger" style="padding:4px; font-size:11px; background:#e74c3c; border-color:#e74c3c; color:#fff; font-weight:700; cursor:pointer; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+          ${isAdminOrOwner ? `
+            <button onclick="openTemplateModal(${t.id})" class="btn-primary" style="padding:4px 8px; font-size:11px; background:#f39c12; border-color:#f39c12; color:#fff; font-weight:700; cursor:pointer; border-radius:6px; display:inline-flex; align-items:center; gap:2px; height:22px;">Edit</button>
+            <button onclick="deleteTemplate(${t.id})" class="btn-danger" style="padding:4px; font-size:11px; background:#e74c3c; border-color:#e74c3c; color:#fff; font-weight:700; cursor:pointer; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          ` : '<span style="color:#aaa; font-size:11px;">Tidak ada akses</span>'}
         </div>
       </td>
     </tr>

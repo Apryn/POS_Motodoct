@@ -21,6 +21,8 @@ const avatarEl  = document.getElementById('userAvatar');
 if (welcomeEl) welcomeEl.textContent = user.username || 'Admin';
 if (avatarEl)  avatarEl.textContent  = (user.username || 'A')[0].toUpperCase();
 
+const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
+
 const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
 function openSidebar()  { document.getElementById('sidebar')?.classList.add('open');    document.getElementById('sidebarOverlay')?.classList.add('open'); }
@@ -71,7 +73,7 @@ function renderTable(list) {
       <td>
         <div class="action-btns" style="justify-content: center;">
           <button class="btn-edit"    onclick="openEdit(${c.id})">Edit</button>
-          <button class="btn-del-row" onclick="openDelete(${c.id}, '${escAttr(c.name)}')">Hapus</button>
+          ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${c.id}, '${escAttr(c.name)}')">Hapus</button>` : ''}
         </div>
       </td>
     </tr>

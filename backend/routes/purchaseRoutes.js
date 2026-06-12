@@ -2,14 +2,15 @@ const express = require('express');
 const router = express.Router();
 const c = require('../controllers/purchaseController');
 const auth = require('../middleware/auth');
+const isAdminOrOwner = require('../middleware/isAdminOrOwner');
 
 router.use(auth);
 
 router.get('/', c.getAllPurchases);
 router.post('/', c.createPurchase);
-router.delete('/by-supplier', c.deletePurchasesBySupplier);
-router.get('/undo-last-import/preview', c.previewUndoLastImport);
-router.post('/undo-last-import', c.undoLastImport);
-router.delete('/:id', c.deletePurchase);
+router.delete('/by-supplier', isAdminOrOwner, c.deletePurchasesBySupplier);
+router.get('/undo-last-import/preview', isAdminOrOwner, c.previewUndoLastImport);
+router.post('/undo-last-import', isAdminOrOwner, c.undoLastImport);
+router.delete('/:id', isAdminOrOwner, c.deletePurchase);
 
 module.exports = router;
