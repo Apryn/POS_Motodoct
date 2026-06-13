@@ -633,7 +633,7 @@
           <p style="font-size:12px;color:#e74c3c;margin:12px 0 6px 0;">Tindakan ini akan menghapus semua riwayat pembelian dari supplier yang dipilih dan tidak dapat dibatalkan.</p>
           <div class="form-group">
             <label>Masukkan Password Verifikasi <span class="required">*</span></label>
-            <input type="password" id="fieldDeleteSupplierPassword" placeholder="Password akun Anda" required />
+              <input type="password" id="fieldDeleteSupplierPassword" placeholder="Password akun Anda" required />
           </div>
         </div>
         <div class="modal-footer">
@@ -646,16 +646,16 @@
 
   <!-- Modal Batal Impor Terakhir (Undo Last Import) -->
   <div class="modal hidden" id="modalUndoImport">
-    <div class="modal-box" style="max-width: 800px; width: 90vw; border-radius: 16px; box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.3);">
+    <div class="modal-box" style="max-width: 850px; width: 95vw; border-radius: 16px; box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.3);">
       <div class="modal-header">
-        <h3>Batal Impor Terakhir (Undo)</h3>
+        <h3>Riwayat & Batal Impor (Undo)</h3>
         <button class="modal-close" onclick="closeUndoImportModal()">✕</button>
       </div>
       <form id="formUndoImport" onsubmit="event.preventDefault(); confirmUndoImport()">
         <div class="modal-body" style="padding: 20px 24px;">
           <!-- Loading State -->
           <div id="undoImportLoading" style="text-align: center; padding: 24px 0;">
-            <div style="font-size: 14px; color: #64748b; font-weight: 500;">Memuat preview data impor terakhir...</div>
+            <div style="font-size: 14px; color: #64748b; font-weight: 500;">Memuat data sesi impor berkas...</div>
           </div>
 
           <!-- Error State -->
@@ -663,10 +663,38 @@
             <span id="undoImportErrorText" style="font-weight: 600; font-size: 13.5px;">Tidak ada data yang dapat dibatalkan.</span>
           </div>
 
-          <!-- Content / Preview State -->
+          <!-- Sesi Impor List Section -->
+          <div id="undoImportListSection" class="hidden">
+            <p style="font-weight: 600; color: #1e293b; font-size: 13.5px; margin-bottom: 12px; line-height: 1.4;">
+              Pilih sesi impor berkas Excel yang ingin Anda batalkan (seluruh data barang yang ditambahkan/diperbarui pada sesi tersebut akan ditarik/revert):
+            </p>
+            
+            <div class="preview-table-container" style="margin: 12px 0; max-height: 40vh; overflow-y: auto; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
+                <thead>
+                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569;">No</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569;">Waktu Impor</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569;">Nama Berkas</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569; text-align: center;">Total Item</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569; text-align: center;">Total Qty</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569; text-align: right;">Total Nominal</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: #475569; text-align: center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="undoImportListTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Preview & Password input (View 2) -->
           <div id="undoImportContent" class="hidden">
+            <button type="button" class="btn-secondary" onclick="showUndoImportList()" style="padding: 6px 12px; font-size: 12px; margin-bottom: 16px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #475569; transition: all 0.2s;">
+              ← Kembali ke Daftar Berkas
+            </button>
+
             <p style="font-weight: 600; color: #1e293b; font-size: 13.5px; margin-bottom: 8px; line-height: 1.4;">
-              Berikut adalah daftar barang yang terdaftar/terupdate pada sesi impor terakhir (<span id="undoImportTimeText" style="color:#2563eb;">-</span>).
+              Berikut adalah daftar barang yang terdaftar/terupdate pada sesi impor (<span id="undoImportTimeText" style="color:#2563eb;">-</span>).
             </p>
             <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
               Jika Anda melanjutkan, sistem akan secara otomatis mengurangi stok barang tersebut, memulihkan harga beli lama/supplier asli, dan menghapus log pembelian impor ini.
@@ -713,12 +741,8 @@
   </div>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <script src="../js/pembelian.js"></script>
+  <script src="../js/pembelian.js?v=3"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>
 </body>
 </html>
-
-
-
-

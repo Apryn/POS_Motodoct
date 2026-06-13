@@ -240,32 +240,55 @@ exports.deletePurchasesBySupplier = async (req, res) => {
 
 exports.previewUndoLastImport = async (req, res) => {
     try {
-        // 1. Dapatkan timestamp impor terakhir dengan catatan 'Import Excel'
-        const [[lastImport]] = await db.execute(
-            `SELECT MAX(created_at) as max_time FROM purchases WHERE note = 'Import Excel'`
+        // 1. Dapatkan semua pembelian dengan catatan impor diurutkan dari yang terbaru
+        const [allImports] = await db.execute(
+            `SELECT p.id, p.sparepart_id, s.name as sparepart_name, s.code as sparepart_code, 
+                    p.supplier, p.quantity, p.buy_price, p.total, p.created_at, p.note
+             FROM purchases p
+             LEFT JOIN spareparts s ON p.sparepart_id = s.id
+             WHERE p.note LIKE 'Import Excel%'
+             ORDER BY p.created_at DESC, p.id DESC`
         );
 
-        if (!lastImport || !lastImport.max_time) {
+        if (allImports.length === 0) {
             return res.status(404).json({ success: false, message: 'Tidak ada data impor Excel yang dapat dibatalkan.' });
         }
 
-        const maxTime = lastImport.max_time;
-
-        // 2. Dapatkan semua pembelian dengan note = 'Import Excel' yang terbuat dalam rentang 15 detik dari maxTime
-        const [purchases] = await db.execute(
-            `SELECT p.id, p.sparepart_id, s.name as sparepart_name, s.code as sparepart_code, 
-                    p.supplier, p.quantity, p.buy_price, p.total, p.created_at
-             FROM purchases p
-             LEFT JOIN spareparts s ON p.sparepart_id = s.id
-             WHERE p.note = 'Import Excel' 
-               AND ABS(TIMESTAMPDIFF(SECOND, p.created_at, ?)) <= 15
-             ORDER BY s.name ASC`,
-            [maxTime]
-        );
+        // 2. Saring pembelian yang termasuk dalam batch impor terakhir menggunakan deteksi gap (threshold: 30 detik)
+        const purchases = [];
+        let prevTime = null;
+        for (const p of allImports) {
+            const currTime = new Date(p.created_at);
+            if (purchases.length === 0) {
+                purchases.push(p);
+                prevTime = currTime;
+            } else {
+                const gapSeconds = Math.abs((prevTime - currTime) / 1000);
+                if (gapSeconds <= 30) {
+                    purchases.push(p);
+                    prevTime = currTime;
+                } else {
+                    break;
+                }
+            }
+        }
 
         if (purchases.length === 0) {
             return res.status(404).json({ success: false, message: 'Tidak ditemukan data pembelian untuk impor terakhir.' });
         }
+
+        // Simpan waktu impor terakhir (max time dari batch) sebelum array diurutkan berdasarkan nama
+        const maxTime = purchases[0].created_at;
+
+        // Ambil nama file dari catatan terbaru (jika ada format "Import Excel: nama_file.xlsx")
+        const latestNote = purchases[0].note || '';
+        let fileName = '';
+        if (latestNote.startsWith('Import Excel: ')) {
+            fileName = latestNote.substring('Import Excel: '.length);
+        }
+
+        // Urutkan hasil akhir berdasarkan nama sparepart ASC agar konsisten dengan tampilan sebelumnya
+        purchases.sort((a, b) => (a.sparepart_name || '').localeCompare(b.sparepart_name || ''));
 
         res.json({
             success: true,
@@ -273,7 +296,8 @@ exports.previewUndoLastImport = async (req, res) => {
             total_items: purchases.length,
             total_quantity: purchases.reduce((sum, p) => sum + p.quantity, 0),
             total_amount: purchases.reduce((sum, p) => sum + parseFloat(p.total), 0),
-            import_time: maxTime
+            import_time: maxTime,
+            file_name: fileName
         });
     } catch (error) {
         console.error('Error previewUndoLastImport:', error);
@@ -297,25 +321,36 @@ exports.undoLastImport = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Password salah!' });
         }
 
-        // 1. Dapatkan timestamp impor terakhir dengan catatan 'Import Excel'
-        const [[lastImport]] = await conn.execute(
-            `SELECT MAX(created_at) as max_time FROM purchases WHERE note = 'Import Excel'`
+        // 1. Dapatkan semua pembelian dengan catatan impor diurutkan dari yang terbaru
+        const [allImports] = await conn.execute(
+            `SELECT id, sparepart_id, quantity, total, created_at, note 
+             FROM purchases 
+             WHERE note LIKE 'Import Excel%' 
+             ORDER BY created_at DESC, id DESC`
         );
 
-        if (!lastImport || !lastImport.max_time) {
+        if (allImports.length === 0) {
             return res.status(404).json({ success: false, message: 'Tidak ada data impor Excel yang dapat dibatalkan.' });
         }
 
-        const maxTime = lastImport.max_time;
-
-        // 2. Dapatkan semua pembelian dengan note = 'Import Excel' yang terbuat dalam rentang 15 detik dari maxTime
-        const [purchases] = await conn.execute(
-            `SELECT id, sparepart_id, quantity, total 
-             FROM purchases 
-             WHERE note = 'Import Excel' 
-               AND ABS(TIMESTAMPDIFF(SECOND, created_at, ?)) <= 15`,
-            [maxTime]
-        );
+        // 2. Saring pembelian yang termasuk dalam batch impor terakhir menggunakan deteksi gap (threshold: 30 detik)
+        const purchases = [];
+        let prevTime = null;
+        for (const p of allImports) {
+            const currTime = new Date(p.created_at);
+            if (purchases.length === 0) {
+                purchases.push(p);
+                prevTime = currTime;
+            } else {
+                const gapSeconds = Math.abs((prevTime - currTime) / 1000);
+                if (gapSeconds <= 30) {
+                    purchases.push(p);
+                    prevTime = currTime;
+                } else {
+                    break;
+                }
+            }
+        }
 
         if (purchases.length === 0) {
             return res.status(404).json({ success: false, message: 'Tidak ditemukan data pembelian untuk impor terakhir.' });
@@ -378,6 +413,183 @@ exports.undoLastImport = async (req, res) => {
         await conn.rollback();
         console.error('Error undoLastImport:', error);
         res.status(500).json({ success: false, message: 'Gagal membatalkan impor terakhir.' });
+    } finally {
+        conn.release();
+    }
+};
+
+exports.getImportSessions = async (req, res) => {
+    try {
+        const [rows] = await db.execute(`
+            SELECT p.id, p.sparepart_id, s.name as sparepart_name, s.code as sparepart_code, 
+                   p.supplier, p.quantity, p.buy_price, p.total, p.created_at, p.note
+            FROM purchases p
+            LEFT JOIN spareparts s ON p.sparepart_id = s.id
+            WHERE p.note LIKE 'Import Excel%'
+            ORDER BY p.created_at DESC, p.id DESC
+        `);
+
+        const sessions = [];
+        let currentSession = null;
+
+        for (const row of rows) {
+            const rowTime = new Date(row.created_at);
+            if (!currentSession) {
+                currentSession = {
+                    note: row.note,
+                    import_time: row.created_at,
+                    total_items: 1,
+                    total_quantity: row.quantity,
+                    total_amount: parseFloat(row.total),
+                    purchase_ids: [row.id],
+                    last_time: rowTime,
+                    items: [row]
+                };
+            } else {
+                const gapSeconds = Math.abs((currentSession.last_time - rowTime) / 1000);
+                if (row.note === currentSession.note && gapSeconds <= 60) {
+                    currentSession.total_items++;
+                    currentSession.total_quantity += row.quantity;
+                    currentSession.total_amount += parseFloat(row.total);
+                    currentSession.purchase_ids.push(row.id);
+                    currentSession.last_time = rowTime;
+                    currentSession.items.push(row);
+                } else {
+                    sessions.push(currentSession);
+                    currentSession = {
+                        note: row.note,
+                        import_time: row.created_at,
+                        total_items: 1,
+                        total_quantity: row.quantity,
+                        total_amount: parseFloat(row.total),
+                        purchase_ids: [row.id],
+                        last_time: rowTime,
+                        items: [row]
+                    };
+                }
+            }
+        }
+        if (currentSession) {
+            sessions.push(currentSession);
+        }
+
+        const result = sessions.map(s => {
+            const latestNote = s.note || '';
+            let fileName = 'Tanpa Nama Berkas';
+            if (latestNote.startsWith('Import Excel: ')) {
+                fileName = latestNote.substring('Import Excel: '.length);
+            }
+            return {
+                file_name: fileName,
+                import_time: s.import_time,
+                total_items: s.total_items,
+                total_quantity: s.total_quantity,
+                total_amount: s.total_amount,
+                purchase_ids: s.purchase_ids,
+                items: s.items.map(item => ({
+                    id: item.id,
+                    sparepart_code: item.sparepart_code,
+                    sparepart_name: item.sparepart_name,
+                    supplier: item.supplier,
+                    quantity: item.quantity,
+                    buy_price: item.buy_price,
+                    total: item.total
+                }))
+            };
+        });
+
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('Error getImportSessions:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+exports.undoImportSession = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const { password, purchase_ids } = req.body;
+        if (!purchase_ids || !Array.isArray(purchase_ids) || purchase_ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Data pembelian tidak valid.' });
+        }
+
+        const adminId = req.user?.id;
+        const [users] = await conn.execute('SELECT * FROM users WHERE id = ?', [adminId]);
+        if (users.length === 0) {
+            return res.status(401).json({ success: false, message: 'User tidak ditemukan' });
+        }
+        const isValid = await require('bcrypt').compare(password, users[0].password);
+        if (!isValid) {
+            return res.status(401).json({ success: false, message: 'Password salah!' });
+        }
+
+        // 1. Dapatkan detail semua pembelian yang akan dibatalkan
+        const purchaseIdsStr = purchase_ids.join(',');
+        const [purchases] = await conn.execute(
+            `SELECT id, sparepart_id, quantity, total FROM purchases WHERE id IN (${purchaseIdsStr})`
+        );
+
+        if (purchases.length === 0) {
+            return res.status(404).json({ success: false, message: 'Tidak ditemukan data pembelian yang cocok.' });
+        }
+
+        // 2. Kembalikan stok & total harga beli untuk setiap sparepart
+        for (const purchase of purchases) {
+            if (purchase.sparepart_id) {
+                // Kurangi stok dan buy_total
+                await conn.execute(
+                    `UPDATE spareparts 
+                     SET stock = GREATEST(0, stock - ?),
+                         buy_total = GREATEST(0, buy_total - ?)
+                     WHERE id = ?`,
+                    [purchase.quantity, purchase.total, purchase.sparepart_id]
+                );
+
+                // Ambil pembelian terakhir tersisa untuk update buy_price dan supplier
+                const [remaining] = await conn.execute(
+                    `SELECT buy_price, supplier 
+                     FROM purchases 
+                     WHERE sparepart_id = ? AND id NOT IN (${purchaseIdsStr})
+                     ORDER BY created_at DESC LIMIT 1`,
+                    [purchase.sparepart_id]
+                );
+
+                if (remaining.length > 0) {
+                    await conn.execute(
+                        `UPDATE spareparts 
+                         SET buy_price = ?,
+                             supplier = ?
+                         WHERE id = ?`,
+                        [remaining[0].buy_price, remaining[0].supplier, purchase.sparepart_id]
+                    );
+                } else {
+                    await conn.execute(
+                        `UPDATE spareparts 
+                         SET buy_price = 0,
+                             supplier = NULL
+                         WHERE id = ?`,
+                        [purchase.sparepart_id]
+                    );
+                }
+            }
+        }
+
+        // 3. Hapus data pembelian
+        await conn.execute(
+            `DELETE FROM purchases WHERE id IN (${purchaseIdsStr})`
+        );
+
+        await conn.commit();
+        res.json({ 
+            success: true, 
+            message: `Berhasil membatalkan impor (menghapus ${purchases.length} baris pembelian & memulihkan stok).` 
+        });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Error undoImportSession:', error);
+        res.status(500).json({ success: false, message: 'Gagal membatalkan impor.' });
     } finally {
         conn.release();
     }

@@ -65,7 +65,7 @@ CREATE TABLE `users` (
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `plain_password` varchar(255) DEFAULT NULL,
-  `role` enum('admin','kasir') DEFAULT 'kasir',
+  `role` enum('admin','kasir','gudang','owner') DEFAULT 'kasir',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)

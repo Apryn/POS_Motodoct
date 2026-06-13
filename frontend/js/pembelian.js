@@ -87,6 +87,7 @@ let purchases = [];
 let spareparts = [];
 let deleteId = null;
 let importRows = [];
+let importFileName = '';
 let isImporting = false;
 
 async function loadData() {
@@ -512,6 +513,7 @@ function parseRows(sheetData) {
 function handleImportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
+  importFileName = file.name;
 
   const reader = new FileReader();
   reader.onload = function(evt) {
@@ -933,7 +935,7 @@ async function submitImport() {
             buy_price: row.beliPcs,
             price: finalPrice,
             rack_location: row.lokasiRak,
-            stock: (existing.stock || 0) + row.qty,
+            stock: existing.stock || 0,
             category_id: existing.category_id || getCategoryIdForProduct(row.nama),
             discount: row.diskon,
             nama_lain: existing.nama_lain || null,
@@ -958,7 +960,7 @@ async function submitImport() {
             buy_price: row.beliPcs,
             price: finalPrice,
             rack_location: row.lokasiRak,
-            stock: row.qty,
+            stock: 0,
             category_id: getCategoryIdForProduct(row.nama),
             discount: row.diskon
           })
@@ -983,7 +985,7 @@ async function submitImport() {
             buy_price: row.beliPcs,
             sell_price: finalPrice,
             rack_location: row.lokasiRak,
-            note: 'Import Excel'
+            note: importFileName ? `Import Excel: ${importFileName}` : 'Import Excel'
           })
         });
         const purData = await resPur.json();
@@ -1181,62 +1183,115 @@ function downloadTemplate() {
   XLSX.utils.book_append_sheet(wb, ws, 'Template');
   XLSX.writeFile(wb, 'template_pembelian.xlsx');
 }
+let importSessions = [];
+let selectedSession = null;
 
 window.openUndoImportModal = async function() {
   document.getElementById('fieldUndoImportPassword').value = '';
+  selectedSession = null;
   
   // Show modal and reset layout elements
   document.getElementById('modalUndoImport').classList.remove('hidden');
   document.getElementById('undoImportLoading').classList.remove('hidden');
   document.getElementById('undoImportError').classList.add('hidden');
+  document.getElementById('undoImportListSection').classList.add('hidden');
   document.getElementById('undoImportContent').classList.add('hidden');
   document.getElementById('undoImportModalFooter').style.display = 'none';
 
   try {
-    const res = await fetch(`${API}/purchases/undo-last-import/preview`, {
+    const res = await fetch(`${API}/purchases/import-sessions`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
     const data = await res.json();
     document.getElementById('undoImportLoading').classList.add('hidden');
 
-    if (data.success) {
-      // Set metadata
-      const dateStr = new Date(data.import_time).toLocaleString('id-ID', { 
-        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
-      });
-      document.getElementById('undoImportTimeText').textContent = dateStr;
-      document.getElementById('undoImportTotalItems').textContent = data.total_items;
-      document.getElementById('undoImportTotalQty').textContent = data.total_quantity;
-      document.getElementById('undoImportTotalAmount').textContent = rupiah(data.total_amount);
-
-      // Render table
-      const tbody = document.getElementById('undoImportTableBody');
-      tbody.innerHTML = data.data.map((p, idx) => `
-        <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 10px 12px; color: #64748b;">${idx + 1}</td>
-          <td style="padding: 10px 12px; font-family: monospace;">${p.sparepart_code || '-'}</td>
-          <td style="padding: 10px 12px; font-weight: 500;">${escHtml(p.sparepart_name)}</td>
-          <td style="padding: 10px 12px; color: #475569;">${escHtml(p.supplier || '-')}</td>
-          <td style="padding: 10px 12px; text-align: center; font-weight: 600;">${p.quantity}</td>
-          <td style="padding: 10px 12px; text-align: right;">${rupiah(p.buy_price)}</td>
-          <td style="padding: 10px 12px; text-align: right; font-weight: 600; color: #475569;">${rupiah(p.total)}</td>
-        </tr>
-      `).join('');
-
-      // Show content and footer
-      document.getElementById('undoImportContent').classList.remove('hidden');
-      document.getElementById('undoImportModalFooter').style.display = 'flex';
+    if (data.success && data.data && data.data.length > 0) {
+      importSessions = data.data;
+      renderImportSessionsList();
     } else {
-      document.getElementById('undoImportErrorText').textContent = data.message || 'Gagal memuat preview.';
+      document.getElementById('undoImportErrorText').textContent = data.message || 'Tidak ada riwayat sesi impor Excel.';
       document.getElementById('undoImportError').classList.remove('hidden');
     }
   } catch (err) {
     console.error(err);
     document.getElementById('undoImportLoading').classList.add('hidden');
-    document.getElementById('undoImportErrorText').textContent = 'Koneksi error saat mengambil data preview.';
+    document.getElementById('undoImportErrorText').textContent = 'Koneksi error saat mengambil data riwayat impor.';
     document.getElementById('undoImportError').classList.remove('hidden');
   }
+};
+
+function renderImportSessionsList() {
+  const tbody = document.getElementById('undoImportListTableBody');
+  tbody.innerHTML = importSessions.map((s, idx) => {
+    const dateStr = new Date(s.import_time).toLocaleString('id-ID', { 
+      timeZone: 'Asia/Jakarta',
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+    
+    return `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 12px; color: #64748b;">${idx + 1}</td>
+        <td style="padding: 10px 12px; font-weight: 500;">${dateStr} WIB</td>
+        <td style="padding: 10px 12px; color: #334155; max-width: 200px; word-wrap: break-word;">${escHtml(s.file_name)}</td>
+        <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #475569;">${s.total_items}</td>
+        <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #475569;">${s.total_quantity}</td>
+        <td style="padding: 10px 12px; text-align: right; font-weight: 600; color: #10b981;">${rupiah(s.total_amount)}</td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <button type="button" onclick="selectImportSession(${idx})" style="background: rgba(59,130,246,0.08); color: #3b82f6; border: 1px solid rgba(59,130,246,0.15); padding: 4px 10px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 11.5px; transition: all 0.2s;">
+            Pilih & Detail
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('undoImportListSection').classList.remove('hidden');
+  document.getElementById('undoImportContent').classList.add('hidden');
+  document.getElementById('undoImportModalFooter').style.display = 'none';
+}
+
+window.showUndoImportList = function() {
+  selectedSession = null;
+  document.getElementById('fieldUndoImportPassword').value = '';
+  renderImportSessionsList();
+};
+
+window.selectImportSession = function(index) {
+  selectedSession = importSessions[index];
+  if (!selectedSession) return;
+
+  const dateStr = new Date(selectedSession.import_time).toLocaleString('id-ID', { 
+    timeZone: 'Asia/Jakarta',
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+  });
+  
+  let labelStr = dateStr + ' WIB';
+  if (selectedSession.file_name) {
+    labelStr += ` dari berkas "${selectedSession.file_name}"`;
+  }
+  
+  document.getElementById('undoImportTimeText').textContent = labelStr;
+  document.getElementById('undoImportTotalItems').textContent = selectedSession.total_items;
+  document.getElementById('undoImportTotalQty').textContent = selectedSession.total_quantity;
+  document.getElementById('undoImportTotalAmount').textContent = rupiah(selectedSession.total_amount);
+
+  const tbody = document.getElementById('undoImportTableBody');
+  tbody.innerHTML = selectedSession.items.map((p, idx) => `
+    <tr style="border-bottom: 1px solid #f1f5f9;">
+      <td style="padding: 10px 12px; color: #64748b;">${idx + 1}</td>
+      <td style="padding: 10px 12px; font-family: monospace;">${p.sparepart_code || '-'}</td>
+      <td style="padding: 10px 12px; font-weight: 500;">${escHtml(p.sparepart_name)}</td>
+      <td style="padding: 10px 12px; color: #475569;">${escHtml(p.supplier || '-')}</td>
+      <td style="padding: 10px 12px; text-align: center; font-weight: 600;">${p.quantity}</td>
+      <td style="padding: 10px 12px; text-align: right;">${rupiah(p.buy_price)}</td>
+      <td style="padding: 10px 12px; text-align: right; font-weight: 600; color: #475569;">${rupiah(p.total)}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('undoImportListSection').classList.add('hidden');
+  document.getElementById('undoImportContent').classList.remove('hidden');
+  document.getElementById('undoImportModalFooter').style.display = 'flex';
 };
 
 window.closeUndoImportModal = function() {
@@ -1244,6 +1299,7 @@ window.closeUndoImportModal = function() {
 };
 
 window.confirmUndoImport = async function() {
+  if (!selectedSession) return;
   const password = document.getElementById('fieldUndoImportPassword').value;
   if (!password) {
     alert('Password verifikasi wajib diisi!');
@@ -1257,13 +1313,13 @@ window.confirmUndoImport = async function() {
   }
 
   try {
-    const res = await fetch(`${API}/purchases/undo-last-import`, {
+    const res = await fetch(`${API}/purchases/undo-import-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ password, purchase_ids: selectedSession.purchase_ids })
     });
     
     const data = await res.json();
@@ -1272,7 +1328,7 @@ window.confirmUndoImport = async function() {
       closeUndoImportModal();
       loadData();
     } else {
-      alert(data.message || 'Gagal membatalkan impor terakhir.');
+      alert(data.message || 'Gagal membatalkan impor.');
     }
   } catch (err) {
     console.error(err);

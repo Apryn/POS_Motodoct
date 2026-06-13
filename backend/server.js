@@ -1,3 +1,4 @@
+process.env.TZ = "Asia/Jakarta";
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -234,6 +235,16 @@ app.listen(PORT, async () => {
     if (userCols.length === 0) {
       await db.execute("ALTER TABLE users ADD COLUMN plain_password VARCHAR(255) DEFAULT NULL");
       console.log("🛠️  Kolom plain_password berhasil ditambahkan ke tabel users!");
+    }
+
+    // 1b. users.role ENUM migration (admin, kasir, gudang, owner)
+    const [roleCols] = await db.execute("SHOW COLUMNS FROM users LIKE 'role'");
+    if (roleCols.length > 0) {
+      const typeStr = roleCols[0].Type || '';
+      if (!typeStr.includes('gudang') || !typeStr.includes('owner')) {
+        await db.execute("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'kasir', 'gudang', 'owner') DEFAULT 'kasir'");
+        console.log("🛠️  Kolom role berhasil diperbarui untuk mendukung role 'gudang' & 'owner'!");
+      }
     }
 
     // 2. mechanics.commission_rate
