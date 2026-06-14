@@ -193,6 +193,13 @@
           <tr><td colspan="12" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
+      <div id="paginationContainer" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+        <span id="paginationInfo" style="font-size:12px; color:#64748b; font-weight:500;">Menampilkan 0 item</span>
+        <div style="display:flex; gap:6px;">
+          <button id="btnPrevPage" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="changePage(-1)">Sebelumnya</button>
+          <button id="btnNextPage" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="changePage(1)">Berikutnya</button>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -448,7 +455,7 @@
 
 
 
-  <script src="../js/sparepart.js?v=2"></script>
+  <script src="../js/sparepart.js?v=3"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>

@@ -105,6 +105,8 @@ let spareparts = [];
 let categories = [];
 let editId = null;
 let deleteId = null;
+let currentPage = 1;
+const itemsPerPage = 50;
 
 async function loadData() {
   try {
@@ -176,15 +178,24 @@ function renderTable() {
     return matchSearch && matchKat && matchStok;
   });
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginated = filtered.slice(startIdx, endIdx);
+
   const tbody = document.getElementById('sparepartTableBody');
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Tidak ada data sparepart</td></tr>';
+    updatePaginationUI(0, 0, 0);
     return;
   }
 
-  tbody.innerHTML = filtered.map((p, i) => `
+  tbody.innerHTML = paginated.map((p, i) => `
     <tr>
-      <td>${i + 1}</td>
+      <td>${startIdx + i + 1}</td>
       <td><span class="code-badge">${p.code || '-'}</span></td>
       <td>${p.name}</td>
       <td>
@@ -222,16 +233,68 @@ function renderTable() {
       </td>
     </tr>
   `).join('');
+
+  updatePaginationUI(filtered.length, startIdx, endIdx);
 }
 
 // Search & filter events
 let searchTimeout;
 document.getElementById('searchInput')?.addEventListener('input', function() {
   clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(renderTable, 250);
+  searchTimeout = setTimeout(() => {
+    currentPage = 1;
+    renderTable();
+  }, 250);
 });
-document.getElementById('filterKategori')?.addEventListener('change', renderTable);
-document.getElementById('filterStok')?.addEventListener('change', renderTable);
+document.getElementById('filterKategori')?.addEventListener('change', function() {
+  currentPage = 1;
+  renderTable();
+});
+document.getElementById('filterStok')?.addEventListener('change', function() {
+  currentPage = 1;
+  renderTable();
+});
+
+function updatePaginationUI(totalItems, start, end) {
+  const container = document.getElementById('paginationContainer');
+  if (!container) return;
+
+  if (totalItems === 0) {
+    container.style.display = 'none';
+    return;
+  } else {
+    container.style.display = 'flex';
+  }
+
+  const displayStart = start + 1;
+  const displayEnd = Math.min(end, totalItems);
+  
+  const infoEl = document.getElementById('paginationInfo');
+  if (infoEl) {
+    infoEl.textContent = `Menampilkan ${displayStart} - ${displayEnd} dari ${totalItems} item`;
+  }
+
+  const btnPrev = document.getElementById('btnPrevPage');
+  const btnNext = document.getElementById('btnNextPage');
+  
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  
+  if (btnPrev) {
+    btnPrev.disabled = currentPage === 1;
+    btnPrev.style.opacity = currentPage === 1 ? '0.5' : '1';
+    btnPrev.style.cursor = currentPage === 1 ? 'not-allowed' : 'pointer';
+  }
+  if (btnNext) {
+    btnNext.disabled = currentPage === totalPages;
+    btnNext.style.opacity = currentPage === totalPages ? '0.5' : '1';
+    btnNext.style.cursor = currentPage === totalPages ? 'not-allowed' : 'pointer';
+  }
+}
+
+window.changePage = function(delta) {
+  currentPage += delta;
+  renderTable();
+};
 
 // Add quick category creation inline
 document.getElementById('fieldKategori')?.addEventListener('change', async function() {
