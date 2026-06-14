@@ -109,10 +109,14 @@ function renderProducts(filter = '') {
   );
 
   spGrid.innerHTML = filteredSp.length ? filteredSp.map(p => {
+    const aliasHtml = p.nama_lain 
+      ? `<div class="product-alias" style="font-size: 11px; color: #64748b; font-style: italic; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(p.nama_lain)}">(${p.nama_lain})</div>`
+      : '';
     return `
       <div class="product-card" onclick="addToCartById(${p.id}, 'sparepart')">
         <div class="product-code">${p.code || '-'}</div>
-        <div class="product-name">${p.name}</div>
+        <div class="product-name" style="margin-bottom: 2px;">${p.name}</div>
+        ${aliasHtml}
         <div class="product-price">${rupiah(p.price)}</div>
         <div class="product-stock ${p.stock <= 5 ? 'low' : ''}">Stok: ${p.stock} ${p.unit || 'pcs'}</div>
       </div>
@@ -1462,10 +1466,11 @@ function handlePriceCheckSearch() {
       ? `<span style="font-size:11px; color:#64748b; font-weight:500;">(Modal: ${rupiah(sp.buy_price)})</span>`
       : '';
       
+    const aliasText = sp.nama_lain ? ` (${sp.nama_lain})` : '';
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; box-shadow:0 1px 2px rgba(0,0,0,0.05); margin-bottom:8px;">
         <div style="display:flex; flex-direction:column; gap:2px; flex:1; padding-right:10px; text-align:left;">
-          <div style="font-size:13px; font-weight:700; color:#1e293b;">${escHtml(sp.name)}</div>
+          <div style="font-size:13px; font-weight:700; color:#1e293b;">${escHtml(sp.name)}<span style="font-size:11px; color:#64748b; font-style:italic; font-weight:normal;">${escHtml(aliasText)}</span></div>
           <div style="font-size:11px; color:#64748b; font-family:monospace;">Kode: ${escHtml(sp.code || '-')} · Merk: ${escHtml(sp.brand || '-')}</div>
           <div style="font-size:11px; color:#64748b;">Rak: <strong style="color:#0f766e;">${escHtml(sp.rack_location || '-')}</strong> · Stok: <strong style="${sp.stock <= 5 ? 'color:#ef4444;' : 'color:#10b981;'}">${sp.stock} ${sp.unit || 'pcs'}</strong></div>
         </div>
