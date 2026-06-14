@@ -250,7 +250,11 @@ function resetFilter() {
   renderTable();
 }
 
-document.getElementById('searchInput')?.addEventListener('input', renderTable);
+let searchTimeout;
+document.getElementById('searchInput')?.addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(renderTable, 250);
+});
 document.getElementById('filterFrom')?.addEventListener('change', renderTable);
 document.getElementById('filterTo')?.addEventListener('change', renderTable);
 document.getElementById('importMarkupPercent')?.addEventListener('input', showImportPreview);

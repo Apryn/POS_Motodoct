@@ -225,7 +225,11 @@ function renderTable() {
 }
 
 // Search & filter events
-document.getElementById('searchInput')?.addEventListener('input', renderTable);
+let searchTimeout;
+document.getElementById('searchInput')?.addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(renderTable, 250);
+});
 document.getElementById('filterKategori')?.addEventListener('change', renderTable);
 document.getElementById('filterStok')?.addEventListener('change', renderTable);
 

@@ -152,8 +152,12 @@ if (barcodeInput) {
       barcodeInput.value = '';
     }
   });
+  let searchTimeout;
   barcodeInput.addEventListener('input', () => {
-    renderProducts(barcodeInput.value);
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      renderProducts(barcodeInput.value);
+    }, 250);
   });
 }
 
