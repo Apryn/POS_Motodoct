@@ -107,6 +107,7 @@ let editId = null;
 let deleteId = null;
 let currentPage = 1;
 const itemsPerPage = 50;
+let filteredCount = 0;
 
 async function loadData() {
   try {
@@ -177,6 +178,8 @@ function renderTable() {
       (stokFilter === 'habis' && p.stock === 0);
     return matchSearch && matchKat && matchStok;
   });
+
+  filteredCount = filtered.length;
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   if (currentPage > totalPages) currentPage = totalPages;
@@ -274,11 +277,35 @@ function updatePaginationUI(totalItems, start, end) {
     infoEl.textContent = `Menampilkan ${displayStart} - ${displayEnd} dari ${totalItems} item`;
   }
 
+  const btnFirst = document.getElementById('btnFirstPage');
   const btnPrev = document.getElementById('btnPrevPage');
   const btnNext = document.getElementById('btnNextPage');
+  const btnLast = document.getElementById('btnLastPage');
   
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  const totalPagesEl = document.getElementById('paginationTotalPages');
+  if (totalPagesEl) {
+    totalPagesEl.textContent = totalPages;
+  }
   
+  const selectEl = document.getElementById('paginationSelect');
+  if (selectEl) {
+    if (selectEl.options.length !== totalPages) {
+      let optionsHtml = '';
+      for (let i = 1; i <= totalPages; i++) {
+        optionsHtml += `<option value="${i}">${i}</option>`;
+      }
+      selectEl.innerHTML = optionsHtml;
+    }
+    selectEl.value = currentPage;
+  }
+  
+  if (btnFirst) {
+    btnFirst.disabled = currentPage === 1;
+    btnFirst.style.opacity = currentPage === 1 ? '0.5' : '1';
+    btnFirst.style.cursor = currentPage === 1 ? 'not-allowed' : 'pointer';
+  }
   if (btnPrev) {
     btnPrev.disabled = currentPage === 1;
     btnPrev.style.opacity = currentPage === 1 ? '0.5' : '1';
@@ -289,11 +316,27 @@ function updatePaginationUI(totalItems, start, end) {
     btnNext.style.opacity = currentPage === totalPages ? '0.5' : '1';
     btnNext.style.cursor = currentPage === totalPages ? 'not-allowed' : 'pointer';
   }
+  if (btnLast) {
+    btnLast.disabled = currentPage === totalPages;
+    btnLast.style.opacity = currentPage === totalPages ? '0.5' : '1';
+    btnLast.style.cursor = currentPage === totalPages ? 'not-allowed' : 'pointer';
+  }
 }
 
-window.changePage = function(delta) {
-  currentPage += delta;
+window.getLastPage = function() {
+  return Math.ceil(filteredCount / itemsPerPage) || 1;
+};
+
+window.goToPage = function(pageNum) {
+  const lastPage = window.getLastPage();
+  if (pageNum < 1) pageNum = 1;
+  if (pageNum > lastPage) pageNum = lastPage;
+  currentPage = pageNum;
   renderTable();
+};
+
+window.changePage = function(delta) {
+  window.goToPage(currentPage + delta);
 };
 
 // Add quick category creation inline

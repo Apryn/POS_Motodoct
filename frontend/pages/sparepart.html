@@ -193,11 +193,22 @@
           <tr><td colspan="12" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
-      <div id="paginationContainer" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+      <div id="paginationContainer" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px; flex-wrap:wrap; gap:12px;">
         <span id="paginationInfo" style="font-size:12px; color:#64748b; font-weight:500;">Menampilkan 0 item</span>
-        <div style="display:flex; gap:6px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <button id="btnFirstPage" class="btn-secondary" style="padding:6px 10px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="goToPage(1)" title="Halaman Pertama">«</button>
           <button id="btnPrevPage" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="changePage(-1)">Sebelumnya</button>
+          
+          <div style="display:flex; align-items:center; gap:4px; font-size:12px; color:#475569; font-weight:500;">
+            <span>Halaman</span>
+            <select id="paginationSelect" style="padding:4px 8px; border:1.5px solid #cbd5e1; border-radius:6px; font-size:12px; outline:none; background:#fff; cursor:pointer;" onchange="goToPage(Number(this.value))">
+              <option value="1">1</option>
+            </select>
+            <span>dari <span id="paginationTotalPages">1</span></span>
+          </div>
+
           <button id="btnNextPage" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="changePage(1)">Berikutnya</button>
+          <button id="btnLastPage" class="btn-secondary" style="padding:6px 10px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="goToPage(getLastPage())" title="Halaman Terakhir">»</button>
         </div>
       </div>
     </div>
@@ -455,7 +466,7 @@
 
 
 
-  <script src="../js/sparepart.js?v=3"></script>
+  <script src="../js/sparepart.js?v=4"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>
