@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP KASIR - MOTODOCT</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', Arial, sans-serif;
+      color: #334155;
+      background: #f1f5f9;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      background: #ffffff;
+      margin: 0 auto;
+      padding: 40px 50px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      border-bottom: 4px double #e2e8f0;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .header .logo {
+      font-size: 28px;
+      font-weight: 900;
+      color: #e87722;
+      margin-bottom: 8px;
+      display: inline-block;
+      border: 3px solid #e87722;
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+    .header .doc-title {
+      font-size: 14px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .meta-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: #f8fafc;
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+    .meta-info div span {
+      font-weight: 600;
+      color: #475569;
+    }
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px solid #e87722;
+      padding-bottom: 6px;
+      margin-top: 30px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #475569;
+    }
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #475569;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .alert {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .alert-title {
+      font-weight: 700;
+      color: #b45309;
+      margin-bottom: 4px;
+    }
+    .error-box {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .error-title {
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 4px;
+    }
+    .table-flow {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .table-flow th, .table-flow td {
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      text-align: left;
+    }
+    .table-flow th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 40px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 20px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .btn-print {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background: #e87722;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(232, 119, 34, 0.2);
+    }
+    .btn-print:hover {
+      background: #c9621a;
+    }
+    
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        width: 100%;
+      }
+      .btn-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-print" onclick="window.print()">🖨️ Cetak ke PDF / Printer</button>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo">MOTODOCT</div>
+      <h1>STANDARD OPERATING PROCEDURE (SOP) KASIR</h1>
+      <div class="doc-title">SOP Pelayanan Kasir & Penjualan POS</div>
+    </div>
+
+    <div class="meta-info">
+      <div><span>Divisi:</span> Front Office / Kasir (POS)</div>
+      <div><span>Tanggal Berlaku:</span> 14 Juni 2026</div>
+      <div><span>Jumlah Karyawan:</span> 1 Kasir Aktif</div>
+      <div><span>Tipe Dokumen:</span> Panduan Operasional Resmi</div>
+    </div>
+
+    <h2>1. Persiapan Awal Hari (Opening Shift)</h2>
+    <ol>
+      <li>Nyalakan komputer kasir dan printer thermal struk belanja.</li>
+      <li>Buka Google Chrome dan masuk ke sistem kasir Motodoct: <code>https://motodoct.com</code>.</li>
+      <li>Periksa koneksi internet. Jika halaman tidak termuat, pastikan router WiFi menyala.</li>
+      <li>Siapkan modal kas modal awal (uang kembalian) sebesar <strong>Rp 300.000</strong> di dalam laci uang kasir.</li>
+    </ol>
+
+    <h2>2. Alur Pelayanan Transaksi Kasir</h2>
+    
+    <h3>Langkah A: Input Data Pelanggan & Mekanik</h3>
+    <ul>
+      <li><strong>Identifikasi Pelanggan</strong>: Tanyakan plat nomor motor pelanggan. Input plat nomor pada kolom <em>Pelanggan</em>.
+        <ul>
+          <li>Jika terdaftar sebagai <strong>Member</strong>, nama pelanggan akan otomatis terpilih.</li>
+          <li>Jika <strong>Bukan Member</strong>, klik tombol <strong>+ Baru</strong> di sebelah kanan kolom Pelanggan untuk mendaftarkan Plat Nomor, Nama, dan No. HP secara cepat.</li>
+        </ul>
+      </li>
+      <li><strong>Pilih Mekanik</strong>: Jika transaksi melibatkan <strong>Jasa Servis</strong>, Anda wajib memilih mekanik aktif pada dropdown <em>Mekanik</em> untuk keperluan kalkulasi komisi servis. Jika hanya membeli sparepart biasa, mekanik bersifat opsional.</li>
+    </ul>
+
+    <h3>Langkah B: Pencarian & Input Produk ke Keranjang</h3>
+    <ul>
+      <li>Anda dapat menggunakan scanner barcode pada kolom pencarian untuk langsung memasukkan barang secara otomatis.</li>
+      <li>Jika input manual, ketik nama sparepart, kode barang, atau lokasi rak pada kolom pencarian.</li>
+      <li><strong>Membaca Nama Lain (Alias)</strong>: Jika pelanggan menanyakan nama alias/sinonim barang (contoh: "cover knalpot" untuk barang "ANTI PANAS KENALPOT"), Anda dapat melihatnya langsung pada text abu-abu miring di bawah nama barang utama.</li>
+      <li><strong>Cek Harga Cepat (Tombol F2)</strong>: Tekan tombol <strong>F2</strong> pada keyboard kapan saja untuk membuka pop-up pencarian harga cepat, ketersediaan stok, dan posisi rak barang tanpa merusak isi keranjang belanja aktif.</li>
+    </ul>
+
+    <div class="alert">
+      <div class="alert-title">⚠️ PENTING: Penyesuaian Harga Manual</div>
+      Jika perlu menyesuaikan harga sparepart secara manual, klik ikon pensil ✏️ di samping harga barang pada keranjang belanja. Sistem akan meminta <strong>verifikasi password kasir</strong> Anda demi mencegah perubahan harga tidak sah.
+    </div>
+
+    <h3>Langkah C: Pembayaran (Payment Process)</h3>
+    <table class="table-flow">
+      <thead>
+        <tr>
+          <th>Metode Pembayaran</th>
+          <th>SOP Operasional</th>
+          <th>Cara Verifikasi Keberhasilan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Tunai (Cash)</strong></td>
+          <td>Input nominal uang tunai yang diterima dari pembeli pada kolom <em>Uang Diterima</em>.</td>
+          <td>Sistem akan menghitung kembalian. Pastikan nominal kembalian yang diserahkan ke pelanggan sudah sesuai angka <em>Kembalian</em>.</td>
+        </tr>
+        <tr>
+          <td><strong>QRIS Statis/Dinamis</strong></td>
+          <td>Pilih metode QRIS. Tunjukkan layar monitor kepada pelanggan untuk discan.</td>
+          <td>Minta pelanggan menunjukkan bukti transfer berhasil pada HP mereka sebelum menekan tombol <strong>BAYAR</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>Transfer Bank</strong></td>
+          <td>Tunjukkan nomor rekening bank yang muncul di layar. Klik tombol <strong>Salin</strong> untuk menyalin no. rekening jika diperlukan.</td>
+          <td>Lakukan cek saldo m-Banking bengkel untuk memastikan uang masuk sebelum mengizinkan pelanggan membawa pulang kendaraan.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Langkah D: Cetak Struk Belanja</h3>
+    <ul>
+      <li>Setelah menekan tombol <strong>BAYAR</strong>, pop-up <em>Transaksi Berhasil</em> akan muncul beserta struk belanja.</li>
+      <li>Klik <strong>Cetak Struk</strong> untuk mencetak struk belanja fisik melalui printer thermal, kemudian serahkan struk kepada pelanggan.</li>
+    </ul>
+
+    <h2>3. Fitur Pendukung Kasir</h2>
+    
+    <h3>A. Fitur Rekam Medis (Medical Record Kendaraan)</h3>
+    <p>Ketika Anda memasukkan plat nomor kendaraan yang sudah pernah servis di Motodoct, tombol <strong>Rekam Medis</strong> berwarna oranye akan muncul. Klik tombol tersebut untuk melihat:</p>
+    <ul>
+      <li>Nama pemilik dan tanggal kunjungan terakhir.</li>
+      <li>Seluruh riwayat jasa servis dan mekanik yang pernah menanganinya.</li>
+      <li>Seluruh daftar sparepart yang pernah diganti pada kunjungan sebelumnya.</li>
+    </ul>
+
+    <h3>B. Fitur Simpan & Lanjut Keranjang (Pending Cart)</h3>
+    <p>Jika transaksi menggantung (misal: motor pelanggan sedang dibongkar oleh mekanik dan transaksi belum selesai), gunakan tombol <strong>Simpan Keranjang</strong> (ikon disket) untuk menyimpan daftar belanja berdasarkan plat nomor kendaraan. Transaksi kasir bisa Anda lanjutkan nanti dengan masuk ke menu <strong>Keranjang Tersimpan</strong>.</p>
+
+    <h2>4. Panduan Penanganan Masalah (Troubleshooting Kasir)</h2>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Server / Internet Terputus (Koneksi Error)</div>
+      <strong>Penyebab:</strong> Koneksi WiFi lokal mati atau server backend crash.<br>
+      <strong>Tindakan:</strong> 
+      1. Coba refresh halaman dengan tombol <code>Ctrl + F5</code>.<br>
+      2. Jika masih gagal, cek apakah server lokal menyala. Laporkan segera ke admin/pemilik untuk mengecek status PM2 node server di komputer utama.<br>
+      3. Jangan menutup browser agar data keranjang aktif tidak hilang.
+    </div>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Salah Input Transaksi / Salah Bayar (Perlu Batalkan Transaksi)</div>
+      <strong>Penyebab:</strong> Kasir salah memilih metode pembayaran atau salah memasukkan item barang namun transaksi telanjur disimpan.<br>
+      <strong>Tindakan:</strong>
+      1. Masuk ke halaman <strong>Laporan</strong> dan temukan transaksi yang salah.<br>
+      2. Klik tombol <strong>Hapus/Batalkan Transaksi</strong>. Sistem otomatis akan menghapus catatan keuangan dan <strong>mengembalikan jumlah stok barang</strong> secara otomatis ke database.<br>
+      3. Buat transaksi baru yang benar di halaman Kasir.
+    </div>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Printer Struk Tidak Merespon</div>
+      <strong>Penyebab:</strong> Printer offline, kehabisan kertas thermal, atau kabel USB terputus.<br>
+      <strong>Tindakan:</strong>
+      1. Cek lampu indikator printer (jika merah berkedip, tandanya kertas habis).<br>
+      2. Periksa colokan kabel USB ke komputer kasir.<br>
+      3. Klik tombol <strong>Cetak Struk</strong> kembali setelah printer kembali online.
+    </div>
+
+    <div class="footer">
+      SOP Kasir POS Motodoct — Hak Cipta &copy; 2026 Motodoct Workshop. All rights reserved.
+    </div>
+  </div>
+
+</body>
+</html>

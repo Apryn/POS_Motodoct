@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP MEKANIK - MOTODOCT</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', Arial, sans-serif;
+      color: #334155;
+      background: #f1f5f9;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      background: #ffffff;
+      margin: 0 auto;
+      padding: 40px 50px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      border-bottom: 4px double #e2e8f0;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .header .logo {
+      font-size: 28px;
+      font-weight: 900;
+      color: #e87722;
+      margin-bottom: 8px;
+      display: inline-block;
+      border: 3px solid #e87722;
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+    .header .doc-title {
+      font-size: 14px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .meta-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: #f8fafc;
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+    .meta-info div span {
+      font-weight: 600;
+      color: #475569;
+    }
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px solid #e87722;
+      padding-bottom: 6px;
+      margin-top: 30px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #475569;
+    }
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #475569;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .alert {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .alert-title {
+      font-weight: 700;
+      color: #b45309;
+      margin-bottom: 4px;
+    }
+    .error-box {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .error-title {
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 4px;
+    }
+    .table-flow {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .table-flow th, .table-flow td {
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      text-align: left;
+    }
+    .table-flow th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 40px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 20px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .btn-print {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background: #e87722;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(232, 119, 34, 0.2);
+    }
+    .btn-print:hover {
+      background: #c9621a;
+    }
+    
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        width: 100%;
+      }
+      .btn-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-print" onclick="window.print()">🖨️ Cetak ke PDF / Printer</button>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo">MOTODOCT</div>
+      <h1>STANDARD OPERATING PROCEDURE (SOP) MEKANIK</h1>
+      <div class="doc-title">SOP Alur Kerja Bengkel & Penghitungan Komisi Jasa</div>
+    </div>
+
+    <div class="meta-info">
+      <div><span>Divisi:</span> Technical & Service / Mekanik</div>
+      <div><span>Tanggal Berlaku:</span> 14 Juni 2026</div>
+      <div><span>Jumlah Karyawan:</span> 4 Mekanik Aktif</div>
+      <div><span>Tipe Dokumen:</span> Panduan Operasional Resmi</div>
+    </div>
+
+    <h2>1. Alur Penerimaan & Pengerjaan Kendaraan</h2>
+    <ol>
+      <li>Mekanik menerima kendaraan dari Service Advisor / Kasir beserta Perintah Kerja (Job Sheet).</li>
+      <li>Lakukan inspeksi kerusakan pada bagian mesin, kelistrikan, maupun roda kendaraan.</li>
+      <li>Catat daftar kerusakan serta rekomendasi jasa servis & sparepart pengganti pada Job Sheet.</li>
+    </ol>
+
+    <div class="alert">
+      <div class="alert-title">⚠️ PENTING: Konfirmasi Pelanggan Sebelum Memasang Part</div>
+      Mekanik dilarang keras membongkar komponen mesin atau mengganti sparepart baru tanpa persetujuan dari pemilik kendaraan. Kasir wajib mengonfirmasi harga jasa dan harga sparepart terlebih dahulu kepada pelanggan. Setelah disetujui, baru mekanik boleh melakukan pemasangan barang baru.
+    </div>
+
+    <h2>2. Alur Pelaporan ke Kasir</h2>
+    <p>Setelah servis selesai dilakukan, mekanik wajib mengikuti alur berikut agar tidak terjadi kesalahan komisi:</p>
+    <ul>
+      <li>Serahkan kembali Job Sheet yang telah dicap "SELESAI" beserta sparepart bekas yang diganti (jika pelanggan ingin membawanya pulang).</li>
+      <li>Pastikan kasir memasukkan **nama mekanik yang benar** di kolom dropdown <em>Mekanik</em> pada halaman kasir.</li>
+      <li>Periksa kembali struk transaksi/preview tagihan kasir sebelum kendaraan diserahkan ke pelanggan untuk memastikan jasa yang Anda kerjakan sudah masuk tagihan.</li>
+    </ul>
+
+    <h2>3. Sistem Komisi Jasa Servis Mekanik</h2>
+    <p>Sistem kasir POS Motodoct secara otomatis menghitung komisi jasa servis yang dikerjakan oleh masing-masing mekanik:</p>
+    <ul>
+      <li>Setiap tindakan servis yang tercatat di dalam transaksi kasir dengan nama mekanik Anda akan otomatis dihitung ke laporan komisi bulanan.</li>
+      <li>Anda dapat menanyakan rekap total komisi harian/mingguan Anda kepada Admin/Kasir melalui menu <strong>Laporan Keuangan & Komisi Mekanik</strong>.</li>
+      <li>Pembagian komisi disesuaikan dengan kebijakan bengkel yang terinput pada database sistem.</li>
+    </ul>
+
+    <h2>4. Panduan Penanganan Masalah (Troubleshooting Mekanik)</h2>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Komisi Tidak Masuk / Tercatat di Nama Mekanik Lain</div>
+      <strong>Penyebab:</strong> Kasir salah memilih nama mekanik saat transaksi dibayar di POS.<br>
+      <strong>Tindakan Koreksi:</strong> 
+      1. Laporkan segera ke kasir sebelum laci kas harian ditutup.<br>
+      2. Kasir akan masuk ke halaman <strong>Laporan</strong>, membatalkan transaksi yang salah, dan membuat transaksi ulang dengan memilih nama mekanik Anda yang benar.<br>
+      3. Verifikasi ulang rekap komisi di sistem setelah transaksi dikoreksi kasir.
+    </div>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Part Pengganti Ternyata Rusak / Cacat Setelah Dipasang</div>
+      <strong>Tindakan Koreksi:</strong>
+      1. Jika sparepart baru yang dipasang terbukti cacat pabrik, segera bongkar kembali.<br>
+      2. Kembalikan part cacat tersebut ke Admin Gudang untuk diganti dengan part baru dari rak.<br>
+      3. Admin Gudang akan mencatat mutasi retur/penyesuaian pada sistem untuk mengoreksi jumlah stok barang yang rusak.
+    </div>
+
+    <div class="footer">
+      SOP Mekanik POS Motodoct — Hak Cipta &copy; 2026 Motodoct Workshop. All rights reserved.
+    </div>
+  </div>
+
+</body>
+</html>

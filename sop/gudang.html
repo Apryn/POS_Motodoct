@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP ADMIN GUDANG - MOTODOCT</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', Arial, sans-serif;
+      color: #334155;
+      background: #f1f5f9;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      background: #ffffff;
+      margin: 0 auto;
+      padding: 40px 50px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      border-bottom: 4px double #e2e8f0;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .header .logo {
+      font-size: 28px;
+      font-weight: 900;
+      color: #e87722;
+      margin-bottom: 8px;
+      display: inline-block;
+      border: 3px solid #e87722;
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+    .header .doc-title {
+      font-size: 14px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .meta-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: #f8fafc;
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+    .meta-info div span {
+      font-weight: 600;
+      color: #475569;
+    }
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px solid #e87722;
+      padding-bottom: 6px;
+      margin-top: 30px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #475569;
+    }
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #475569;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .alert {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .alert-title {
+      font-weight: 700;
+      color: #b45309;
+      margin-bottom: 4px;
+    }
+    .error-box {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .error-title {
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 4px;
+    }
+    .table-flow {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .table-flow th, .table-flow td {
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      text-align: left;
+    }
+    .table-flow th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 40px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 20px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .btn-print {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background: #e87722;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(232, 119, 34, 0.2);
+    }
+    .btn-print:hover {
+      background: #c9621a;
+    }
+    
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        width: 100%;
+      }
+      .btn-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-print" onclick="window.print()">🖨️ Cetak ke PDF / Printer</button>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo">MOTODOCT</div>
+      <h1>STANDARD OPERATING PROCEDURE (SOP) GUDANG</h1>
+      <div class="doc-title">SOP Inventaris, Penataan Rak, & Impor Stok Excel</div>
+    </div>
+
+    <div class="meta-info">
+      <div><span>Divisi:</span> Back Office / Gudang (Inventory)</div>
+      <div><span>Tanggal Berlaku:</span> 14 Juni 2026</div>
+      <div><span>Jumlah Karyawan:</span> 1 Admin Gudang</div>
+      <div><span>Tipe Dokumen:</span> Panduan Operasional Resmi</div>
+    </div>
+
+    <h2>1. Manajemen Penataan Barang & Rak</h2>
+    <p>Setiap barang yang masuk wajib diletakkan pada lokasi rak yang sesuai dengan ketentuan bengkel.</p>
+    <ul>
+      <li><strong>Standardisasi Kode Rak</strong>: Pilihan lokasi rak standar adalah dari <strong>1A</strong> sampai <strong>12C</strong>.
+        <ul>
+          <li>Format penamaan rak: <code>[Nomor Baris][Kode Kolom]</code>, contoh: <code>1A</code>, <code>5B</code>, <code>12C</code>.</li>
+        </ul>
+      </li>
+      <li><strong>Input Barang Baru / Edit Modal</strong>: Ketika menambahkan sparepart baru, pilih lokasi rak menggunakan dropdown pada kolom <em>Lokasi Rak</em>.</li>
+      <li><strong>Koreksi Data Rak Cepat (Inline Edit)</strong>: Untuk merapikan data rak tanpa membuka menu Edit secara penuh, klik langsung tulisan lokasi rak pada tabel Stok Gudang, pilih opsi rak baru pada dropdown yang muncul, lalu tekan Enter atau klik di luar area untuk langsung menyimpan perubahan.</li>
+    </ul>
+
+    <div class="alert">
+      <div class="alert-title">⚠️ PENTING: Penanganan Rak Non-Standar (Legacy)</div>
+      Jika data barang lama di database menggunakan kode rak non-standar (misalnya <code>RAK-BAN</code> atau <code>12 x</code>), sistem akan memunculkannya dengan warna merah dan bertuliskan <strong>(Non-standar)</strong>. Segera lakukan penataan ulang fisik barang ke rak standar (1A-12C) dan ubah data rak tersebut melalui dropdown tabel.
+    </div>
+
+    <h2>2. Alur Impor Stok Excel (Pembelian Stok)</h2>
+    <p>Apabila terdapat kedatangan barang dalam jumlah besar dari distributor, Anda dapat menggunakan modul <strong>Pembelian Stok</strong> via Excel.</p>
+
+    <h3>Langkah 1: Unggah & Pemetaan Kolom</h3>
+    <ol>
+      <li>Masuk ke halaman <strong>Pembelian Stok</strong>, klik tombol <strong>Pilih File Excel</strong>, lalu pilih dokumen Excel dari distributor.</li>
+      <li>Petakan kolom Excel ke struktur data sistem (Kode Barang, Nama Barang, Stok Masuk, Harga Beli, Harga Jual, Merek, Unit Satuan, Tipe Motor).</li>
+    </ol>
+
+    <h3>Langkah 2: Verifikasi Perbandingan Data (Visual Preview)</h3>
+    <p>Sistem akan menampilkan pop-up komparasi visual sebelum data dimasukkan ke database:</p>
+    <ul>
+      <li><strong>Pencocokan Kategori Cerdas</strong>: Sistem secara otomatis akan memetakan kategori barang baru yang mengandung kata "Ban" atau "Oli" ke kategori Ban dan Oli masing-masing secara otomatis.</li>
+      <li><strong>Merge Tracking</strong>: Sistem akan melacak apakah barang tersebut sudah ada di gudang (berdasarkan kode/nama barang). Jika ada, sistem akan menampilkan data lama dan data baru secara bersandingan (harga lama vs harga baru, stok lama vs stok baru).</li>
+      <li><strong>Koreksi Inline Preview</strong>: Jika ada kolom kode barang yang kosong atau salah pada layar preview, Anda dapat mengklik langsung sel kode barang tersebut di preview untuk mengeditnya secara manual sebelum diklik impor.</li>
+    </ul>
+
+    <h3>Langkah 3: Proses Akhir Impor</h3>
+    <ul>
+      <li>Setelah data diverifikasi dan sesuai, klik <strong>Impor Data</strong>. Sistem akan menampilkan progress bar pengunggahan. Tunggu hingga proses selesai 100%.</li>
+    </ul>
+
+    <h2>3. Fitur Kartu Stok (Mutasi Barang)</h2>
+    <p>Apabila terdapat selisih stok fisik dengan data sistem, Anda dilarang langsung mengubah angka stok secara asal. Lakukan pelacakan melalui <strong>Kartu Stok</strong>:</p>
+    <ol>
+      <li>Pada tabel Stok Gudang, klik angka jumlah stok barang yang bergaris bawah oranye (misalnya: <strong>10 pcs</strong>).</li>
+      <li>Sistem akan membuka pop-up kronologis mutasi stok barang tersebut secara lengkap (pembelian, penjualan, retur, penyesuaian).</li>
+      <li>Pastikan saldo mutasi terakhir cocok dengan stok fisik barang di rak.</li>
+    </ol>
+
+    <h2>4. Panduan Penanganan Masalah (Troubleshooting Gudang)</h2>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Salah Impor File Excel / Stok Berantakan Setelah Impor</div>
+      <strong>Tindakan Segera:</strong> 
+      1. Jika Anda menyadari data hasil impor salah, jangan panik. Pada halaman Pembelian Stok, klik tombol <strong>Undo Last Import (Batalkan Impor Terakhir)</strong>.<br>
+      2. Sistem akan menghapus seluruh data barang baru yang diimpor dari sesi terakhir tersebut dan mengembalikan stok lama ke kondisi semula secara instan.<br>
+      3. Perbaiki file Excel Anda lalu ulangi langkah impor.
+    </div>
+
+    <div class="error-box">
+      <div class="error-title">🔴 EROR: Kode Barang Duplikat atau Salah Normalisasi Unit</div>
+      <strong>Tindakan Segera:</strong>
+      1. Jika sistem menolak impor karena kode barang duplikat, cari kode barang tersebut pada kolom pencarian Stok Gudang.<br>
+      2. Jika terjadi kesalahan penamaan unit satuan (misal `klg` atau `sets`), sistem kasir secara otomatis mengoreksi menjadi `kaleng` dan `set`. Jika ada unit yang tidak biasa, lakukan edit barang dan ubah satuan melalui dropdown satuan resmi (pcs/set/botol/liter/pack/dus/kaleng).
+    </div>
+
+    <div class="footer">
+      SOP Gudang POS Motodoct — Hak Cipta &copy; 2026 Motodoct Workshop. All rights reserved.
+    </div>
+  </div>
+
+</body>
+</html>
