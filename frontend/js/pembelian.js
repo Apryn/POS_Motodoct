@@ -83,6 +83,48 @@ function getCategoryIdForProduct(name) {
   return null;
 }
 
+function normalizeRackLocation(str) {
+  if (!str) return '';
+  let cleaned = String(str).replace(/\s+/g, '').toUpperCase();
+  const match = cleaned.match(/(\d+)([A-C])/);
+  if (match) {
+    const num = parseInt(match[1]);
+    const letter = match[2];
+    if (num >= 1 && num <= 12) {
+      return `${num}${letter}`;
+    }
+  }
+  return '';
+}
+
+function setRackSelectValue(selectId, value) {
+  const selectEl = document.getElementById(selectId);
+  if (!selectEl) return;
+  
+  // Remove any previous temporary legacy options
+  const tempOpt = selectEl.querySelector('.temp-legacy-option');
+  if (tempOpt) tempOpt.remove();
+
+  const val = (value || '').trim();
+  if (val) {
+    // Generate standard options to check
+    const standardRacks = [];
+    for (let i = 1; i <= 12; i++) {
+      standardRacks.push(`${i}A`, `${i}B`, `${i}C`);
+    }
+    
+    if (!standardRacks.includes(val)) {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = `${val} (Non-standar)`;
+      opt.className = 'temp-legacy-option';
+      opt.style.color = '#ef4444'; // Red color to indicate non-standard
+      selectEl.insertBefore(opt, selectEl.options[1]);
+    }
+  }
+  selectEl.value = val;
+}
+
 let purchases = [];
 let spareparts = [];
 let deleteId = null;
@@ -137,7 +179,7 @@ function onSparepartChange() {
   document.getElementById('fieldSupplier').value = opt.dataset.supplier || '';
   const buyPriceRaw = parseFloat(opt.dataset.buy) || 0;
   document.getElementById('fieldHargaBeli').value = buyPriceRaw ? Math.round(buyPriceRaw).toLocaleString('id-ID') : '';
-  document.getElementById('fieldRak').value = opt.dataset.rack || '';
+  setRackSelectValue('fieldRak', opt.dataset.rack || '');
   calcTotal();
   calcHargaJual();
 }
@@ -236,6 +278,7 @@ document.getElementById('fieldHargaJual')?.addEventListener('input', function() 
 
 function openAddModal() {
   document.getElementById('formPembelian').reset();
+  setRackSelectValue('fieldRak', '');
   const savedMarkup = localStorage.getItem('default_markup') || '30';
   const markupEl = document.getElementById('fieldMarkup');
   if (markupEl) markupEl.value = savedMarkup;
@@ -468,8 +511,8 @@ function parseRows(sheetData) {
     const beliPcs = parseFloat(row[beliPcsIdx]) || 0;
     const beliTotal = beliTotalIdx !== -1 && row[beliTotalIdx] !== undefined ? parseFloat(row[beliTotalIdx]) : (beliPcs * qty);
     const jualPcs = jualPcsIdx !== -1 ? parseFloat(row[jualPcsIdx]) : 0;
-    const diskon = diskonIdx !== -1 ? parseFloat(row[diskonIdx]) : 0;
-    const lokasiRak = lokasiRakIdx !== -1 ? String(row[lokasiRakIdx] || '').trim() : '';
+    const rawLokasiRak = lokasiRakIdx !== -1 ? String(row[lokasiRakIdx] || '').trim() : '';
+    const lokasiRak = normalizeRackLocation(rawLokasiRak);
 
     if (!nama || !qty) return;
 
@@ -634,7 +677,19 @@ function showImportPreview() {
         <td>${priceHtml}</td>
         <td>${rupiah(r.beliTotal)}</td>
         <td>${rupiah(r.jualPcs || roundToNearest500(r.beliPcs * (1 + getMarkupForProduct(r.nama, markupPercent, banMarkup, oliMarkup) / 100)))}</td>
-        <td>${r.lokasiRak || '-'}</td>
+        <td>${(() => {
+          let rakDisplay = r.lokasiRak || '-';
+          if (r.lokasiRak) {
+            const standardRacks = [];
+            for (let x = 1; x <= 12; x++) {
+              standardRacks.push(`${x}A`, `${x}B`, `${x}C`);
+            }
+            if (!standardRacks.includes(r.lokasiRak)) {
+              rakDisplay = `${r.lokasiRak} <span style="display:inline-block; font-size:9px; background:#fee2e2; color:#ef4444; border-radius:4px; padding:1px 4px; font-weight:600; margin-left:4px; border: 1px solid #fca5a5;">Non-standar</span>`;
+            }
+          }
+          return rakDisplay;
+        })()}</td>
       </tr>
     `;
   }).join('');
@@ -1099,7 +1154,24 @@ function showFailedImportPreview() {
           <input type="number" value="${r.jualPcs}" oninput="updateFailedField(${i}, 'jualPcs', this.value)" style="text-align: right;" min="0" />
         </td>
         <td>
-          <input type="text" value="${r.lokasiRak || ''}" oninput="updateFailedField(${i}, 'lokasiRak', this.value)" style="text-align: center;" />
+          <select onchange="updateFailedField(${i}, 'lokasiRak', this.value)" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 8px; font-size: 12px; outline: none; background: #ffffff;">
+            ${(() => {
+              const standardRacks = [];
+              for (let x = 1; x <= 12; x++) {
+                standardRacks.push(`${x}A`, `${x}B`, `${x}C`);
+              }
+              
+              let optionsHtml = '<option value="">-- Pilih --</option>';
+              if (r.lokasiRak && !standardRacks.includes(r.lokasiRak)) {
+                optionsHtml += `<option value="${escAttr(r.lokasiRak)}" selected style="color:#ef4444;">${escHtml(r.lokasiRak)} (Non-standar)</option>`;
+              }
+              optionsHtml += standardRacks.map(opt => {
+                const isSelected = r.lokasiRak === opt ? 'selected' : '';
+                return `<option value="${opt}" ${isSelected}>${opt}</option>`;
+              }).join('');
+              return optionsHtml;
+            })()}
+          </select>
         </td>
       </tr>
     `;
@@ -1349,6 +1421,16 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function escAttr(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 const importFileEl = document.getElementById('importFile');

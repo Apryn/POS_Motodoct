@@ -201,7 +201,12 @@ function renderTable() {
       </td>
       <td>${p.brand || '-'}</td>
       <td>${p.type || '-'}</td>
-      <td>${p.rack_location || '-'}</td>
+      <td>
+        <div class="rack-cell" style="position: relative;">
+          <span class="rack-text" style="cursor: pointer; border-bottom: 1px dashed #94a3b8; display: inline-block; min-width: 60px;" 
+                onclick="enableInlineRackEdit(${p.id}, this)" title="Klik untuk edit rak langsung">${escHtml(p.rack_location || '-')}</span>
+        </div>
+      </td>
       <td>
         <strong style="cursor: pointer; border-bottom: 1px dashed #e87722; color: #e87722; display: inline-block;" 
                 onclick="openStockCard(${p.id})" 
@@ -264,11 +269,40 @@ document.getElementById('fieldKategori')?.addEventListener('change', async funct
   }
 });
 
+function setRackSelectValue(selectId, value) {
+  const selectEl = document.getElementById(selectId);
+  if (!selectEl) return;
+  
+  // Remove any previous temporary legacy options
+  const tempOpt = selectEl.querySelector('.temp-legacy-option');
+  if (tempOpt) tempOpt.remove();
+
+  const val = (value || '').trim();
+  if (val) {
+    // Generate standard options to check
+    const standardRacks = [];
+    for (let i = 1; i <= 12; i++) {
+      standardRacks.push(`${i}A`, `${i}B`, `${i}C`);
+    }
+    
+    if (!standardRacks.includes(val)) {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = `${val} (Non-standar)`;
+      opt.className = 'temp-legacy-option';
+      opt.style.color = '#ef4444'; // Red color to indicate non-standard
+      selectEl.insertBefore(opt, selectEl.options[1]);
+    }
+  }
+  selectEl.value = val;
+}
+
 // Add modal
 function openAddModal() {
   editId = null;
   document.getElementById('modalTitle').textContent = 'Tambah Sparepart';
   document.getElementById('formSparepart').reset();
+  setRackSelectValue('fieldRak', '');
   const namaLainEl = document.getElementById('fieldNamaLain');
   if (namaLainEl) namaLainEl.value = '';
   const savedMarkup = localStorage.getItem('default_markup') || '30';
@@ -283,7 +317,7 @@ function openEditModal(id) {
   editId = id;
   document.getElementById('modalTitle').textContent = 'Edit Sparepart';
   document.getElementById('fieldKode').value = p.code || '';
-  document.getElementById('fieldRak').value = p.rack_location || '';
+  setRackSelectValue('fieldRak', p.rack_location);
   document.getElementById('fieldNama').value = p.name;
   const namaLainEl = document.getElementById('fieldNamaLain');
   if (namaLainEl) namaLainEl.value = p.nama_lain || '';
@@ -696,6 +730,109 @@ window.enableInlineCategoryEdit = function(id, spanEl) {
         loadData();
       } else {
         alert('Gagal mengupdate kategori: ' + data.message);
+        renderTable();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Koneksi error!');
+      renderTable();
+    }
+  };
+  
+  const cancelEdit = () => {
+    if (isSaved) return;
+    isSaved = true;
+    renderTable();
+  };
+  
+  select.addEventListener('change', () => {
+    saveValue();
+  });
+  
+  select.addEventListener('blur', () => {
+    saveValue();
+  });
+  
+  select.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  });
+};
+
+// Inline editing for sparepart rack location directly from the table row dropdown select
+window.enableInlineRackEdit = function(id, spanEl) {
+  if (spanEl.dataset.editing === 'true') return;
+  spanEl.dataset.editing = 'true';
+  
+  const p = spareparts.find(s => s.id === id);
+  const currentRack = p ? (p.rack_location || '') : '';
+  
+  const select = document.createElement('select');
+  select.className = 'inline-edit-select';
+  
+  // Populate options (1A to 12C)
+  const standardRacks = [];
+  for (let i = 1; i <= 12; i++) {
+    standardRacks.push(`${i}A`, `${i}B`, `${i}C`);
+  }
+  
+  let optionsHtml = '<option value="">-- Tanpa Rak --</option>';
+  if (currentRack && !standardRacks.includes(currentRack)) {
+    optionsHtml += `<option value="${escAttr(currentRack)}" selected style="color:#ef4444;">${escHtml(currentRack)} (Non-standar)</option>`;
+  }
+  optionsHtml += standardRacks.map(opt => {
+    const isSelected = opt === currentRack ? 'selected' : '';
+    return `<option value="${opt}" ${isSelected}>${opt}</option>`;
+  }).join('');
+  
+  select.innerHTML = optionsHtml;
+  
+  const parent = spanEl.parentNode;
+  parent.innerHTML = '';
+  parent.appendChild(select);
+  select.focus();
+  
+  let isSaved = false;
+  
+  const saveValue = async () => {
+    if (isSaved) return;
+    isSaved = true;
+    
+    const newRack = select.value.trim() || null;
+    if (newRack === (p.rack_location || null)) {
+      renderTable();
+      return;
+    }
+    
+    try {
+      const payload = {
+        code: p.code || '',
+        rack_location: newRack,
+        name: p.name,
+        nama_lain: p.nama_lain || null,
+        category_id: p.category_id || null,
+        supplier: p.supplier || '',
+        brand: p.brand || '',
+        type: p.type || '',
+        stock: parseInt(p.stock) || 0,
+        buy_price: parseFloat(p.buy_price) || 0,
+        price: parseFloat(p.price) || 0,
+        discount: parseFloat(p.discount) || 0,
+        unit: p.unit
+      };
+      
+      const res = await fetch(`${API}/spareparts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadData();
+      } else {
+        alert('Gagal mengupdate lokasi rak: ' + data.message);
         renderTable();
       }
     } catch (err) {
