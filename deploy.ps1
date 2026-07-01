@@ -59,7 +59,7 @@ if ($pilihan -eq "1") {
     Write-Host "[3/3] Menjalankan Quick Update di VPS..." -ForegroundColor Yellow
     Write-Host "Menginstal dependensi, memverifikasi konfigurasi, & me-restart PM2..." -ForegroundColor Gray
     Write-Host "Silakan masukkan password VPS Anda untuk terakhir kalinya:" -ForegroundColor Gray
-    ssh root@187.77.156.219 "cd /var/www/motodoct/backend && npm install --production && if grep -q 'DB_USER=root' .env 2>/dev/null; then echo 'Memulihkan konfigurasi database produksi (.env)...' && sed -i 's/DB_USER=root/DB_USER=motodoct_user/g' .env && sed -i 's/DB_PASSWORD=/DB_PASSWORD=motodoct123/g' .env; fi && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
+    ssh root@187.77.156.219 "cd /var/www/motodoct/backend && npm install --production && if grep -q 'DB_USER=root' .env 2>/dev/null; then echo 'Memulihkan konfigurasi database produksi (.env)...' && sed -i 's/DB_USER=root/DB_USER=motodoct_user/g' .env && sed -i 's/DB_PASSWORD=/DB_PASSWORD=motodoct123/g' .env; fi && chmod +x backup.sh && (crontab -l 2>/dev/null | grep -F '/var/www/motodoct/backend/backup.sh' >/dev/null || (crontab -l 2>/dev/null; echo '59 23 * * * /bin/bash /var/www/motodoct/backend/backup.sh > /dev/null 2>&1') | crontab -) && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
 } else {
     Write-Host "[3/3] Menjalankan Full Setup di VPS..." -ForegroundColor Yellow
     Write-Host "Menyiapkan sistem database, Nginx, UFW firewall, PM2, dll..." -ForegroundColor Gray

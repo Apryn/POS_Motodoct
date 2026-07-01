@@ -93,7 +93,6 @@ function renderTable(list) {
         <td>
           <div class="action-btns" style="justify-content: center;">
             <button class="btn-edit"    onclick="openEdit(${e.id})">Edit</button>
-            ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${e.id}, '${escAttr(e.description)}')">Hapus</button>` : ''}
           </div>
         </td>
       </tr>
@@ -117,6 +116,7 @@ function openModal() {
   editId = null;
   document.getElementById('modalTitle').textContent = 'Tambah Pengeluaran';
   document.getElementById('formExpense').reset();
+  document.getElementById('btnDeleteExpense')?.classList.add('hidden');
   document.getElementById('modalExpense').classList.remove('hidden');
 }
 
@@ -128,6 +128,7 @@ function openEdit(id) {
   document.getElementById('fieldKategori').value = e.category;
   document.getElementById('fieldDeskripsi').value = e.description;
   document.getElementById('fieldJumlah').value = Math.round(e.amount).toLocaleString('id-ID');
+  document.getElementById('btnDeleteExpense')?.classList.remove('hidden');
   document.getElementById('modalExpense').classList.remove('hidden');
 }
 
@@ -217,6 +218,14 @@ if (fieldJumlahEl) {
   fieldJumlahEl.addEventListener('input', function() {
     formatNumberInput(this);
   });
+}
+
+function handleDeleteFromModal() {
+  if (!editId) return;
+  const e = expenses.find(x => x.id === editId);
+  if (!e) return;
+  closeModal();
+  openDelete(e.id, e.description);
 }
 
 loadData();

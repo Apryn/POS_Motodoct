@@ -10,6 +10,6 @@ router.use(auth);
 router.get('/', c.getAllExpenses);
 router.post('/', c.createExpense);
 router.put('/:id', c.updateExpense);
-router.delete('/:id', isAdminOrOwner, c.deleteExpense);
+router.delete('/:id', c.deleteExpense);
 
 module.exports = router;

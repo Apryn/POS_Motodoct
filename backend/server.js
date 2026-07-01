@@ -228,6 +228,27 @@ app.listen(PORT, async () => {
     console.error("❌ Gagal memverifikasi tabel sparepart_returns:", err.message);
   }
 
+  // Auto-create stock_opnames table if it doesn't exist
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS stock_opnames (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sparepart_id INT NOT NULL,
+        user_id INT NOT NULL,
+        system_stock INT NOT NULL,
+        physical_stock INT NOT NULL,
+        difference INT NOT NULL,
+        reason VARCHAR(255) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sparepart_id) REFERENCES spareparts(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    );
+    console.log("✅ Tabel stock_opnames terverifikasi!");
+  } catch (err) {
+    console.error("❌ Gagal memverifikasi tabel stock_opnames:", err.message);
+  }
+
   // Verify and add missing columns dynamically in a non-destructive way
   try {
     // 1. users.plain_password
@@ -291,6 +312,13 @@ app.listen(PORT, async () => {
       console.log("🛠️  Kolom nama_lain berhasil ditambahkan ke tabel spareparts!");
     }
 
+    // 6b. spareparts.last_opname_at
+    const [lastOpnameCols] = await db.execute("SHOW COLUMNS FROM spareparts LIKE 'last_opname_at'");
+    if (lastOpnameCols.length === 0) {
+      await db.execute("ALTER TABLE spareparts ADD COLUMN last_opname_at TIMESTAMP NULL DEFAULT NULL");
+      console.log("🛠️  Kolom last_opname_at berhasil ditambahkan ke tabel spareparts!");
+    }
+
     // 7. mechanics.is_deleted
     const [mechDelCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'is_deleted'");
     if (mechDelCols.length === 0) {
@@ -309,6 +337,31 @@ app.listen(PORT, async () => {
     if (claimedCols.length === 0) {
       await db.execute("ALTER TABLE transaction_services ADD COLUMN claimed_at TIMESTAMP NULL DEFAULT NULL");
       console.log("🛠️  Kolom claimed_at berhasil ditambahkan ke tabel transaction_services!");
+    }
+
+    // 9. transaction_services helper columns
+    const [helperMechCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'helper_mechanic_id'");
+    if (helperMechCols.length === 0) {
+      await db.execute("ALTER TABLE transaction_services ADD COLUMN helper_mechanic_id INT NULL DEFAULT NULL");
+      console.log("🛠️  Kolom helper_mechanic_id berhasil ditambahkan ke tabel transaction_services!");
+    }
+
+    const [helperCommCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'helper_commission'");
+    if (helperCommCols.length === 0) {
+      await db.execute("ALTER TABLE transaction_services ADD COLUMN helper_commission DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+      console.log("🛠️  Kolom helper_commission berhasil ditambahkan ke tabel transaction_services!");
+    }
+
+    const [helperStatusCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'helper_commission_status'");
+    if (helperStatusCols.length === 0) {
+      await db.execute("ALTER TABLE transaction_services ADD COLUMN helper_commission_status VARCHAR(20) DEFAULT 'unpaid'");
+      console.log("🛠️  Kolom helper_commission_status berhasil ditambahkan ke tabel transaction_services!");
+    }
+
+    const [helperClaimedCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'helper_claimed_at'");
+    if (helperClaimedCols.length === 0) {
+      await db.execute("ALTER TABLE transaction_services ADD COLUMN helper_claimed_at TIMESTAMP NULL DEFAULT NULL");
+      console.log("🛠️  Kolom helper_claimed_at berhasil ditambahkan ke tabel transaction_services!");
     }
 
     console.log("✅ Kolom database tambahan terverifikasi!");

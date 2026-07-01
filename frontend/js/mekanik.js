@@ -201,7 +201,7 @@ async function openJobs(id, name) {
   document.getElementById('paidJobsDetail').textContent = 'Memuat...';
   document.getElementById('totalWagesDisplay').textContent = 'Rp 0';
   document.getElementById('totalJobsDetail').textContent = 'Memuat...';
-  document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="11" class="empty-state">Memuat histori pekerjaan...</td></tr>';
+  document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="12" class="empty-state">Memuat histori pekerjaan...</td></tr>';
   document.getElementById('modalJobs').classList.remove('hidden');
 
   try {
@@ -219,8 +219,8 @@ async function openJobs(id, name) {
       const rowsHtml = list.map((j, i) => {
         const commRate = parseFloat(j.commission_rate || 90.00);
         const totalJasa = parseFloat(j.service_price || 0);
-        const komisiNet = (totalJasa * commRate) / 100;
-        const tokoCut = totalJasa - komisiNet;
+        const komisiNet = parseFloat(j.calculated_commission || 0);
+        const tokoCut = j.role === 'helper' ? 0 : totalJasa - (totalJasa * commRate) / 100;
         
         const isPaid = j.commission_status === 'paid';
         
@@ -245,6 +245,16 @@ async function openJobs(id, name) {
           ? `<span style="background:#d1fae5; color:#059669; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid #a7f3d0; display:inline-block;">Sudah Cair</span>`
           : `<span style="background:#fff3c7; color:#d97706; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid #fde68a; display:inline-block;">Belum Cair</span>`;
 
+        let roleBadge = j.role === 'utama'
+          ? `<span style="background:#e0f2fe; color:#0369a1; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid #bae6fd; display:inline-block;">Utama</span>`
+          : `<span style="background:#fef3c7; color:#b45309; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid #fde68a; display:inline-block;">Helper</span>`;
+
+        if (j.role === 'utama' && j.helper_name) {
+          roleBadge += `<div style="font-size: 10px; color: #475569; margin-top: 4px; font-style: italic; line-height: 1.2;">Helper: ${escHtml(j.helper_name)}<br>(-${formatRp(j.helper_commission)})</div>`;
+        } else if (j.role === 'helper' && j.main_mechanic_name) {
+          roleBadge += `<div style="font-size: 10px; color: #475569; margin-top: 4px; font-style: italic; line-height: 1.2;">Utama: ${escHtml(j.main_mechanic_name)}</div>`;
+        }
+
         return `
           <tr style="${isPaid ? 'background:#fafafa; color:#64748b;' : ''}">
             <td style="text-align:center; padding:10px 0;">${checkboxHtml}</td>
@@ -253,8 +263,9 @@ async function openJobs(id, name) {
             <td>${escHtml(j.customer_name || 'Pelanggan Umum')}</td>
             <td><span class="code-badge" style="background:#1e293b; color:#ffffff; font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; border:1px solid #475569; letter-spacing:0.5px; display:inline-block; white-space:nowrap;">${escHtml(j.license_plate || '-')}</span></td>
             <td>${escHtml(j.service_name)}</td>
+            <td style="text-align:center;">${roleBadge}</td>
             <td style="text-align:right; font-weight:700;">${formatRp(totalJasa)}</td>
-            <td style="text-align:right; color:#ef4444;">${formatRp(tokoCut)}</td>
+            <td style="text-align:right; color:#ef4444;">${j.role === 'helper' ? '-' : formatRp(tokoCut)}</td>
             <td style="text-align:right; font-weight:700; color:#10b981;">${formatRp(komisiNet)}</td>
             <td style="text-align:center;">${statusBadgeHtml}</td>
             <td>${tglCair}</td>
@@ -279,11 +290,11 @@ async function openJobs(id, name) {
       document.getElementById('paidJobsDetail').textContent = '0 servis sudah diambil';
       document.getElementById('totalWagesDisplay').textContent = 'Rp 0';
       document.getElementById('totalJobsDetail').textContent = '0 servis terdaftar';
-      document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="11" class="empty-state">Mekanik ini belum memiliki histori pekerjaan.</td></tr>';
+      document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="12" class="empty-state">Mekanik ini belum memiliki histori pekerjaan.</td></tr>';
     }
   } catch (err) {
     console.error(err);
-    document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="11" class="empty-state" style="color:#e74c3c;">Gagal memuat data pekerjaan.</td></tr>';
+    document.getElementById('jobsTableBody').innerHTML = '<tr><td colspan="12" class="empty-state" style="color:#e74c3c;">Gagal memuat data pekerjaan.</td></tr>';
   }
 }
 

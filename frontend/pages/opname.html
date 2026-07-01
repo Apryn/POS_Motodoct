@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <!-- Secure Route Guard & Role Access Control -->
+  <script>
+    (function() {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      const allPages = [
+        'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
+        'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
+        'mekanik.html', 'pelanggan.html', 'laporan.html', 'notifikasi.html', 'user.html',
+        'opname.html'
+      ];
+      
+      const rolePages = {
+        admin: allPages,
+        kasir: ['transaksi.html', 'keranjang.html', 'sparepart.html'], // kasir tidak diizinkan opname
+        gudang: ['sparepart.html', 'pembelian.html', 'opname.html'],
+        owner: allPages
+      };
+      
+      const roleDefaults = {
+        admin: 'dashboard.html',
+        kasir: 'transaksi.html',
+        gudang: 'sparepart.html',
+        owner: 'dashboard.html'
+      };
+      
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      const allowedPages = rolePages[user.role] || [];
+      const isAllowed = allowedPages.some(page => currentPage.includes(page));
+      
+      if (!isAllowed) {
+        alert('Akses Ditolak: Role Anda (' + (user.role || 'user') + ') tidak memiliki izin untuk halaman ini!');
+        window.location.href = roleDefaults[user.role] || 'login.html';
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.sidebar nav a').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href) {
+              const linkPage = href.split('/').pop();
+              const isLinkAllowed = allowedPages.some(page => linkPage.includes(page));
+              if (!isLinkAllowed) {
+                a.style.display = 'none';
+              }
+            }
+          });
+        });
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stock Opname — Motodoct</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/table.css" />
+  <style>
+    /* Styling tambahan khusus modul Stock Opname */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .opname-config-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+      margin-bottom: 20px;
+      border: 1px solid #f0f0f0;
+    }
+    
+    .btn-action-sm {
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-apply-all {
+      background: #eef2ff;
+      color: #4a6cf7;
+      border: 1.5px dashed #4a6cf7;
+      transition: all 0.2s;
+    }
+    .btn-apply-all:hover {
+      background: #4a6cf7;
+      color: #fff;
+    }
+    
+    .diff-badge {
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .diff-zero { background: #e8f8f0; color: #27ae60; }
+    .diff-negative { background: #fdecea; color: #e74c3c; }
+    .diff-positive { background: #eef2ff; color: #4a6cf7; }
+    
+    .input-qty-phys {
+      width: 80px;
+      padding: 6px 10px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-weight: 700;
+      outline: none;
+      text-align: center;
+    }
+    .input-qty-phys:focus {
+      border-color: #e87722;
+      box-shadow: 0 0 0 3px rgba(232, 119, 34, 0.15);
+    }
+    
+    .input-reason {
+      width: 100%;
+      min-width: 120px;
+      padding: 6px 10px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+    .input-reason:focus {
+      border-color: #e87722;
+    }
+
+    /* Print styles */
+    .print-header { display: none; }
+    .print-only-header, .print-only-cell { display: none; }
+
+    @media print {
+      /* Sembunyikan elemen non-cetak */
+      .sidebar, .sidebar-overlay, .topbar, .opname-tabs, .opname-config-card,
+      #sheetEmptyState, #tabContentHistory, .btn-primary, .btn-secondary,
+      .btn-action-sm, .input-qty-phys, .input-reason, .diff-badge,
+      #opnameSheetContainer > div:first-child, /* toolbar lembar opname */
+      #opnameSheetContainer > div:last-child, /* tombol simpan/batal bawah */
+      th:nth-child(10), td:nth-child(10), /* Stok Fisik input */
+      th:nth-child(13), td:nth-child(13), /* Selisih */
+      th:nth-child(14), td:nth-child(14), /* Alasan */
+      th:nth-child(15), td:nth-child(15) /* Aksi */
+      {
+        display: none !important;
+      }
+      
+      /* Reset layout main panel untuk print */
+      .main {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      
+      /* Tampilkan judul lembar cetak khusus */
+      .print-header {
+        display: block !important;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      
+      .print-only-header, .print-only-cell {
+        display: table-cell !important;
+      }
+      
+      /* Rapikan tabel untuk cetak */
+      .table-wrap {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+      }
+      .data-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+      .data-table th, .data-table td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        padding: 8px 6px !important;
+      }
+      .data-table th {
+        background: #f0f0f0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/logo.png" alt="Motodoct" />
+    </div>
+    <nav>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
+      <a href="keranjang.html" class="nav-item"><i data-lucide="archive"></i><span class="nav-label">Keranjang Tersimpan</span></a>
+      <a href="sparepart.html" class="nav-item"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
+      <a href="opname.html" class="nav-item active"><i data-lucide="clipboard-check"></i><span class="nav-label">Stock Opname</span></a>
+      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
+      <a href="pengeluaran.html" class="nav-item"><i data-lucide="wallet"></i><span class="nav-label">Pengeluaran</span></a>
+      <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
+      <a href="servis.html" class="nav-item"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
+      <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
+      <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
+      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="notifikasi.html" class="nav-item"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
+      <a href="user.html" class="nav-item"><i data-lucide="user-check"></i><span class="nav-label">Manajemen User</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Printable Header (Only shown during print) -->
+    <div class="print-header">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 700; text-align: center;">LEMBAR KERJA STOCK OPNAME</h2>
+      <p style="margin: 5px 0 20px 0; font-size: 13px; text-align: center; color: #475569;" id="printMetaInfo"></p>
+    </div>
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-left">
+          <h1>Stock Opname</h1>
+          <p>Pemeriksaan dan penyesuaian berkala stok fisik gudang</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-badge">
+          <div class="user-avatar-sm" id="userAvatar">A</div>
+          <span class="user-badge-name" id="welcomeText">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="opname-tabs" style="display:flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; gap: 8px;">
+      <button class="opname-tab-btn active" id="tabBtnSheet" onclick="switchTab('sheet')" style="padding: 12px 24px; font-size: 13px; font-weight: 600; background: none; border: none; border-bottom: 3px solid #e87722; color: #e87722; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">
+        <i data-lucide="clipboard-list" style="width:16px;height:16px;"></i> Lembar Opname
+      </button>
+      <button class="opname-tab-btn" id="tabBtnHistory" onclick="switchTab('history')" style="padding: 12px 24px; font-size: 13px; font-weight: 600; background: none; border: none; border-bottom: 3px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">
+        <i data-lucide="history" style="width:16px;height:16px;"></i> Riwayat Opname
+      </button>
+    </div>
+
+    <!-- Tab 1: Lembar Opname -->
+    <div id="tabContentSheet" class="tab-content active">
+      <!-- Config Form (Only show when not in opname session) -->
+      <div class="opname-config-card" id="configCard">
+        <h3 style="font-size:15px; margin-bottom:15px; color:#1e293b; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="sliders" style="width:18px;height:18px;color:#e87722;"></i>
+          Pengaturan Lembar Kerja Opname Baru
+        </h3>
+        <div class="form-row-3" style="margin-bottom: 15px;">
+          <div class="form-group">
+            <label for="opnameLimit">Jumlah Barang (Limit)</label>
+            <select id="opnameLimit">
+              <option value="10">10 Item (Harian)</option>
+              <option value="20">20 Item</option>
+              <option value="50" selected>50 Item (Bulanan)</option>
+              <option value="100">100 Item</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opnameSort">Metode Pengambilan Barang</label>
+            <select id="opnameSort">
+              <option value="least_recent" selected>Urutan Paling Lama Belum Diopname</option>
+              <option value="random">Acak (Random)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opnameCategory">Filter Kategori</label>
+            <select id="opnameCategory">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2" style="margin-bottom: 15px; grid-template-columns: 2fr 1fr;">
+          <div class="form-group">
+            <label for="opnameRack">Filter Lokasi Rak (Teks bebas)</label>
+            <input type="text" id="opnameRack" placeholder="Contoh: Rak A, Rak B-1, dll..." />
+          </div>
+          <div class="form-group" style="justify-content: flex-end;">
+            <button class="btn-primary" onclick="generateOpnameSheet()" style="width: 100%; height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <i data-lucide="sparkles" style="width:16px;height:16px;"></i> Mulai Penghitungan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Opname Sheet Table (Initially hidden) -->
+      <div id="opnameSheetContainer" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <div style="font-size:13px; color:#475569; font-weight:500;">
+            <span class="badge badge-aman" id="itemCountBadge">0 Item</span> Sedang Diperiksa
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn-secondary" onclick="window.print()" style="padding:6px 12px; font-size:12px; border-radius:6px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+              🖨️ Cetak Lembar Opname
+            </button>
+            <button class="btn-action-sm btn-apply-all" onclick="applyAllSystemStock()" style="height:32px; padding:0 12px;">
+              ✅ Set Semua Fisik = Sistem
+            </button>
+          </div>
+        </div>
+        
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:50px; text-align:center;">No</th>
+                <th style="width:100px;">Kode</th>
+                <th>Nama Sparepart</th>
+                <th style="width:140px;">Nama Lain</th>
+                <th>Kategori</th>
+                <th>Merk</th>
+                <th>Tipe Motor</th>
+                <th>Lokasi Rak</th>
+                <th style="width:100px; text-align:center;">Stok Sistem</th>
+                <th style="width:120px; text-align:center;">Stok Fisik</th>
+                <!-- Header khusus cetak fisik -->
+                <th class="print-only-header" style="width:120px; text-align:center;">Stok Fisik (Tulis)</th>
+                <th class="print-only-header" style="width:150px;">Catatan Selisih</th>
+                <th style="width:100px; text-align:center;">Selisih</th>
+                <th>Alasan / Keterangan</th>
+                <th style="width:80px; text-align:center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="opnameSheetBody">
+              <!-- Baris dinamis -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px; margin-bottom:40px;">
+          <button class="btn-secondary" onclick="cancelOpnameSheet()" style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="x-circle" style="width:16px;height:16px;"></i> Batalkan Lembar Opname
+          </button>
+          <button class="btn-primary" onclick="submitOpnameSheet()" style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="save" style="width:16px;height:16px;"></i> Simpan & Sesuaikan Stok
+          </button>
+        </div>
+      </div>
+      
+      <!-- Empty State for Sheet Tab -->
+      <div id="sheetEmptyState" class="table-wrap empty-state" style="padding: 60px 20px;">
+        <i data-lucide="clipboard-signature" style="width:48px; height:48px; color:#cbd5e1; margin-bottom:12px;"></i>
+        <p style="color:#64748b; font-size:14px; font-weight:500;">Belum ada lembar opname aktif.</p>
+        <p style="color:#94a3b8; font-size:12px; margin-top:4px;">Atur konfigurasi di atas lalu klik <strong>"Mulai Penghitungan"</strong>.</p>
+      </div>
+    </div>
+
+    <!-- Tab 2: Riwayat Opname -->
+    <div id="tabContentHistory" class="tab-content">
+      <!-- Filters -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input type="text" id="historySearch" placeholder="🔍 Cari nama atau kode barang..." />
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12px; color:#64748b; font-weight:600;">Dari:</span>
+            <input type="date" id="historyStart" style="min-width:auto; padding: 7px 10px;" />
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12px; color:#64748b; font-weight:600;">Sampai:</span>
+            <input type="date" id="historyEnd" style="min-width:auto; padding: 7px 10px;" />
+          </div>
+        </div>
+        <div>
+          <button class="btn-secondary" onclick="loadHistoryData()" style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="rotate-cw" style="width:16px;height:16px;"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:50px; text-align:center;">No</th>
+              <th style="width:140px;">Waktu Pemeriksaan</th>
+              <th>Kode</th>
+              <th>Nama Sparepart</th>
+              <th style="width:100px; text-align:center;">Stok Sistem</th>
+              <th style="width:100px; text-align:center;">Stok Fisik</th>
+              <th style="width:90px; text-align:center;">Selisih</th>
+              <th>Alasan / Keterangan</th>
+              <th>Petugas</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr><td colspan="9" class="empty-state">Memuat riwayat...</td></tr>
+          </tbody>
+        </table>
+        
+        <div id="historyPagination" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+          <span id="historyInfo" style="font-size:12px; color:#64748b; font-weight:500;">Menampilkan 0 riwayat</span>
+          <div style="display:flex; gap:8px;">
+            <button id="btnPrevHistory" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="changeHistoryPage(-1)">Sebelumnya</button>
+            <button id="btnNextHistory" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="changeHistoryPage(1)">Berikutnya</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../js/opname.js?v=1"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

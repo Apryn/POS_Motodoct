@@ -59,7 +59,9 @@ let cart = [];
 let activeTab = 'sparepart';
 let paymentMethod = 'cash';
 let activeSavedCartId = null; // track keranjang tersimpan yang sedang aktif
+let activeSavedCartData = null; // track metadata of the loaded saved cart (license_plate, customer_name, mechanic_id, note)
 let adjustCartIndex = null;
+let currentPage = 1;
 
 // Load data
 async function loadData() {
@@ -83,6 +85,18 @@ async function loadData() {
     renderProducts();
     renderMechanicSelect();
     renderCustomerSelect();
+
+    // Restore mechanic from saved state if available
+    const saved = localStorage.getItem('active_cart_state');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state.mechanicId) {
+          const sel = document.getElementById('selectMechanic');
+          if (sel) sel.value = state.mechanicId;
+        }
+      } catch (e) {}
+    }
   } catch (err) {
     console.error('Load data error:', err);
   }
@@ -101,31 +115,125 @@ function renderProducts(filter = '') {
   const spGrid = document.getElementById('tabSparepart');
   const svGrid = document.getElementById('tabServis');
 
-  const filteredSp = spareparts.filter(p =>
-    p.stock > 0 &&
-    (p.name.toLowerCase().includes(filter.toLowerCase()) ||
-     (p.nama_lain || '').toLowerCase().includes(filter.toLowerCase()) ||
-     (p.code || '').toLowerCase().includes(filter.toLowerCase()))
-  );
+  const keywords = filter.toLowerCase().split(/\s+/).filter(Boolean);
 
-  spGrid.innerHTML = filteredSp.length ? filteredSp.map(p => {
-    const aliasHtml = p.nama_lain 
-      ? `<div class="product-alias" style="font-size: 11px; color: #64748b; font-style: italic; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(p.nama_lain)}">(${p.nama_lain})</div>`
-      : '';
-    return `
-      <div class="product-card" onclick="addToCartById(${p.id}, 'sparepart')">
-        <div class="product-code">${p.code || '-'}</div>
-        <div class="product-name" style="margin-bottom: 2px;">${p.name}</div>
-        ${aliasHtml}
-        <div class="product-price">${rupiah(p.price)}</div>
-        <div class="product-stock ${p.stock <= 5 ? 'low' : ''}">Stok: ${p.stock} ${p.unit || 'pcs'}</div>
+  const filteredSp = spareparts.filter(p => {
+    if (keywords.length === 0) return true;
+    const searchString = `${p.name} ${p.nama_lain || ''} ${p.code || ''} ${p.brand || ''} ${p.type || ''}`.toLowerCase();
+    return keywords.every(kw => searchString.includes(kw));
+  });
+
+  const itemsPerPage = 30;
+  const totalPages = Math.ceil(filteredSp.length / itemsPerPage) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedSp = filteredSp.slice(startIdx, endIdx);
+
+  if (!filteredSp.length) {
+    spGrid.innerHTML = '<div class="empty-state">Tidak ada sparepart</div>';
+  } else {    const tableRows = paginatedSp.map((p, idx) => {
+      const aliasText = p.nama_lain ? ` (${p.nama_lain})` : '';
+      const isOutOfStock = p.stock <= 0;
+      const rowClass = isOutOfStock ? 'out-of-stock-row' : '';
+      
+      const motorType = p.type || '-';
+      const brandName = p.brand || '-';
+      
+      const stockBadgeStyle = isOutOfStock 
+        ? 'background: #fdecea; color: #e74c3c; border: 1px solid #fca5a5;' 
+        : (p.stock <= 5 ? 'background: #fff8e6; color: #f39c12; border: 1px solid #fde68a;' : 'background: #e8f8f0; color: #27ae60; border: 1px solid #a7f3d0;');
+        
+      const stockText = isOutOfStock ? 'Habis' : `${p.stock} ${p.unit || 'pcs'}`;
+      
+      const actionBtnHtml = isOutOfStock
+        ? `<button class="btn-add-cart out-of-stock-btn" disabled>Habis</button>`
+        : `<button class="btn-add-cart" onclick="addToCartById(${p.id}, 'sparepart')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tambah
+           </button>`;
+
+      const codeHtml = p.code 
+        ? `<span class="code-badge" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px; font-size:11px;">${escHtml(p.code)}</span>`
+        : '<span style="color:#cbd5e1;">-</span>';
+
+      const rackHtml = p.rack_location && p.rack_location !== '-'
+        ? `<strong style="color: #0f766e; font-weight: 600;">${escHtml(p.rack_location)}</strong>`
+        : '<span style="color:#cbd5e1;">-</span>';
+
+      let brandAndTypeHtml = '';
+      if (brandName === '-' && motorType === '-') {
+        brandAndTypeHtml = '<span style="color:#cbd5e1;">-</span>';
+      } else {
+        brandAndTypeHtml = `
+          <div style="font-weight: 500; color: #1e293b;">${escHtml(brandName !== '-' ? brandName : '')}</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;" title="${escHtml(motorType !== '-' ? motorType : '')}">${escHtml(motorType !== '-' ? motorType : '')}</div>
+        `;
+      }
+
+      return `
+        <tr class="${rowClass}">
+          <td style="font-family: monospace; font-weight: 700; color: #475569;">
+            ${codeHtml}
+          </td>
+          <td>
+            <div style="font-weight: 600; color: #1e293b; font-size: 13px;">${escHtml(p.name)}</div>
+            ${aliasText ? `<div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 2px;">${escHtml(aliasText)}</div>` : ''}
+          </td>
+          <td>${rackHtml}</td>
+          <td>
+            ${brandAndTypeHtml}
+          </td>
+          <td style="font-weight: 700; color: #e87722; text-align: right; white-space: nowrap;">${rupiah(p.price)}</td>
+          <td style="text-align: center;">
+            <span class="badge" style="${stockBadgeStyle} display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 4px 8px; white-space: nowrap;">
+              ${stockText}
+            </span>
+          </td>
+          <td style="text-align: center;" onclick="event.stopPropagation();">
+            ${actionBtnHtml}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    spGrid.innerHTML = `
+      <div class="pos-table-wrap">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th style="width: 90px;">Kode</th>
+              <th>Nama Sparepart</th>
+              <th style="width: 50px;">Rak</th>
+              <th style="width: 130px;">Merk & Tipe Motor</th>
+              <th style="text-align: right; width: 105px;">Harga</th>
+              <th style="text-align: center; width: 75px;">Stok</th>
+              <th style="text-align: center; width: 85px;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      <div class="pos-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; background: #fff; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; flex-shrink: 0;">
+        <span style="color: #64748b; font-weight: 500;">Menampilkan ${startIdx + 1}-${Math.min(endIdx, filteredSp.length)} dari ${filteredSp.length} item</span>
+        <div style="display: flex; gap: 6px;">
+          <button class="pos-pag-btn" onclick="changePosPage(-1)" ${currentPage === 1 ? 'disabled' : ''} style="padding: 6px 12px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer;">Sebelumnya</button>
+          <span style="align-self: center; font-weight: 700; color: #1e293b; padding: 0 4px;">Halaman ${currentPage} / ${totalPages}</span>
+          <button class="pos-pag-btn" onclick="changePosPage(1)" ${currentPage === totalPages ? 'disabled' : ''} style="padding: 6px 12px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer;">Berikutnya</button>
+        </div>
       </div>
     `;
-  }).join('') : '<div class="empty-state">Tidak ada produk</div>';
+  }
 
-  const filteredSv = services.filter(s =>
-    s.name.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filteredSv = services.filter(s => {
+    if (keywords.length === 0) return true;
+    const searchString = s.name.toLowerCase();
+    return keywords.every(kw => searchString.includes(kw));
+  });
 
   svGrid.innerHTML = filteredSv.length ? filteredSv.map(s => `
     <div class="product-card" onclick="addToCartById(${s.id}, 'servis')">
@@ -134,6 +242,11 @@ function renderProducts(filter = '') {
       <div class="product-type">Servis</div>
     </div>
   `).join('') : '<div class="empty-state">Tidak ada servis</div>';
+}
+
+function changePosPage(delta) {
+  currentPage += delta;
+  renderProducts(document.getElementById('barcodeInput')?.value || '');
 }
 
 // Barcode scan
@@ -158,6 +271,7 @@ if (barcodeInput) {
   });
   let searchTimeout;
   barcodeInput.addEventListener('input', () => {
+    currentPage = 1;
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       renderProducts(barcodeInput.value);
@@ -169,12 +283,16 @@ if (barcodeInput) {
 function addToCartById(id, type) {
   if (type === 'sparepart') {
     const item = spareparts.find(p => p.id === id);
-    if (!item) return;
+    if (!item) return false;
+    if (item.stock <= 0) {
+      alert(`Stok ${item.name} habis!`);
+      return false;
+    }
     const existing = cart.find(c => c.id === id && c.type === 'sparepart');
     if (existing) {
       if (existing.qty >= item.stock) {
         alert('Stok tidak mencukupi!');
-        return;
+        return false;
       }
       existing.qty++;
     } else {
@@ -182,12 +300,13 @@ function addToCartById(id, type) {
     }
   } else {
     const item = services.find(s => s.id === id);
-    if (!item) return;
+    if (!item) return false;
     const existing = cart.find(c => c.id === id && c.type === 'servis');
-    if (existing) return; // servis tidak duplikat
+    if (existing) return false; // servis tidak duplikat
     cart.push({ id, type: 'servis', name: item.name, code: '-', price: item.price, qty: 1, mechanic_id: null, unit: '' });
   }
   renderCart();
+  return true;
 }
 
 function changeQty(idx, delta) {
@@ -226,25 +345,50 @@ function renderCart() {
   if (!cart.length) {
     cartList.innerHTML = '<div class="empty-cart">Belum ada item</div>';
     updateTotals();
+    if (typeof saveActiveCartState === 'function') {
+      saveActiveCartState();
+    }
     return;
   }
 
   cartList.innerHTML = cart.map((item, idx) => {
-    const dbItem = item.type === 'sparepart'
+    const dbItem = !item.is_manual && item.type === 'sparepart'
       ? spareparts.find(p => p.id === item.id)
-      : services.find(s => s.id === item.id);
+      : (item.type === 'servis' ? services.find(s => s.id === item.id) : null);
     const dbPrice = dbItem ? Number(dbItem.price) : Number(item.price);
-    const isCustom = Number(item.price) !== dbPrice;
-    const badgeHtml = isCustom
-      ? `<span class="badge-custom-price" style="background:#ffe4e6; color:#b91c1c; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:middle; border:1px solid #fecdd3; display:inline-block; line-height:1.2;">Manual</span>`
-      : '';
+    const isCustom = !item.is_manual && Number(item.price) !== dbPrice;
+    
+    let cartItemDetails = '';
+    if (item.type === 'sparepart') {
+      const detailParts = [];
+      if (dbItem) {
+        if (dbItem.brand && dbItem.brand.toLowerCase() !== 'luar' && dbItem.brand.toLowerCase() !== 'lainnya') detailParts.push(dbItem.brand);
+        if (dbItem.type && dbItem.type.toLowerCase() !== 'luar' && dbItem.type.toLowerCase() !== 'lainnya') detailParts.push(dbItem.type);
+      } else {
+        if (item.brand && item.brand.toLowerCase() !== 'luar' && item.brand.toLowerCase() !== 'lainnya') detailParts.push(item.brand);
+      }
+      if (detailParts.length) {
+        cartItemDetails = ` · ${detailParts.join(' - ')}`;
+      }
+    }
+    
+    let badgeHtml = '';
+    if (item.is_manual) {
+      if (item.code === 'Lainnya') {
+        badgeHtml = `<span class="badge-custom-price" style="background:#f3e8ff; color:#6b21a8; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:middle; border:1px solid #e9d5ff; display:inline-block; line-height:1.2;">Lainnya</span>`;
+      } else {
+        badgeHtml = `<span class="badge-custom-price" style="background:#e0f2fe; color:#0369a1; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:middle; border:1px solid #bae6fd; display:inline-block; line-height:1.2;">Produk Luar</span>`;
+      }
+    } else if (isCustom) {
+      badgeHtml = `<span class="badge-custom-price" style="background:#ffe4e6; color:#b91c1c; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:middle; border:1px solid #fecdd3; display:inline-block; line-height:1.2;">Manual</span>`;
+    }
 
     return `
       <div class="cart-item">
         <!-- Col 1: Info (Nama & Subtitle Jasa/Part + Harga Satuan) -->
         <div class="cart-col-info">
           <span class="cart-item-name" title="${escHtml(item.name)}">${escHtml(item.name)}</span>
-          <span class="cart-item-sub">${item.type === 'servis' ? 'Servis' : 'Part'} · ${rupiah(item.price)} <button type="button" onclick="openAdjustPriceModal(${idx})" title="Edit Harga" style="background:none; border:none; color:#e87722; cursor:pointer; font-size:11px; padding:0 2px; display:inline; vertical-align:middle; line-height:1;">✏️</button>${badgeHtml}</span>
+          <span class="cart-item-sub">${item.type === 'servis' ? 'Servis' : 'Part'}${escHtml(cartItemDetails)} · ${rupiah(item.price)} <button type="button" onclick="openAdjustPriceModal(${idx})" title="Edit Harga" style="background:none; border:none; color:#e87722; cursor:pointer; font-size:11px; padding:0 2px; display:inline; vertical-align:middle; line-height:1;">✏️</button>${badgeHtml}</span>
         </div>
         
         <!-- Col 2: Kontrol Qty -->
@@ -268,6 +412,9 @@ function renderCart() {
   }).join('');
 
   updateTotals();
+  if (typeof saveActiveCartState === 'function') {
+    saveActiveCartState();
+  }
 }
 
 function updateTotals() {
@@ -292,9 +439,33 @@ function updateTotals() {
 // Mechanic select
 function renderMechanicSelect() {
   const sel = document.getElementById('selectMechanic');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">-- Pilih Mekanik --</option>' +
-    mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  if (sel) {
+    sel.innerHTML = '<option value="">-- Pilih Mekanik --</option>' +
+      mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  }
+  const helperSel = document.getElementById('selectHelper');
+  if (helperSel) {
+    helperSel.innerHTML = '<option value="">-- Tanpa Helper --</option>' +
+      mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  }
+}
+
+function toggleHelperCommissionInput() {
+  const helperSel = document.getElementById('selectHelper');
+  const container = document.getElementById('helperCommContainer');
+  const input = document.getElementById('helperCommissionInput');
+  if (helperSel && container) {
+    const hasHelper = helperSel.value !== '';
+    container.classList.toggle('hidden', !hasHelper);
+    if (!hasHelper && input) {
+      input.value = '';
+    }
+  }
+}
+
+function formatHelperPriceInput(input) {
+  const raw = input.value.replace(/\D/g, '');
+  input.value = raw ? Number(raw).toLocaleString('id-ID') : '';
 }
 
 // Customer select (Datalist Autocomplete)
@@ -319,6 +490,9 @@ function selectPayment(method) {
   
   updateChange();
   renderPaymentDetails();
+  if (typeof saveActiveCartState === 'function') {
+    saveActiveCartState();
+  }
 }
 
 // Copy to clipboard helper
@@ -372,6 +546,9 @@ function formatCashInput(input) {
   // Format dengan titik ribuan
   input.value = raw ? Number(raw).toLocaleString('id-ID') : '';
   updateChange();
+  if (typeof saveActiveCartState === 'function') {
+    saveActiveCartState();
+  }
 }
 
 function getCashValue() {
@@ -453,11 +630,29 @@ async function processTransaction() {
 
   const sparepartsPayload = cart
     .filter(c => c.type === 'sparepart')
-    .map(c => ({ sparepart_id: c.id, quantity: c.qty, price: c.price }));
+    .map(c => ({
+      sparepart_id: c.is_manual ? null : c.id,
+      quantity: c.qty,
+      price: c.price,
+      is_manual: c.is_manual || false,
+      name: c.name,
+      buy_price: c.buy_price || 0,
+      brand: c.brand || 'Luar'
+    }));
+
+  const helperMechId = document.getElementById('selectHelper')?.value || null;
+  const rawHelperComm = document.getElementById('helperCommissionInput')?.value.replace(/\./g, '') || '0';
+  const helperComm = parseFloat(rawHelperComm) || 0;
 
   const servicesPayload = cart
     .filter(c => c.type === 'servis')
-    .map(c => ({ service_id: c.id, mechanic_id: parseInt(mechanicId), price: c.price }));
+    .map((c, idx) => ({
+      service_id: c.id,
+      mechanic_id: parseInt(mechanicId),
+      price: c.price,
+      helper_mechanic_id: idx === 0 && helperMechId ? parseInt(helperMechId) : null,
+      helper_commission: idx === 0 && helperMechId ? helperComm : 0
+    }));
 
   const btnProcess = document.getElementById('btnProcess');
   if (btnProcess) { btnProcess.disabled = true; btnProcess.textContent = 'Memproses...'; }
@@ -545,6 +740,9 @@ async function applyDiscount() {
     updateTotals();
     document.getElementById('discountRow').style.display = 'flex';
     document.getElementById('discountPctLabel').textContent = `(${pct}%)`;
+    if (typeof saveActiveCartState === 'function') {
+      saveActiveCartState();
+    }
 
   } catch {
     errEl.textContent = 'Tidak bisa terhubung ke server!';
@@ -641,10 +839,14 @@ async function applyManualPrice() {
 function clearCart() {
   cart = [];
   activeSavedCartId = null;
+  activeSavedCartData = null;
   if (document.getElementById('cashReceived')) document.getElementById('cashReceived').value = '';
   if (document.getElementById('discountInput')) document.getElementById('discountInput').value = '';
   if (document.getElementById('discountRow')) document.getElementById('discountRow').style.display = 'none';
   if (document.getElementById('selectCustomerInput')) document.getElementById('selectCustomerInput').value = '';
+  if (document.getElementById('selectHelper')) document.getElementById('selectHelper').value = '';
+  if (document.getElementById('helperCommissionInput')) document.getElementById('helperCommissionInput').value = '';
+  if (document.getElementById('helperCommContainer')) document.getElementById('helperCommContainer').classList.add('hidden');
   renderCart();
   selectPayment('cash');
 }
@@ -1053,16 +1255,57 @@ async function loadSavedCarts() {
   }
 }
 
+function getCurrentCustomerInfo() {
+  const val = document.getElementById('selectCustomerInput')?.value.trim() || '';
+  let name = '';
+  let plate = '';
+  if (val) {
+    const matched = customers.find(c => `${c.name} (${c.license_plate || '-'})` === val);
+    if (matched) {
+      name = matched.name;
+      plate = matched.license_plate || '';
+    } else {
+      const parenMatch = val.match(/^(.*?)\s*\((.*?)\)$/);
+      if (parenMatch) {
+        name = parenMatch[1].trim();
+        plate = parenMatch[2].trim();
+        if (plate === '-') plate = '';
+      } else {
+        if (/^[a-zA-Z]{1,2}\s*\d+/.test(val)) {
+          plate = val.toUpperCase();
+        } else {
+          name = val;
+        }
+      }
+    }
+  }
+  return { name, plate };
+}
+
 function openSaveCartModal() {
   if (!cart.length) { alert('Keranjang kosong!'); return; }
-  document.getElementById('savePlate').value = '';
-  document.getElementById('saveCustomer').value = '';
-  document.getElementById('saveNote').value = '';
+  
+  const uiCust = getCurrentCustomerInfo();
+  const mainMechanic = document.getElementById('selectMechanic')?.value || '';
+  
+  const hasSavedData = activeSavedCartId && activeSavedCartData;
+  
+  // Pre-fill values based on active UI state, falling back to loaded saved cart metadata
+  const plateValue = uiCust.plate || (hasSavedData ? (activeSavedCartData.license_plate || '') : '');
+  const customerValue = uiCust.name || (hasSavedData ? (activeSavedCartData.customer_name || '') : '');
+  const noteValue = hasSavedData ? (activeSavedCartData.note || '') : '';
+  const mechanicValue = mainMechanic || (hasSavedData ? (activeSavedCartData.mechanic_id || '') : '');
+
+  document.getElementById('savePlate').value = plateValue;
+  document.getElementById('saveCustomer').value = customerValue;
+  document.getElementById('saveNote').value = noteValue;
 
   // Isi dropdown mekanik
   const sel = document.getElementById('saveMechanic');
   sel.innerHTML = '<option value="">-- Pilih Mekanik --</option>' +
     mechanics.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  sel.value = mechanicValue;
 
   document.getElementById('modalSaveCart').classList.remove('hidden');
   setTimeout(() => document.getElementById('savePlate').focus(), 100);
@@ -1077,17 +1320,22 @@ async function confirmSaveCart() {
   if (!plate) { alert('Plat nomor wajib diisi!'); return; }
 
   const mechanic_id = document.getElementById('saveMechanic').value || null;
+  const customer_name = document.getElementById('saveCustomer').value.trim() || null;
+  const note = document.getElementById('saveNote').value.trim() || null;
 
   try {
-    const res = await fetch(`${API}/saved-carts`, {
-      method: 'POST',
+    const url = activeSavedCartId ? `${API}/saved-carts/${activeSavedCartId}` : `${API}/saved-carts`;
+    const method = activeSavedCartId ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method: method,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         license_plate: plate,
-        customer_name: document.getElementById('saveCustomer').value.trim() || null,
+        customer_name: customer_name,
         cart_data: cart,
         mechanic_id: mechanic_id ? parseInt(mechanic_id) : null,
-        note: document.getElementById('saveNote').value.trim() || null,
+        note: note,
       })
     });
     const data = await res.json();
@@ -1099,7 +1347,10 @@ async function confirmSaveCart() {
     } else {
       alert(data.message || 'Gagal menyimpan!');
     }
-  } catch { alert('Tidak bisa terhubung ke server!'); }
+  } catch (err) {
+    console.error(err);
+    alert('Tidak bisa terhubung ke server!');
+  }
 }
 
 async function loadSavedCart(id) {
@@ -1112,6 +1363,12 @@ async function loadSavedCart(id) {
     const cartItems = JSON.parse(saved.cart_data || '[]');
     cart = cartItems;
     activeSavedCartId = saved.id; // tandai keranjang ini sedang aktif
+    activeSavedCartData = {
+      license_plate: saved.license_plate,
+      customer_name: saved.customer_name,
+      mechanic_id: saved.mechanic_id,
+      note: saved.note
+    };
 
     // Set mekanik kalau ada
     if (saved.mechanic_id) {
@@ -1119,7 +1376,7 @@ async function loadSavedCart(id) {
       if (sel) sel.value = saved.mechanic_id;
     }
 
-    // Auto-match plat nomor ke pelanggan terdaftar
+    // Auto-match plat nomor ke pelanggan terdaftar atau non-member
     if (saved.license_plate) {
       const cleanedPlate = saved.license_plate.replace(/\s+/g, '').toUpperCase();
       const matchedCust = customers.find(c => (c.license_plate || '').replace(/\s+/g, '').toUpperCase() === cleanedPlate);
@@ -1127,16 +1384,25 @@ async function loadSavedCart(id) {
       if (custInput) {
         if (matchedCust) {
           custInput.value = `${matchedCust.name} (${matchedCust.license_plate || '-'})`;
+        } else if (saved.customer_name) {
+          custInput.value = `${saved.customer_name} (${saved.license_plate})`;
         } else {
-          custInput.value = '';
+          custInput.value = saved.license_plate;
         }
       }
+    } else if (saved.customer_name) {
+      const custInput = document.getElementById('selectCustomerInput');
+      if (custInput) custInput.value = saved.customer_name;
     }
 
     renderCart();
     loadSavedCarts();
     alert(`✅ Keranjang ${saved.license_plate} dimuat!`);
-  } catch { alert('Gagal memuat keranjang!'); }
+    if (typeof checkVehicleHistoryButton === 'function') checkVehicleHistoryButton();
+  } catch (err) {
+    console.error(err);
+    alert('Gagal memuat keranjang!');
+  }
 }
 
 async function deleteSavedCart(id) {
@@ -1381,13 +1647,30 @@ async function openVehicleHistory() {
 // Add selectCustomerInput listeners
 const selectCustomerInput = document.getElementById('selectCustomerInput');
 if (selectCustomerInput) {
-  selectCustomerInput.addEventListener('input', checkVehicleHistoryButton);
-  selectCustomerInput.addEventListener('change', checkVehicleHistoryButton);
+  selectCustomerInput.addEventListener('input', () => {
+    checkVehicleHistoryButton();
+    if (typeof saveActiveCartState === 'function') saveActiveCartState();
+  });
+  selectCustomerInput.addEventListener('change', () => {
+    checkVehicleHistoryButton();
+    if (typeof saveActiveCartState === 'function') saveActiveCartState();
+  });
 }
 
-// Init
+const selectMechanicInput = document.getElementById('selectMechanic');
+if (selectMechanicInput) {
+  selectMechanicInput.addEventListener('change', () => {
+    if (typeof saveActiveCartState === 'function') saveActiveCartState();
+  });
+}
+
+if (typeof loadActiveCartState === 'function') {
+  loadActiveCartState();
+}
 loadData();
-selectPayment('cash');
+if (!localStorage.getItem('active_cart_state')) {
+  selectPayment('cash');
+}
 renderCart();
 
 // Auto-load keranjang tersimpan kalau dari halaman keranjang
@@ -1471,7 +1754,7 @@ function handlePriceCheckSearch() {
       <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; box-shadow:0 1px 2px rgba(0,0,0,0.05); margin-bottom:8px;">
         <div style="display:flex; flex-direction:column; gap:2px; flex:1; padding-right:10px; text-align:left;">
           <div style="font-size:13px; font-weight:700; color:#1e293b;">${escHtml(sp.name)}<span style="font-size:11px; color:#64748b; font-style:italic; font-weight:normal;">${escHtml(aliasText)}</span></div>
-          <div style="font-size:11px; color:#64748b; font-family:monospace;">Kode: ${escHtml(sp.code || '-')} · Merk: ${escHtml(sp.brand || '-')}</div>
+          <div style="font-size:11px; color:#64748b; font-family:monospace;">Kode: ${escHtml(sp.code || '-')} · Merk: ${escHtml(sp.brand || '-')} · Tipe: ${escHtml(sp.type || '-')}</div>
           <div style="font-size:11px; color:#64748b;">Rak: <strong style="color:#0f766e;">${escHtml(sp.rack_location || '-')}</strong> · Stok: <strong style="${sp.stock <= 5 ? 'color:#ef4444;' : 'color:#10b981;'}">${sp.stock} ${sp.unit || 'pcs'}</strong></div>
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
@@ -1509,7 +1792,8 @@ function handlePriceCheckSearch() {
 }
 
 function addToCartFromPriceCheck(btn, id, type) {
-  addToCartById(id, type);
+  const success = addToCartById(id, type);
+  if (!success) return;
   const originalText = btn.innerHTML;
   btn.innerHTML = '✅ Sukses';
   btn.style.background = '#27ae60';
@@ -1537,4 +1821,187 @@ window.addEventListener('keydown', e => {
     }
   }
 });
+
+// ===== MANUAL PRODUCT FROM OUTSIDE LOGIC =====
+function openManualItemModal() {
+  const form = document.getElementById('formManualItem');
+  if (form) form.reset();
+  const qtyEl = document.getElementById('manualItemQty');
+  if (qtyEl) qtyEl.value = '1';
+  const modal = document.getElementById('modalManualItem');
+  if (modal) modal.classList.remove('hidden');
+  const nameEl = document.getElementById('manualItemName');
+  if (nameEl) setTimeout(() => nameEl.focus(), 100);
+}
+
+function closeManualItemModal() {
+  const modal = document.getElementById('modalManualItem');
+  if (modal) modal.classList.add('hidden');
+}
+
+function formatManualPriceInput(input) {
+  const raw = input.value.replace(/\D/g, '');
+  input.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+}
+
+function addManualItemToCart() {
+  const name = document.getElementById('manualItemName').value.trim();
+  const brand = document.getElementById('manualItemBrand').value.trim();
+  
+  const rawBuyPrice = document.getElementById('manualItemBuyPrice').value.replace(/\./g, '').replace(',', '.');
+  const buyPrice = parseFloat(rawBuyPrice) || 0;
+  
+  const rawPrice = document.getElementById('manualItemPrice').value.replace(/\./g, '').replace(',', '.');
+  const price = parseFloat(rawPrice) || 0;
+  
+  const qty = parseInt(document.getElementById('manualItemQty').value) || 1;
+
+  if (!name) {
+    alert('Nama barang wajib diisi!');
+    return;
+  }
+  if (price < 0 || buyPrice < 0) {
+    alert('Harga tidak valid!');
+    return;
+  }
+
+  // Generate a temporary unique ID for cart tracking
+  const tempId = 'manual_' + Date.now();
+
+  cart.push({
+    id: tempId,
+    is_manual: true,
+    type: 'sparepart',
+    name: name,
+    code: 'Luar',
+    brand: brand || 'Luar',
+    price: price,
+    buy_price: buyPrice,
+    qty: qty,
+    maxQty: 99999,
+    unit: 'pcs'
+  });
+
+  closeManualItemModal();
+  renderCart();
+}
+
+// ===== OTHER PRODUCT (LAINNYA) LOGIC =====
+function openOtherItemModal() {
+  const form = document.getElementById('formOtherItem');
+  if (form) form.reset();
+  const qtyEl = document.getElementById('otherItemQty');
+  if (qtyEl) qtyEl.value = '1';
+  const modal = document.getElementById('modalOtherItem');
+  if (modal) modal.classList.remove('hidden');
+  const nameEl = document.getElementById('otherItemName');
+  if (nameEl) setTimeout(() => nameEl.focus(), 100);
+}
+
+function closeOtherItemModal() {
+  const modal = document.getElementById('modalOtherItem');
+  if (modal) modal.classList.add('hidden');
+}
+
+function addOtherItemToCart() {
+  const name = document.getElementById('otherItemName').value.trim();
+  
+  const rawPrice = document.getElementById('otherItemPrice').value.replace(/\./g, '').replace(',', '.');
+  const price = parseFloat(rawPrice) || 0;
+  
+  const qty = parseInt(document.getElementById('otherItemQty').value) || 1;
+
+  if (!name) {
+    alert('Nama barang wajib diisi!');
+    return;
+  }
+  if (price < 0) {
+    alert('Harga tidak valid!');
+    return;
+  }
+
+  // Generate a temporary unique ID for cart tracking
+  const tempId = 'other_' + Date.now();
+
+  cart.push({
+    id: tempId,
+    is_manual: true,
+    type: 'sparepart',
+    name: name,
+    code: 'Lainnya',
+    brand: 'Lainnya',
+    price: price,
+    buy_price: 0,
+    qty: qty,
+    maxQty: 99999,
+    unit: 'pcs'
+  });
+
+  closeOtherItemModal();
+  renderCart();
+}
+
+// ===== PERSISTENT CART STATE LOGIC =====
+function saveActiveCartState() {
+  const state = {
+    cart: cart,
+    activeSavedCartId: activeSavedCartId,
+    activeSavedCartData: activeSavedCartData,
+    paymentMethod: paymentMethod,
+    customerInput: document.getElementById('selectCustomerInput')?.value || '',
+    mechanicId: document.getElementById('selectMechanic')?.value || '',
+    discountInput: document.getElementById('discountInput')?.value || '',
+    cashReceived: document.getElementById('cashReceived')?.value || ''
+  };
+  localStorage.setItem('active_cart_state', JSON.stringify(state));
+}
+
+function loadActiveCartState() {
+  // If there is a pending cart loading request from the saved carts page, ignore the saved active cart state
+  if (localStorage.getItem('loadCartId')) {
+    return;
+  }
+  try {
+    const saved = localStorage.getItem('active_cart_state');
+    if (!saved) return;
+    const state = JSON.parse(saved);
+    if (state.cart) cart = state.cart;
+    if (state.activeSavedCartId) activeSavedCartId = state.activeSavedCartId;
+    if (state.activeSavedCartData) activeSavedCartData = state.activeSavedCartData;
+    if (state.paymentMethod) paymentMethod = state.paymentMethod;
+
+    // Apply values to DOM once DOM is ready or immediately if already loaded
+    const applyToDom = () => {
+      // Set payment method
+      if (state.paymentMethod) {
+        selectPayment(state.paymentMethod);
+      }
+      // Set customer input
+      const custInput = document.getElementById('selectCustomerInput');
+      if (custInput && state.customerInput) {
+        custInput.value = state.customerInput;
+      }
+      // Set discount
+      const discInput = document.getElementById('discountInput');
+      if (discInput && state.discountInput) {
+        discInput.value = state.discountInput;
+      }
+      // Set cash received
+      const cashInput = document.getElementById('cashReceived');
+      if (cashInput && state.cashReceived) {
+        cashInput.value = state.cashReceived;
+      }
+      renderCart();
+      if (typeof checkVehicleHistoryButton === 'function') checkVehicleHistoryButton();
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyToDom);
+    } else {
+      applyToDom();
+    }
+  } catch (err) {
+    console.error('Error loading active cart state:', err);
+  }
+}
 

@@ -57,12 +57,35 @@ exports.getSummary = async (req, res) => {
 
         // 5. Rekapitulasi Komisi Mekanik
         const [rekapMekanik] = await db.execute(`
-            SELECT m.name as nama_mekanik, COUNT(ts.id) as total_servis,
-                   COALESCE(SUM(ts.price), 0) as total_jasa,
-                   COALESCE(SUM(ts.price * m.commission_rate / 100), 0) as total_komisi
+            SELECT 
+                m.id,
+                m.name as nama_mekanik,
+                COUNT(jobs.id) as total_servis,
+                COALESCE(SUM(jobs.price), 0) as total_jasa,
+                COALESCE(SUM(jobs.calculated_commission), 0) as total_komisi
             FROM mechanics m
-            JOIN transaction_services ts ON m.id = ts.mechanic_id
-            JOIN transactions t ON ts.transaction_id = t.id
+            JOIN (
+                SELECT 
+                    ts.id, 
+                    ts.mechanic_id, 
+                    ts.price, 
+                    CAST(((ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
+                    ts.transaction_id
+                FROM transaction_services ts
+                JOIN mechanics m ON ts.mechanic_id = m.id
+
+                UNION ALL
+
+                SELECT 
+                    ts.id, 
+                    ts.helper_mechanic_id as mechanic_id, 
+                    ts.price, 
+                    ts.helper_commission as calculated_commission,
+                    ts.transaction_id
+                FROM transaction_services ts
+                WHERE ts.helper_mechanic_id IS NOT NULL
+            ) jobs ON m.id = jobs.mechanic_id
+            JOIN transactions t ON jobs.transaction_id = t.id
             WHERE DATE(t.created_at) BETWEEN ? AND ?
             GROUP BY m.id, m.name
             ORDER BY total_komisi DESC

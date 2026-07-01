@@ -80,7 +80,7 @@ exports.bulkAdjustPrices = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { category_id, price_type, adjust_type, adjust_value, rounding, password } = req.body;
+        const { category_id, sparepart_ids, price_type, adjust_type, adjust_value, rounding, password } = req.body;
         const adminId = req.user?.id;
 
         // 1. Verifikasi password admin/kasir yang sedang login
@@ -90,12 +90,19 @@ exports.bulkAdjustPrices = async (req, res) => {
         if (!isValid) return res.status(401).json({ success: false, message: 'Password salah!' });
 
         // 2. Tentukan target kolom (price atau buy_price)
-        const col = price_type === 'buy' ? 'buy_price' : 'price';
+        let targetPriceType = price_type;
+        if (adjust_type === 'markup') {
+            targetPriceType = 'sell';
+        }
+        const col = targetPriceType === 'buy' ? 'buy_price' : 'price';
 
         // 3. Ambil data spareparts yang akan disesuaikan
-        let query = `SELECT id, ${col}, stock FROM spareparts`;
+        let query = `SELECT id, price, buy_price, stock FROM spareparts`;
         const params = [];
-        if (category_id) {
+        if (sparepart_ids && Array.isArray(sparepart_ids) && sparepart_ids.length > 0) {
+            query += ` WHERE id IN (${sparepart_ids.map(() => '?').join(',')})`;
+            params.push(...sparepart_ids);
+        } else if (category_id) {
             query += ` WHERE category_id = ?`;
             params.push(category_id);
         }
@@ -108,6 +115,9 @@ exports.bulkAdjustPrices = async (req, res) => {
 
             if (adjust_type === 'percentage') {
                 newVal = currentVal * (1 + Number(adjust_value) / 100);
+            } else if (adjust_type === 'markup') {
+                const buyPrice = Number(item.buy_price || 0);
+                newVal = buyPrice * (1 + Number(adjust_value) / 100);
             } else {
                 newVal = currentVal + Number(adjust_value);
             }
@@ -121,7 +131,7 @@ exports.bulkAdjustPrices = async (req, res) => {
             }
 
             // Hitung buy_total jika yang diupdate adalah buy_price
-            if (price_type === 'buy') {
+            if (targetPriceType === 'buy') {
                 const stock = Number(item.stock || 0);
                 const buy_total = newVal * stock;
                 await conn.execute(
@@ -192,11 +202,22 @@ exports.getSparepartStockCard = async (req, res) => {
             FROM sparepart_returns r
             JOIN transactions t ON r.transaction_id = t.id
             WHERE r.sparepart_id = ?
+
+            UNION ALL
+
+            SELECT 
+                o.created_at,
+                o.difference AS qty,
+                'opname' AS type,
+                CONCAT('Stock Opname (Sistem: ', o.system_stock, ', Fisik: ', o.physical_stock, ')') AS description,
+                o.reason AS reference
+            FROM stock_opnames o
+            WHERE o.sparepart_id = ?
             
             ORDER BY created_at ASC
         `;
         
-        const [mutations] = await db.execute(query, [id, id, id]);
+        const [mutations] = await db.execute(query, [id, id, id, id]);
         
         // 3. Hitung running balance dengan berhitung mundur dari stok saat ini
         let currentStock = sparepart.stock;
@@ -236,6 +257,148 @@ exports.getSparepartStockCard = async (req, res) => {
         });
     } catch (error) {
         console.error("Error getSparepartStockCard:", error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+exports.getOpnameList = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const category_id = req.query.category_id ? parseInt(req.query.category_id) : null;
+        const rack_location = req.query.rack_location ? req.query.rack_location.trim() : null;
+        const sortBy = req.query.sortBy === 'random' ? 'random' : 'least_recent';
+
+        let query = `
+            SELECT s.*, c.name as category_name 
+            FROM spareparts s 
+            LEFT JOIN categories c ON s.category_id = c.id
+            WHERE s.id IS NOT NULL
+        `;
+        const params = [];
+
+        if (category_id) {
+            query += ` AND s.category_id = ?`;
+            params.push(category_id);
+        }
+
+        if (rack_location) {
+            query += ` AND s.rack_location LIKE ?`;
+            params.push(`%${rack_location}%`);
+        }
+
+        if (sortBy === 'random') {
+            query += ` ORDER BY RAND()`;
+        } else {
+            query += ` ORDER BY s.last_opname_at ASC, s.id ASC`;
+        }
+
+        query += ` LIMIT ?`;
+        params.push(limit);
+
+        const [rows] = await db.query(query, params);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error("Error getOpnameList:", error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+exports.submitOpname = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const userId = req.user?.id;
+        const role = req.user?.role;
+
+        if (role === 'kasir') {
+            return res.status(403).json({ success: false, message: 'Akses ditolak: Kasir tidak diperbolehkan melakukan stock opname!' });
+        }
+
+        const { items } = req.body;
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'Data item opname tidak valid!' });
+        }
+
+        for (const item of items) {
+            const { sparepart_id, physical_stock, reason } = item;
+            if (sparepart_id === undefined || physical_stock === undefined) {
+                continue;
+            }
+
+            // 1. Ambil stok dan harga beli saat ini
+            const [spRows] = await conn.execute(
+                'SELECT stock, buy_price FROM spareparts WHERE id = ?',
+                [sparepart_id]
+            );
+            if (spRows.length === 0) continue;
+            const system_stock = Number(spRows[0].stock || 0);
+            const buy_price = Number(spRows[0].buy_price || 0);
+            const physStockNum = Number(physical_stock);
+            const difference = physStockNum - system_stock;
+
+            // 2. Catat ke tabel stock_opnames
+            await conn.execute(
+                `INSERT INTO stock_opnames (sparepart_id, user_id, system_stock, physical_stock, difference, reason)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [sparepart_id, userId, system_stock, physStockNum, difference, reason || null]
+            );
+
+            // 3. Update stok aktual, buy_total, dan tanggal opname terakhir
+            const newBuyTotal = buy_price * physStockNum;
+            await conn.execute(
+                `UPDATE spareparts 
+                 SET stock = ?, buy_total = ?, last_opname_at = CURRENT_TIMESTAMP 
+                 WHERE id = ?`,
+                [physStockNum, newBuyTotal, sparepart_id]
+            );
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: 'Hasil stock opname berhasil disimpan dan stok disesuaikan' });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error submitOpname:", error);
+        res.status(500).json({ success: false, message: 'Gagal memproses stock opname' });
+    } finally {
+        conn.release();
+    }
+};
+
+exports.getOpnameHistory = async (req, res) => {
+    try {
+        const { start_date, end_date, sparepart_id } = req.query;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+
+        let query = `
+            SELECT o.*, s.name AS sparepart_name, s.code AS sparepart_code, u.username AS user_name
+            FROM stock_opnames o
+            JOIN spareparts s ON o.sparepart_id = s.id
+            JOIN users u ON o.user_id = u.id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (start_date) {
+            query += ` AND o.created_at >= ?`;
+            params.push(`${start_date} 00:00:00`);
+        }
+        if (end_date) {
+            query += ` AND o.created_at <= ?`;
+            params.push(`${end_date} 23:59:59`);
+        }
+        if (sparepart_id) {
+            query += ` AND o.sparepart_id = ?`;
+            params.push(sparepart_id);
+        }
+
+        query += ` ORDER BY o.created_at DESC LIMIT ? OFFSET ?`;
+        params.push(limit, offset);
+
+        const [rows] = await db.query(query, params);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error("Error getOpnameHistory:", error);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };

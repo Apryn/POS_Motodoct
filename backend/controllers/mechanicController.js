@@ -48,6 +48,7 @@ exports.getMechanicJobs = async (req, res) => {
         const [rows] = await db.execute(`
             SELECT 
                 ts.id as transaction_service_id,
+                'utama' as role,
                 ts.price as service_price,
                 ts.commission_status,
                 ts.claimed_at,
@@ -56,15 +57,46 @@ exports.getMechanicJobs = async (req, res) => {
                 t.created_at,
                 COALESCE(t.customer_name, c.name) as customer_name,
                 COALESCE(t.license_plate, c.license_plate) as license_plate,
-                m.commission_rate
+                m.commission_rate,
+                ts.helper_commission,
+                CAST(((ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
+                mh.name as helper_name,
+                NULL as main_mechanic_name
+            FROM transaction_services ts
+            JOIN transactions t ON ts.transaction_id = t.id
+            JOIN services sv ON ts.service_id = sv.id
+            JOIN mechanics m ON ts.mechanic_id = m.id
+            LEFT JOIN mechanics mh ON ts.helper_mechanic_id = mh.id
+            LEFT JOIN customers c ON t.customer_id = c.id
+            WHERE ts.mechanic_id = ?
+
+            UNION ALL
+
+            SELECT 
+                ts.id as transaction_service_id,
+                'helper' as role,
+                ts.price as service_price,
+                ts.helper_commission_status as commission_status,
+                ts.helper_claimed_at as claimed_at,
+                sv.name as service_name,
+                t.invoice_number,
+                t.created_at,
+                COALESCE(t.customer_name, c.name) as customer_name,
+                COALESCE(t.license_plate, c.license_plate) as license_plate,
+                m.commission_rate,
+                ts.helper_commission,
+                ts.helper_commission as calculated_commission,
+                NULL as helper_name,
+                m.name as main_mechanic_name
             FROM transaction_services ts
             JOIN transactions t ON ts.transaction_id = t.id
             JOIN services sv ON ts.service_id = sv.id
             JOIN mechanics m ON ts.mechanic_id = m.id
             LEFT JOIN customers c ON t.customer_id = c.id
-            WHERE ts.mechanic_id = ?
-            ORDER BY t.created_at DESC
-        `, [id]);
+            WHERE ts.helper_mechanic_id = ?
+            
+            ORDER BY created_at DESC
+        `, [id, id]);
         res.json({ success: true, data: rows });
     } catch (error) {
         console.error("Error get mechanic jobs:", error);
@@ -84,19 +116,30 @@ exports.claimMechanicCommissions = async (req, res) => {
         }
 
         const placeholders = ids.map(() => '?').join(',');
-        const query = `
+        
+        // 1. Update as Main Mechanic
+        const query1 = `
             UPDATE transaction_services 
             SET commission_status = 'paid', claimed_at = NOW() 
             WHERE id IN (${placeholders}) AND mechanic_id = ? AND commission_status = 'unpaid'
         `;
-        
-        const [result] = await conn.execute(query, [...ids, id]);
+        const [res1] = await conn.execute(query1, [...ids, id]);
+
+        // 2. Update as Helper Mechanic
+        const query2 = `
+            UPDATE transaction_services 
+            SET helper_commission_status = 'paid', helper_claimed_at = NOW() 
+            WHERE id IN (${placeholders}) AND helper_mechanic_id = ? AND helper_commission_status = 'unpaid'
+        `;
+        const [res2] = await conn.execute(query2, [...ids, id]);
+
+        const totalAffected = res1.affectedRows + res2.affectedRows;
 
         await conn.commit();
         res.json({ 
             success: true, 
-            message: `Berhasil mencairkan komisi untuk ${result.affectedRows} pekerjaan!`,
-            affectedRows: result.affectedRows 
+            message: `Berhasil mencairkan komisi untuk ${totalAffected} pekerjaan!`,
+            affectedRows: totalAffected 
         });
     } catch (error) {
         await conn.rollback();

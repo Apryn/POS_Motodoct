@@ -155,6 +155,66 @@ body {
 
 .tab-btn.active { color: #e87722; border-bottom-color: #e87722; }
 
+.btn-produk-luar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e87722;
+  border: none;
+  color: #fff !important;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(232, 119, 34, 0.25);
+  outline: none;
+  margin-bottom: 2px;
+  align-self: center;
+}
+
+.btn-produk-luar:hover {
+  background: #d35400;
+  box-shadow: 0 4px 12px rgba(211, 84, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-produk-luar:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(211, 84, 0, 0.2);
+}
+
+.btn-produk-lainnya {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0284c7;
+  border: none;
+  color: #fff !important;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  outline: none;
+  margin-bottom: 2px;
+  align-self: center;
+}
+
+.btn-produk-lainnya:hover {
+  background: #0369a1;
+  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-produk-lainnya:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(3, 105, 161, 0.2);
+}
+
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -181,6 +241,19 @@ body {
 }
 
 .product-card:hover { border-color: #e87722; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(232,119,34,0.15); }
+
+.product-card.out-of-stock {
+  opacity: 0.6;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  cursor: not-allowed;
+}
+
+.product-card.out-of-stock:hover {
+  border-color: #ef4444;
+  transform: none;
+  box-shadow: none;
+}
 
 .product-code {
   font-size: 10.5px;
@@ -775,3 +848,131 @@ body {
     width: 100%; /* Take full width */
   }
 }
+
+/* POS Table List View Styling */
+.product-list-wrap {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+  background: #f8fafc;
+  overflow: hidden;
+}
+.product-list-wrap.hidden { display: none !important; }
+
+.pos-table-wrap {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  border: 1px solid #e2e8f0;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.pos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+  height: auto;
+}
+
+.pos-table thead tr {
+  background: #f1f5f9;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.pos-table th {
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #475569;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  z-index: 10;
+  box-shadow: inset 0 -2px 0 #e2e8f0;
+}
+
+.pos-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.pos-table tbody tr {
+  cursor: default;
+  transition: background 0.15s;
+}
+
+.pos-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.pos-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pos-table .btn-add-cart {
+  padding: 5px 10px;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pos-table .btn-add-cart:hover {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+.pos-table .out-of-stock-row {
+  opacity: 0.55;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.pos-table .out-of-stock-row:hover {
+  background: #f8fafc;
+}
+
+.pos-table .btn-add-cart.out-of-stock-btn {
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.pos-table .btn-add-cart.out-of-stock-btn:hover {
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-color: #cbd5e1;
+}
+
+.pos-pag-btn:disabled {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed !important;
+}
+
+.pos-pag-btn:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: #e87722 !important;
+  color: #e87722 !important;
+}
+

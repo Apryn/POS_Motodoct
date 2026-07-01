@@ -87,7 +87,6 @@ function renderTable(list) {
         <div class="action-btns">
           <button class="btn-edit" onclick="openEdit(${c.id})">Edit</button>
           <button class="btn-secondary" style="padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;" onclick="openHistory(${c.id}, '${escAttr(c.name)}', '${escAttr(c.license_plate)}')">📋 Riwayat</button>
-          ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${c.id}, '${escAttr(c.name)}')">Hapus</button>` : ''}
         </div>
       </td>
     </tr>
@@ -107,6 +106,7 @@ function openModal() {
   editId = null;
   document.getElementById('modalTitle').textContent = 'Tambah Pelanggan';
   document.getElementById('formPelanggan').reset();
+  document.getElementById('btnDeletePelanggan')?.classList.add('hidden');
   document.getElementById('modalPelanggan').classList.remove('hidden');
 }
 
@@ -118,6 +118,7 @@ function openEdit(id) {
   document.getElementById('fieldNama').value = c.name;
   document.getElementById('fieldHp').value   = c.phone || '';
   document.getElementById('fieldPlat').value = c.license_plate || '';
+  document.getElementById('btnDeletePelanggan')?.classList.remove('hidden');
   document.getElementById('modalPelanggan').classList.remove('hidden');
 }
 
@@ -274,6 +275,14 @@ async function openHistory(id, name, plate) {
 
 function closeHistoryModal() {
   document.getElementById('modalHistory').classList.add('hidden');
+}
+
+function handleDeleteFromModal() {
+  if (!editId) return;
+  const c = customers.find(x => x.id === editId);
+  if (!c) return;
+  closeModal();
+  openDelete(c.id, c.name);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

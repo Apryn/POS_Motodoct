@@ -123,14 +123,25 @@
         />
       </div>
 
-      <!-- Tabs -->
-      <div class="tab-bar">
-        <button class="tab-btn active" data-tab="sparepart" onclick="switchTab('sparepart')">Sparepart</button>
-        <button class="tab-btn" data-tab="servis" onclick="switchTab('servis')">Servis</button>
+      <div class="tab-bar" style="display: flex; justify-content: space-between; align-items: center; padding-right: 16px;">
+        <div style="display: flex; gap: 0;">
+          <button class="tab-btn active" data-tab="sparepart" onclick="switchTab('sparepart')">Sparepart</button>
+          <button class="tab-btn" data-tab="servis" onclick="switchTab('servis')">Servis</button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-produk-luar" onclick="openManualItemModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: #fff;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Produk Luar
+          </button>
+          <button class="btn-produk-lainnya" onclick="openOtherItemModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: #fff;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Produk Lainnya
+          </button>
+        </div>
       </div>
 
       <!-- Product Grids -->
-      <div class="product-grid" id="tabSparepart">
+      <div class="product-list-wrap" id="tabSparepart">
         <div class="empty-state">Memuat produk...</div>
       </div>
       <div class="product-grid hidden" id="tabServis">
@@ -178,10 +189,24 @@
 
         <!-- Mechanic Row (hidden by default) -->
         <div class="mechanic-row hidden" id="mechanicRow">
-          <label>Mekanik <span style="color:#e74c3c">*</span></label>
-          <select id="selectMechanic">
-            <option value="">-- Pilih Mekanik --</option>
-          </select>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+            <div>
+              <label style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; display: block;">Mekanik Utama <span style="color:#e74c3c">*</span></label>
+              <select id="selectMechanic" style="width: 100%; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none; background: #fff;">
+                <option value="">-- Pilih Mekanik --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; display: block;">Helper (Opsional)</label>
+              <select id="selectHelper" onchange="toggleHelperCommissionInput()" style="width: 100%; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none; background: #fff;">
+                <option value="">-- Tanpa Helper --</option>
+              </select>
+            </div>
+          </div>
+          <div id="helperCommContainer" class="hidden" style="margin-top: 4px;">
+            <label style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; display: block;">Nominal Komisi Helper (Rp)</label>
+            <input type="text" id="helperCommissionInput" placeholder="Masukkan Rp (contoh: 15.000)" oninput="formatHelperPriceInput(this)" style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none;" />
+          </div>
         </div>
       </div>
 
@@ -598,6 +623,86 @@
       <div class="struk-footer">
         <button class="btn-close-struk" onclick="closePriceCheck()">Tutup</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Produk Luar (Manual) -->
+  <div class="modal-struk hidden" id="modalManualItem" style="z-index: 1100;">
+    <div class="struk-box" style="max-width:340px;">
+      <div class="struk-header">
+        <h3>Tambah Produk Manual (Luar)</h3>
+        <button class="btn-close-struk" onclick="closeManualItemModal()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <form id="formManualItem" onsubmit="event.preventDefault(); addManualItemToCart();">
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+          <p style="font-size:13px;color:#555;line-height:1.4;">Catat produk yang dibeli di luar toko untuk langsung dimasukkan ke keranjang belanja.</p>
+          <div>
+            <label for="manualItemName" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Nama Barang <span style="color:#e74c3c">*</span></label>
+            <input type="text" id="manualItemName" placeholder="Contoh: Ban Luar Pirelli" required
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+          </div>
+          <div>
+            <label for="manualItemBrand" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Merek / Brand</label>
+            <input type="text" id="manualItemBrand" placeholder="Contoh: Pirelli (Opsional)"
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label for="manualItemBuyPrice" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Harga Beli <span style="color:#e74c3c">*</span></label>
+              <input type="text" id="manualItemBuyPrice" placeholder="0" inputmode="numeric" autocomplete="off" required oninput="formatManualPriceInput(this)"
+                style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-weight:700;" />
+            </div>
+            <div>
+              <label for="manualItemPrice" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Harga Jual <span style="color:#e74c3c">*</span></label>
+              <input type="text" id="manualItemPrice" placeholder="0" inputmode="numeric" autocomplete="off" required oninput="formatManualPriceInput(this)"
+                style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-weight:700;color:#e87722;" />
+            </div>
+          </div>
+          <div>
+            <label for="manualItemQty" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Quantity (Qty) <span style="color:#e74c3c">*</span></label>
+            <input type="number" id="manualItemQty" value="1" min="1" required
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+          </div>
+        </div>
+        <div class="struk-footer">
+          <button type="submit" class="btn-print-struk" style="background:#e87722;">Tambah ke Keranjang</button>
+          <button type="button" class="btn-close-struk" onclick="closeManualItemModal()">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Produk Lainnya (Baut, dll) -->
+  <div class="modal-struk hidden" id="modalOtherItem" style="z-index: 1100;">
+    <div class="struk-box" style="max-width:340px;">
+      <div class="struk-header">
+        <h3>Tambah Produk Lainnya</h3>
+        <button class="btn-close-struk" onclick="closeOtherItemModal()" style="width:auto;padding:4px 10px">✕</button>
+      </div>
+      <form id="formOtherItem" onsubmit="event.preventDefault(); addOtherItemToCart();">
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+          <p style="font-size:13px;color:#555;line-height:1.4;">Catat produk kecil/lainnya yang tidak dimasukkan ke sistem untuk langsung dimasukkan ke keranjang belanja.</p>
+          <div>
+            <label for="otherItemName" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Nama Barang <span style="color:#e74c3c">*</span></label>
+            <input type="text" id="otherItemName" placeholder="Contoh: Baut 10 (1 pcs)" required
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+          </div>
+          <div>
+            <label for="otherItemPrice" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Harga Jual <span style="color:#e74c3c">*</span></label>
+            <input type="text" id="otherItemPrice" placeholder="0" inputmode="numeric" autocomplete="off" required oninput="formatManualPriceInput(this)"
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-weight:700;color:#0284c7;" />
+          </div>
+          <div>
+            <label for="otherItemQty" style="font-size:12px;font-weight:600;color:#444;display:block;margin-bottom:5px;">Quantity (Qty) <span style="color:#e74c3c">*</span></label>
+            <input type="number" id="otherItemQty" value="1" min="1" required
+              style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+          </div>
+        </div>
+        <div class="struk-footer">
+          <button type="submit" class="btn-print-struk" style="background:#0284c7;">Tambah ke Keranjang</button>
+          <button type="button" class="btn-close-struk" onclick="closeOtherItemModal()">Batal</button>
+        </div>
+      </form>
     </div>
   </div>
 

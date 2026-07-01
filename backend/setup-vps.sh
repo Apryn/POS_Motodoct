@@ -141,6 +141,12 @@ ufw allow 'Nginx Full'
 ufw allow 22
 echo "y" | ufw enable
 
+# 8. Setup Auto Backup Cron Job
+echo -e "\n${YELLOW}Mengonfigurasi Auto Backup Cron Job...${NC}"
+chmod +x /var/www/motodoct/backend/backup.sh
+(crontab -l 2>/dev/null | grep -F "/var/www/motodoct/backend/backup.sh" >/dev/null) || (crontab -l 2>/dev/null; echo "59 23 * * * /bin/bash /var/www/motodoct/backend/backup.sh > /dev/null 2>&1") | crontab -
+echo -e "${GREEN}✓ Auto Backup Cron Job berhasil dikonfigurasi!${NC}"
+
 echo -e "\n${GREEN}====================================================${NC}"
 echo -e "${GREEN} 🎉 SETUP SELESAI! APLIKASI SIAP DIAKSES!           ${NC}"
 echo -e "${GREEN}====================================================${NC}"

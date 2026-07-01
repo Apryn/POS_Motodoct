@@ -43,3 +43,22 @@ exports.deleteSavedCart = async (req, res) => {
         res.status(500).json({ success: false, message: 'Gagal menghapus keranjang' });
     }
 };
+
+// Update keranjang tersimpan
+exports.updateSavedCart = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { license_plate, customer_name, cart_data, mechanic_id, note } = req.body;
+        if (!license_plate || !cart_data) {
+            return res.status(400).json({ success: false, message: 'Plat nomor dan data keranjang wajib diisi' });
+        }
+        await db.execute(
+            'UPDATE saved_carts SET license_plate = ?, customer_name = ?, cart_data = ?, mechanic_id = ?, note = ? WHERE id = ?',
+            [license_plate.toUpperCase(), customer_name || null, JSON.stringify(cart_data), mechanic_id || null, note || null, id]
+        );
+        res.json({ success: true, message: 'Keranjang berhasil diupdate' });
+    } catch (error) {
+        console.error('Update cart error:', error);
+        res.status(500).json({ success: false, message: 'Gagal mengupdate keranjang' });
+    }
+};

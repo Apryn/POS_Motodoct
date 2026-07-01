@@ -59,8 +59,8 @@ function logout() {
   window.location.href = 'login.html';
 }
 
-function roundToNearest500(val) {
-  return Math.ceil(val / 500) * 500;
+function roundToNearest1000(val) {
+  return Math.ceil(val / 1000) * 1000;
 }
 
 function getMarkupForProduct(name, defaultMarkup, banMarkup, oliMarkup) {
@@ -199,7 +199,7 @@ function calcHargaJual() {
   const rawHarga = document.getElementById('fieldHargaBeli')?.value.replace(/\./g, '') || '0';
   const harga = parseFloat(rawHarga);
   const markup = parseFloat(document.getElementById('fieldMarkup')?.value || 30);
-  const jual = roundToNearest500(harga * (1 + markup / 100));
+  const jual = roundToNearest1000(harga * (1 + markup / 100));
   const el = document.getElementById('fieldHargaJual');
   if (el) el.value = jual ? Math.round(jual).toLocaleString('id-ID') : '0';
 }
@@ -209,11 +209,14 @@ function renderTable() {
   const from = document.getElementById('filterFrom')?.value || '';
   const to = document.getElementById('filterTo')?.value || '';
 
+  const keywords = search.split(/\s+/).filter(Boolean);
+
   let filtered = purchases.filter(p => {
-    const matchSearch = !search ||
-      (p.sparepart_name || '').toLowerCase().includes(search) ||
-      (p.supplier || '').toLowerCase().includes(search) ||
-      (p.sparepart_code || '').toLowerCase().includes(search);
+    let matchSearch = true;
+    if (keywords.length > 0) {
+      const searchString = `${p.sparepart_name || ''} ${p.supplier || ''} ${p.sparepart_code || ''}`.toLowerCase();
+      matchSearch = keywords.every(kw => searchString.includes(kw));
+    }
     const dateStr = p.created_at ? p.created_at.split('T')[0] : '';
     const matchFrom = !from || dateStr >= from;
     const matchTo = !to || dateStr <= to;
@@ -517,6 +520,7 @@ function parseRows(sheetData) {
     const jualPcs = jualPcsIdx !== -1 ? parseFloat(row[jualPcsIdx]) : 0;
     const rawLokasiRak = lokasiRakIdx !== -1 ? String(row[lokasiRakIdx] || '').trim() : '';
     const lokasiRak = normalizeRackLocation(rawLokasiRak);
+    const diskon = diskonIdx !== -1 && row[diskonIdx] !== undefined ? parseFloat(row[diskonIdx]) || 0 : 0;
 
     if (!nama || !qty) return;
 
@@ -680,7 +684,7 @@ function showImportPreview() {
         <td>${qtyHtml}</td>
         <td>${priceHtml}</td>
         <td>${rupiah(r.beliTotal)}</td>
-        <td>${rupiah(r.jualPcs || roundToNearest500(r.beliPcs * (1 + getMarkupForProduct(r.nama, markupPercent, banMarkup, oliMarkup) / 100)))}</td>
+        <td>${rupiah(r.jualPcs || roundToNearest1000(r.beliPcs * (1 + getMarkupForProduct(r.nama, markupPercent, banMarkup, oliMarkup) / 100)))}</td>
         <td>${(() => {
           let rakDisplay = r.lokasiRak || '-';
           if (r.lokasiRak) {
@@ -978,7 +982,7 @@ async function submitImport() {
           );
 
       const markupVal = getMarkupForProduct(row.nama, markupPercent, banMarkup, oliMarkup);
-      const finalPrice = row.jualPcs || roundToNearest500(row.beliPcs * (1 + markupVal / 100));
+      const finalPrice = row.jualPcs || roundToNearest1000(row.beliPcs * (1 + markupVal / 100));
 
       if (existing) {
         sparepartId = existing.id;

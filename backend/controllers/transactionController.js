@@ -18,20 +18,30 @@ exports.createTransaction = async (req, res) => {
         const transaction_id = trx.insertId;
         if (spareparts && spareparts.length > 0) {
             for (const s of spareparts) {
+                let spId = s.sparepart_id;
+                if (s.is_manual) {
+                    const [newSp] = await conn.execute(
+                        'INSERT INTO spareparts (name, price, buy_price, stock, type, brand) VALUES (?, ?, ?, ?, ?, ?)',
+                        [s.name, s.price, s.buy_price || 0, s.quantity, 'Luar', s.brand || 'Luar']
+                    );
+                    spId = newSp.insertId;
+                }
                 const subtotal = s.price * s.quantity;
                 await conn.execute(
                     'INSERT INTO transaction_spareparts (transaction_id, sparepart_id, quantity, price, subtotal) VALUES (?, ?, ?, ?, ?)',
-                    [transaction_id, s.sparepart_id, s.quantity, s.price, subtotal]
+                    [transaction_id, spId, s.quantity, s.price, subtotal]
                 );
-                await conn.execute('UPDATE spareparts SET stock = stock - ? WHERE id = ?', [s.quantity, s.sparepart_id]);
+                await conn.execute('UPDATE spareparts SET stock = stock - ? WHERE id = ?', [s.quantity, spId]);
             }
         }
         
         if (services && services.length > 0) {
             for (const s of services) {
+                const helperId = s.helper_mechanic_id || null;
+                const helperComm = parseFloat(s.helper_commission) || 0;
                 await conn.execute(
-                    'INSERT INTO transaction_services (transaction_id, service_id, mechanic_id, price) VALUES (?, ?, ?, ?)',
-                    [transaction_id, s.service_id, s.mechanic_id, s.price]
+                    'INSERT INTO transaction_services (transaction_id, service_id, mechanic_id, price, helper_mechanic_id, helper_commission) VALUES (?, ?, ?, ?, ?, ?)',
+                    [transaction_id, s.service_id, s.mechanic_id, s.price, helperId, helperComm]
                 );
             }
         }
@@ -51,9 +61,12 @@ exports.createTransaction = async (req, res) => {
                             if (matchedTemplate.service_keyword.toLowerCase() === 'oli' && spareparts && spareparts.length > 0) {
                                 for (const spItem of spareparts) {
                                     const [[spInfo]] = await conn.execute('SELECT name FROM spareparts WHERE id = ?', [spItem.sparepart_id]);
-                                    if (spInfo && spInfo.name.toLowerCase().includes('oli')) {
-                                        reminderItemName = spInfo.name;
-                                        break;
+                                    if (spInfo) {
+                                        const nameLower = spInfo.name.toLowerCase();
+                                        if (nameLower.includes('oli') || nameLower.includes('sheel') || nameLower.includes('shell')) {
+                                            reminderItemName = spInfo.name;
+                                            break;
+                                        }
                                     }
                                 }
                             }

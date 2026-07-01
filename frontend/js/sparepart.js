@@ -18,10 +18,19 @@ if (!token) window.location.href = 'login.html';
 
 const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
 
-// Hide bulk adjust button if not admin/owner
+// Hide bulk adjust button and Harga Beli header if not admin/owner
 if (!isAdminOrOwner) {
   const bulkBtn = document.querySelector('button[onclick="openBulkAdjustModal()"]');
   if (bulkBtn) bulkBtn.style.display = 'none';
+  
+  const hbHeader = document.getElementById('headerHargaBeli');
+  if (hbHeader) hbHeader.style.display = 'none';
+}
+
+// Hide stock opname button for kasir
+if (user.role === 'kasir') {
+  const opnameBtn = document.querySelector('button[onclick="window.location.href=\'opname.html\'"]');
+  if (opnameBtn) opnameBtn.style.display = 'none';
 }
 
 // Set user info
@@ -41,6 +50,12 @@ function closeSidebar() {
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+}
+
+function formatOpnameDate(dateStr) {
+  if (!dateStr) return '<span style="color:#94a3b8; font-style:italic;">Belum</span>';
+  const d = new Date(dateStr);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 function normalizeUnit(u) {
@@ -108,6 +123,7 @@ let deleteId = null;
 let currentPage = 1;
 const itemsPerPage = 50;
 let filteredCount = 0;
+let selectedSparepartIds = new Set();
 
 async function loadData() {
   try {
@@ -164,19 +180,41 @@ function renderTable() {
   const katFilter = document.getElementById('filterKategori')?.value || '';
   const stokFilter = document.getElementById('filterStok')?.value || '';
 
+  const keywords = search.split(/\s+/).filter(Boolean);
+
   let filtered = spareparts.filter(p => {
-    const matchSearch = !search ||
-      p.name.toLowerCase().includes(search) ||
-      (p.nama_lain || '').toLowerCase().includes(search) ||
-      (p.code || '').toLowerCase().includes(search) ||
-      (p.rack_location || '').toLowerCase().includes(search) ||
-      (p.type || '').toLowerCase().includes(search);
+    let matchSearch = true;
+    if (keywords.length > 0) {
+      const searchString = `${p.name} ${p.nama_lain || ''} ${p.code || ''} ${p.rack_location || ''} ${p.type || ''}`.toLowerCase();
+      matchSearch = keywords.every(kw => searchString.includes(kw));
+    }
     const matchKat = !katFilter || String(p.category_id) === katFilter;
     const matchStok = !stokFilter ||
       (stokFilter === 'aman' && p.stock > 5) ||
       (stokFilter === 'menipis' && p.stock > 0 && p.stock <= 5) ||
       (stokFilter === 'habis' && p.stock === 0);
     return matchSearch && matchKat && matchStok;
+  });
+
+  // Client-side sorting
+  const sortBy = document.getElementById('sortSpareparts')?.value || 'name_asc';
+  filtered.sort((a, b) => {
+    if (sortBy === 'name_asc') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'opname_asc') {
+      const dateA = a.last_opname_at ? new Date(a.last_opname_at).getTime() : 0;
+      const dateB = b.last_opname_at ? new Date(b.last_opname_at).getTime() : 0;
+      if (dateA === dateB) return a.name.localeCompare(b.name);
+      return dateA - dateB;
+    }
+    if (sortBy === 'opname_desc') {
+      const dateA = a.last_opname_at ? new Date(a.last_opname_at).getTime() : 0;
+      const dateB = b.last_opname_at ? new Date(b.last_opname_at).getTime() : 0;
+      if (dateA === dateB) return a.name.localeCompare(b.name);
+      return dateB - dateA;
+    }
+    return 0;
   });
 
   filteredCount = filtered.length;
@@ -191,13 +229,17 @@ function renderTable() {
 
   const tbody = document.getElementById('sparepartTableBody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Tidak ada data sparepart</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${isAdminOrOwner ? 15 : 14}" class="empty-state">Tidak ada data sparepart</td></tr>`;
     updatePaginationUI(0, 0, 0);
     return;
   }
 
   tbody.innerHTML = paginated.map((p, i) => `
     <tr>
+      <td style="text-align: center; vertical-align: middle;">
+        <input type="checkbox" class="sparepart-checkbox" value="${p.id}" ${selectedSparepartIds.has(p.id) ? 'checked' : ''} 
+               onchange="handleRowCheckboxChange(this)" style="cursor: pointer; width: 16px; height: 16px; accent-color: #e87722;">
+      </td>
       <td>${startIdx + i + 1}</td>
       <td><span class="code-badge">${p.code || '-'}</span></td>
       <td>${p.name}</td>
@@ -226,7 +268,21 @@ function renderTable() {
                 onclick="openStockCard(${p.id})" 
                 title="Klik untuk melihat Kartu Stok (Mutasi) dan riwayat barang">${p.stock} ${normalizeUnit(p.unit)}</strong>
       </td>
-      <td>${rupiah(p.price)}</td>
+      ${isAdminOrOwner ? `
+        <td>
+          <div class="price-cell" style="position: relative;">
+            <span class="buy-price-text" style="cursor: pointer; border-bottom: 1px dashed #cbd5e1; display: inline-block; min-width: 60px;" 
+                  onclick="enableInlinePriceEdit(${p.id}, this, 'buy_price')" title="Klik untuk edit langsung">${rupiah(p.buy_price)}</span>
+          </div>
+        </td>
+      ` : ''}
+      <td>
+        <div class="price-cell" style="position: relative;">
+          <span class="price-text" style="cursor: pointer; border-bottom: 1px dashed #94a3b8; font-weight:600; display: inline-block; min-width: 60px;" 
+                onclick="enableInlinePriceEdit(${p.id}, this, 'price')" title="Klik untuk edit langsung">${rupiah(p.price)}</span>
+        </div>
+      </td>
+      <td>${formatOpnameDate(p.last_opname_at)}</td>
       <td>${getStatusBadge(p.stock)}</td>
       <td>
         <div class="action-btns">
@@ -236,6 +292,12 @@ function renderTable() {
       </td>
     </tr>
   `).join('');
+
+  // Sync the master checkbox
+  const pageCheckboxes = document.querySelectorAll('.sparepart-checkbox');
+  const allChecked = pageCheckboxes.length > 0 && Array.from(pageCheckboxes).every(cb => cb.checked);
+  const selectAll = document.getElementById('selectAllCheckbox');
+  if (selectAll) selectAll.checked = allChecked;
 
   updatePaginationUI(filtered.length, startIdx, endIdx);
 }
@@ -254,6 +316,10 @@ document.getElementById('filterKategori')?.addEventListener('change', function()
   renderTable();
 });
 document.getElementById('filterStok')?.addEventListener('change', function() {
+  currentPage = 1;
+  renderTable();
+});
+document.getElementById('sortSpareparts')?.addEventListener('change', function() {
   currentPage = 1;
   renderTable();
 });
@@ -539,8 +605,19 @@ async function confirmDelete() {
 function openBulkAdjustModal() {
   const sel = document.getElementById('bulkAdjustCategory');
   if (sel) {
-    sel.innerHTML = '<option value="">Semua Kategori</option>' +
+    let optionsHtml = '';
+    if (selectedSparepartIds.size > 0) {
+      optionsHtml += `<option value="selected" style="font-weight: bold; color: #e87722;">Item yang Dipilih (${selectedSparepartIds.size} item)</option>`;
+    }
+    optionsHtml += '<option value="">Semua Kategori</option>' +
       categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    sel.innerHTML = optionsHtml;
+    
+    if (selectedSparepartIds.size > 0) {
+      sel.value = 'selected';
+    } else {
+      sel.value = '';
+    }
   }
   document.getElementById('bulkAdjustValue').value = '';
   document.getElementById('bulkAdjustPassword').value = '';
@@ -550,6 +627,7 @@ function openBulkAdjustModal() {
     btnSave.disabled = false;
     btnSave.textContent = 'Terapkan Perubahan';
   }
+  
   document.getElementById('modalBulkAdjust').classList.remove('hidden');
   setTimeout(() => document.getElementById('bulkAdjustValue').focus(), 100);
 }
@@ -559,9 +637,7 @@ function closeBulkAdjustModal() {
 }
 
 async function submitBulkAdjust() {
-  const category_id = document.getElementById('bulkAdjustCategory').value;
-  const price_type = document.getElementById('bulkAdjustPriceType').value;
-  const adjust_type = document.getElementById('bulkAdjustType').value;
+  const category_value = document.getElementById('bulkAdjustCategory').value;
   const adjust_value = parseFloat(document.getElementById('bulkAdjustValue').value);
   const rounding = parseInt(document.getElementById('bulkAdjustRounding').value);
   const password = document.getElementById('bulkAdjustPassword').value;
@@ -584,6 +660,20 @@ async function submitBulkAdjust() {
     btnSave.textContent = 'Memproses...';
   }
 
+  const payload = {
+    price_type: 'sell',
+    adjust_type: 'markup',
+    adjust_value,
+    rounding,
+    password
+  };
+
+  if (category_value === 'selected') {
+    payload.sparepart_ids = Array.from(selectedSparepartIds);
+  } else if (category_value !== '') {
+    payload.category_id = parseInt(category_value);
+  }
+
   try {
     const res = await fetch(`${API}/spareparts/bulk-adjust`, {
       method: 'POST',
@@ -591,17 +681,12 @@ async function submitBulkAdjust() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        category_id: category_id ? parseInt(category_id) : null,
-        price_type,
-        adjust_type,
-        adjust_value,
-        rounding,
-        password
-      })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.success) {
+      selectedSparepartIds.clear();
+      updateBulkButtonState();
       closeBulkAdjustModal();
       loadData();
       alert(data.message);
@@ -623,6 +708,156 @@ async function submitBulkAdjust() {
   }
 }
 
+window.toggleSelectAll = function(masterCheckbox) {
+  const checkboxes = document.querySelectorAll('.sparepart-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = masterCheckbox.checked;
+    const id = parseInt(cb.value);
+    if (masterCheckbox.checked) {
+      selectedSparepartIds.add(id);
+    } else {
+      selectedSparepartIds.delete(id);
+    }
+  });
+  updateBulkButtonState();
+};
+
+window.handleRowCheckboxChange = function(cb) {
+  const id = parseInt(cb.value);
+  if (cb.checked) {
+    selectedSparepartIds.add(id);
+  } else {
+    selectedSparepartIds.delete(id);
+  }
+  
+  const checkboxes = document.querySelectorAll('.sparepart-checkbox');
+  const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(c => c.checked);
+  const selectAll = document.getElementById('selectAllCheckbox');
+  if (selectAll) selectAll.checked = allChecked;
+  
+  updateBulkButtonState();
+};
+
+function updateBulkButtonState() {
+  const bulkBtn = document.querySelector('button[onclick="openBulkAdjustModal()"]');
+  if (!bulkBtn) return;
+  
+  if (selectedSparepartIds.size > 0) {
+    bulkBtn.innerHTML = `⚡ Ubah Harga Pilihan (${selectedSparepartIds.size})`;
+    bulkBtn.classList.remove('btn-secondary');
+    bulkBtn.classList.add('btn-primary');
+  } else {
+    bulkBtn.innerHTML = `⚡ Ubah Harga Massal`;
+    bulkBtn.classList.remove('btn-primary');
+    bulkBtn.classList.add('btn-secondary');
+  }
+}
+
+
+window.enableInlinePriceEdit = function(id, spanEl, priceField) {
+  if (spanEl.dataset.editing === 'true') return;
+  spanEl.dataset.editing = 'true';
+  
+  const p = spareparts.find(s => s.id === id);
+  if (!p) return;
+  
+  const currentValueRaw = parseFloat(p[priceField]) || 0;
+  const currentValueFormatted = Math.round(currentValueRaw).toLocaleString('id-ID');
+  
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentValueFormatted;
+  input.className = 'inline-edit-input';
+  input.style.width = '100px';
+  input.style.display = 'inline-block';
+  input.style.height = '26px';
+  input.style.padding = '2px 6px';
+  
+  const parent = spanEl.parentNode;
+  parent.innerHTML = '';
+  parent.appendChild(input);
+  input.focus();
+  input.select();
+  
+  input.addEventListener('input', function() {
+    let val = this.value.replace(/\D/g, '');
+    if (val) {
+      val = Number(val).toLocaleString('id-ID');
+    }
+    this.value = val;
+  });
+  
+  let isSaved = false;
+  
+  const saveValue = async () => {
+    if (isSaved) return;
+    isSaved = true;
+    
+    const rawVal = input.value.replace(/\./g, '');
+    const newValue = parseFloat(rawVal) || 0;
+    
+    if (newValue === currentValueRaw) {
+      renderTable();
+      return;
+    }
+    
+    try {
+      const payload = {
+        code: p.code || '',
+        rack_location: p.rack_location || '',
+        name: p.name,
+        nama_lain: p.nama_lain || null,
+        category_id: p.category_id || null,
+        supplier: p.supplier || '',
+        brand: p.brand || '',
+        type: p.type || '',
+        stock: parseInt(p.stock) || 0,
+        buy_price: priceField === 'buy_price' ? newValue : (parseFloat(p.buy_price) || 0),
+        price: priceField === 'price' ? newValue : (parseFloat(p.price) || 0),
+        discount: parseFloat(p.discount) || 0,
+        unit: p.unit
+      };
+      
+      const res = await fetch(`${API}/spareparts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadData();
+      } else {
+        alert('Gagal mengupdate harga: ' + data.message);
+        renderTable();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Koneksi error!');
+      renderTable();
+    }
+  };
+  
+  const cancelEdit = () => {
+    if (isSaved) return;
+    isSaved = true;
+    renderTable();
+  };
+  
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveValue();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  });
+  
+  input.addEventListener('blur', () => {
+    saveValue();
+  });
+};
+
 loadData();
 
 // Helper to format text input to thousands separator with dots
@@ -639,7 +874,7 @@ function calcHargaJual() {
   const rawHarga = document.getElementById('fieldHargaBeli')?.value.replace(/\./g, '') || '0';
   const harga = parseFloat(rawHarga);
   const markup = parseFloat(document.getElementById('fieldMarkup')?.value || 0);
-  const jual = Math.ceil((harga * (1 + markup / 100)) / 500) * 500; // Round to nearest 500
+  const jual = Math.ceil((harga * (1 + markup / 100)) / 1000) * 1000; // Round to nearest 1000
   const el = document.getElementById('fieldHarga');
   if (el) el.value = jual ? Math.round(jual).toLocaleString('id-ID') : '0';
 }
