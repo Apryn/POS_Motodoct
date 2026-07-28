@@ -225,7 +225,7 @@ function renderTable() {
 
   const tbody = document.getElementById('pembelianTableBody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Tidak ada data pembelian</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Tidak ada data pembelian</td></tr>';
     return;
   }
 
@@ -234,6 +234,7 @@ function renderTable() {
       <td>${i + 1}</td>
       <td>${p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID') : '-'}</td>
       <td>${p.supplier || '-'}</td>
+      <td style="font-family: monospace; font-weight: 600; color: #475569;">${p.sparepart_code || '-'}</td>
       <td>${p.sparepart_name || '-'}</td>
       <td>${p.quantity}</td>
       <td>${rupiah(p.buy_price)}</td>

@@ -35,33 +35,79 @@ exports.getSparepartById = async (req, res) => {
 };
 
 exports.createSparepart = async (req, res) => {
+    const conn = await db.getConnection();
     try {
+        await conn.beginTransaction();
         const { category_id, code, name, nama_lain, price, stock, supplier, buy_price, discount, rack_location, brand, type, unit } = req.body;
         const buy_total = (buy_price || 0) * (stock || 0);
-        const [result] = await db.execute(
+        const [result] = await conn.execute(
             'INSERT INTO spareparts (category_id, code, name, nama_lain, price, stock, rack_location, supplier, buy_price, buy_total, discount, brand, type, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [category_id || null, code || null, name, nama_lain || null, price, stock || 0, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, type || null, normalizeUnit(unit)]
         );
-        res.status(201).json({ success: true, message: 'Sparepart berhasil ditambahkan', data: { id: result.insertId } });
+        const sparepartId = result.insertId;
+
+        const stockNum = parseInt(stock) || 0;
+        if (stockNum > 0) {
+            await conn.execute(
+                'INSERT INTO purchases (sparepart_id, supplier, quantity, buy_price, total, note) VALUES (?, ?, ?, ?, ?, ?)',
+                [sparepartId, supplier || 'Tanpa Supplier', stockNum, buy_price || 0, buy_total, 'Stok Awal (Input Manual)']
+            );
+        }
+
+        await conn.commit();
+        res.status(201).json({ success: true, message: 'Sparepart berhasil ditambahkan', data: { id: sparepartId } });
     } catch (error) {
+        await conn.rollback();
         console.error("Error create sparepart:", error);
         res.status(500).json({ success: false, message: 'Gagal menambahkan sparepart (mungkin kode duplikat)' });
+    } finally {
+        conn.release();
     }
 };
 
 exports.updateSparepart = async (req, res) => {
+    const conn = await db.getConnection();
     try {
+        await conn.beginTransaction();
         const { id } = req.params;
         const { category_id, code, name, nama_lain, price, stock, supplier, buy_price, discount, rack_location, brand, type, unit } = req.body;
         const buy_total = (buy_price || 0) * (stock || 0);
-        await db.execute(
+
+        // Fetch old stock to calculate change
+        const [[oldRow]] = await conn.execute('SELECT stock FROM spareparts WHERE id = ?', [id]);
+        
+        if (oldRow) {
+            const oldStock = parseInt(oldRow.stock) || 0;
+            const newStock = parseInt(stock) || 0;
+            const diff = newStock - oldStock;
+
+            if (diff > 0) {
+                await conn.execute(
+                    'INSERT INTO purchases (sparepart_id, supplier, quantity, buy_price, total, note) VALUES (?, ?, ?, ?, ?, ?)',
+                    [id, supplier || 'Tanpa Supplier', diff, buy_price || 0, (buy_price || 0) * diff, 'Penyesuaian Stok (Tambah Manual via Edit)']
+                );
+            } else if (diff < 0) {
+                const userId = req.user?.id || 1; // Fallback to admin/system user
+                await conn.execute(
+                    'INSERT INTO stock_opnames (sparepart_id, user_id, system_stock, physical_stock, difference, reason) VALUES (?, ?, ?, ?, ?, ?)',
+                    [id, userId, oldStock, newStock, diff, 'Penyesuaian Stok (Kurang Manual via Edit)']
+                );
+            }
+        }
+
+        await conn.execute(
             'UPDATE spareparts SET category_id=?, code=?, name=?, nama_lain=?, price=?, stock=?, rack_location=?, supplier=?, buy_price=?, buy_total=?, discount=?, brand=?, type=?, unit=? WHERE id=?',
             [category_id || null, code || null, name, nama_lain || null, price, stock, rack_location || null, supplier || null, buy_price || 0, buy_total, discount || 0, brand || null, type || null, normalizeUnit(unit), id]
         );
+
+        await conn.commit();
         res.json({ success: true, message: 'Sparepart berhasil diupdate' });
     } catch (error) {
+        await conn.rollback();
         console.error("Error update sparepart:", error);
         res.status(500).json({ success: false, message: 'Gagal mengupdate sparepart' });
+    } finally {
+        conn.release();
     }
 };
 

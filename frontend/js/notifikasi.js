@@ -193,11 +193,9 @@ async function loadOilReminders() {
            </button>`
         : `<span style="color:#15803d; font-size:11px; font-weight:700; background:#f0fdf4; padding:2px 8px; border-radius:12px;">Selesai</span>`;
 
-      const deleteBtn = isAdminOrOwner 
-        ? `<button class="btn-danger" onclick="deleteReminder(${r.id})" style="padding:4px; font-size:11px; background:#e74c3c; border:1px solid #e74c3c; display:inline-flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; border-radius:6px; width:22px; height:22px;" title="Hapus Pengingat">
+      const deleteBtn = `<button class="btn-danger" onclick="deleteReminder(${r.id})" style="padding:4px; font-size:11px; background:#e74c3c; border:1px solid #e74c3c; display:inline-flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; border-radius:6px; width:22px; height:22px;" title="Hapus Pengingat">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-           </button>`
-        : '';
+           </button>`;
 
       return `
         <tr>

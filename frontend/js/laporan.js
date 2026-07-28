@@ -453,11 +453,7 @@ async function lihatDetail(id) {
     }
     const btnDel = document.getElementById('btnDeleteTransaction');
     if (btnDel) {
-      if (user.role === 'admin' || user.role === 'owner') {
-        btnDel.style.display = 'inline-block';
-      } else {
-        btnDel.style.display = 'none';
-      }
+      btnDel.style.display = 'inline-block';
     }
 
     const tgl = new Date(data.created_at).toLocaleString('id-ID');

@@ -125,14 +125,6 @@ exports.deletePurchase = async (req, res) => {
                      WHERE id = ?`,
                     [remaining[0].buy_price, remaining[0].supplier, purchase.sparepart_id]
                 );
-            } else {
-                await conn.execute(
-                    `UPDATE spareparts 
-                     SET buy_price = 0,
-                         supplier = NULL
-                     WHERE id = ?`,
-                    [purchase.sparepart_id]
-                );
             }
         }
 
@@ -207,14 +199,6 @@ exports.deletePurchasesBySupplier = async (req, res) => {
                                  supplier = ?
                              WHERE id = ?`,
                             [remaining[0].buy_price, remaining[0].supplier, purchase.sparepart_id]
-                        );
-                    } else {
-                        await conn.execute(
-                            `UPDATE spareparts 
-                             SET buy_price = 0,
-                                 supplier = NULL
-                             WHERE id = ?`,
-                            [purchase.sparepart_id]
                         );
                     }
                 }
@@ -387,14 +371,6 @@ exports.undoLastImport = async (req, res) => {
                          WHERE id = ?`,
                         [remaining[0].buy_price, remaining[0].supplier, purchase.sparepart_id]
                     );
-                } else {
-                    await conn.execute(
-                        `UPDATE spareparts 
-                         SET buy_price = 0,
-                             supplier = NULL
-                         WHERE id = ?`,
-                        [purchase.sparepart_id]
-                    );
                 }
             }
         }
@@ -563,14 +539,6 @@ exports.undoImportSession = async (req, res) => {
                              supplier = ?
                          WHERE id = ?`,
                         [remaining[0].buy_price, remaining[0].supplier, purchase.sparepart_id]
-                    );
-                } else {
-                    await conn.execute(
-                        `UPDATE spareparts 
-                         SET buy_price = 0,
-                             supplier = NULL
-                         WHERE id = ?`,
-                        [purchase.sparepart_id]
                     );
                 }
             }

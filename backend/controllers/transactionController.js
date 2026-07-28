@@ -25,6 +25,12 @@ exports.createTransaction = async (req, res) => {
                         [s.name, s.price, s.buy_price || 0, s.quantity, 'Luar', s.brand || 'Luar']
                     );
                     spId = newSp.insertId;
+
+                    // Log a purchase record for the manual item creation to establish correct history!
+                    await conn.execute(
+                        'INSERT INTO purchases (sparepart_id, supplier, quantity, buy_price, total, note) VALUES (?, ?, ?, ?, ?, ?)',
+                        [spId, 'Input Manual Transaksi', s.quantity, s.buy_price || 0, (s.buy_price || 0) * s.quantity, 'Stok Awal (Input Manual Transaksi)']
+                    );
                 }
                 const subtotal = s.price * s.quantity;
                 await conn.execute(

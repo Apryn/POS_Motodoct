@@ -75,7 +75,7 @@ function renderTable(list) {
       <td>${escHtml(s.name)}</td>
       <td>${formatRp(s.price)}</td>
       <td>
-        <div class="action-btns">
+        <div class="action-btns" style="justify-content: center;">
           <button class="btn-edit"    onclick="openEdit(${s.id})">Edit</button>
           ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${s.id}, '${escAttr(s.name)}')">Hapus</button>` : ''}
         </div>

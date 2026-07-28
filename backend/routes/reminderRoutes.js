@@ -11,6 +11,6 @@ router.post('/templates', auth, c.createTemplate);
 router.put('/templates/:id', auth, c.updateTemplate);
 router.delete('/templates/:id', auth, isAdminOrOwner, c.deleteTemplate);
 router.put('/:id/status', auth, c.updateStatus);
-router.delete('/:id', auth, isAdminOrOwner, c.deleteReminder);
+router.delete('/:id', auth, c.deleteReminder);
 
 module.exports = router;

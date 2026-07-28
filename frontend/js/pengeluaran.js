@@ -37,7 +37,16 @@ let deleteId = null;
 // ── Load Data ─────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const res  = await fetch(`${API}/expenses`, { headers: { Authorization: `Bearer ${token}` } });
+    const filterBulan = document.getElementById('filterBulan')?.value;
+    let url = `${API}/expenses`;
+    if (filterBulan) {
+      const [year, month] = filterBulan.split('-');
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const from = `${year}-${month}-01`;
+      const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+      url += `?from=${from}&to=${to}`;
+    }
+    const res  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
     if (data.success) {
       expenses = data.data;
@@ -69,6 +78,21 @@ function renderStats() {
 
   document.getElementById('statHariIni').textContent = formatRp(todayTotal);
   document.getElementById('statBulanIni').textContent = formatRp(monthTotal);
+
+  // Update dynamic label for total expenses card
+  const filterBulan = document.getElementById('filterBulan')?.value;
+  const labelEl = document.querySelector('.stat-card.red .stat-card-label');
+  if (filterBulan && labelEl) {
+    const [year, month] = filterBulan.split('-');
+    const monthNames = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    const monthName = monthNames[parseInt(month) - 1];
+    labelEl.textContent = `Total Pengeluaran (${monthName} ${year})`;
+  } else if (labelEl) {
+    labelEl.textContent = 'Total Pengeluaran (Bulan Terpilih)';
+  }
 }
 
 // ── Table Rendering ───────────────────────────────────────────────────────────
@@ -227,5 +251,33 @@ function handleDeleteFromModal() {
   closeModal();
   openDelete(e.id, e.description);
 }
+
+// Initialize month select dropdown options and value
+function initMonthFilter() {
+  const selectEl = document.getElementById('filterBulan');
+  if (!selectEl) return;
+  
+  const d = new Date();
+  const monthNames = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+  
+  selectEl.innerHTML = '';
+  
+  // Generate options for the last 12 months
+  for (let i = 0; i < 12; i++) {
+    const tempDate = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    const year = tempDate.getFullYear();
+    const monthNum = String(tempDate.getMonth() + 1).padStart(2, '0');
+    const val = `${year}-${monthNum}`;
+    
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = `${monthNames[tempDate.getMonth()]} ${year}`;
+    selectEl.appendChild(opt);
+  }
+}
+initMonthFilter();
 
 loadData();

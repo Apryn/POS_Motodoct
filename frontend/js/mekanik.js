@@ -73,10 +73,10 @@ function renderTable(list) {
       <td>${i + 1}</td>
       <td>${escHtml(m.name)}</td>
       <td>${escHtml(m.phone || '-')}</td>
-      <td><strong>${Number(m.commission_rate || 90).toFixed(1)}%</strong></td>
+      <td><span class="badge" style="background: rgba(139, 92, 246, 0.08); color: #7c3aed; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.15); padding: 4px 10px; border-radius: 12px; font-size: 12px; display: inline-block;">${Number(m.commission_rate || 90).toFixed(0)}%</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn-primary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openJobs(${m.id}, '${escAttr(m.name)}')">💼 Detail Kerja</button>
+          <button class="btn-primary" style="padding: 5px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none; font-family: inherit;" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#ecfdf5'" onclick="openJobs(${m.id}, '${escAttr(m.name)}')">💼 Detail Kerja</button>
           <button class="btn-edit"    onclick="openEdit(${m.id})">Edit</button>
           ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${m.id}, '${escAttr(m.name)}')">Hapus</button>` : ''}
         </div>
@@ -217,7 +217,8 @@ async function openJobs(id, name) {
       let countPaid = 0;
 
       const rowsHtml = list.map((j, i) => {
-        const commRate = parseFloat(j.commission_rate || 90.00);
+        const isRemap = j.service_name && j.service_name.toLowerCase() === 'remap';
+        const commRate = isRemap ? 50.00 : parseFloat(j.commission_rate || 90.00);
         const totalJasa = parseFloat(j.service_price || 0);
         const komisiNet = parseFloat(j.calculated_commission || 0);
         const tokoCut = j.role === 'helper' ? 0 : totalJasa - (totalJasa * commRate) / 100;

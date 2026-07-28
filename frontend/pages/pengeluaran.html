@@ -139,6 +139,7 @@
     <div class="toolbar">
       <div class="toolbar-left">
         <input type="text" id="searchInput" placeholder="🔍 Cari deskripsi biaya..." oninput="filterTable()" />
+        <select id="filterBulan" onchange="loadData()"></select>
         <select id="filterKategori" onchange="filterTable()">
           <option value="">Semua Kategori</option>
           <option value="Listrik & Air">Listrik & Air</option>

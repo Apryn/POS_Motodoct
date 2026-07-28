@@ -13,9 +13,8 @@ Write-Host "====================================================" -ForegroundCol
 Write-Host ""
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host " PILIH METODE DEPLOYMENT:" -ForegroundColor Cyan
-Write-Host " [1] Quick Update (SANGAT CEPAT - Rekomendasi)" -ForegroundColor Green
-Write-Host "     Hanya mengunggah file kode & me-restart server PM2."
-Write-Host "     (Sangat cepat karena tidak mengunggah node_modules)"
+Write-Host " [1] Quick Update (SANGAT CEPAT - 1x Password)" -ForegroundColor Green
+Write-Host "     Mengunggah kode via tar stream & me-restart PM2."
 Write-Host " [2] Full Setup (Instalasi Sistem Lengkap)" -ForegroundColor Yellow
 Write-Host "     Mengonfigurasi ulang database, Nginx, UFW, PM2, dll."
 Write-Host "====================================================" -ForegroundColor Cyan
@@ -24,7 +23,7 @@ if ($pilihan -ne "2") { $pilihan = "1" }
 
 # 2. Menyiapkan Staging Folder Lokal (Mengabaikan node_modules)
 Write-Host ""
-Write-Host "Menyiapkan berkas untuk diunggah (mengabaikan node_modules)..." -ForegroundColor Yellow
+Write-Host "Menyiapkan berkas untuk diunggah..." -ForegroundColor Yellow
 $TempDir = "$PSScriptRoot\temp_deploy"
 if (Test-Path $TempDir) { Remove-Item -Recurse -Force $TempDir }
 New-Item -ItemType Directory -Path $TempDir | Out-Null
@@ -38,34 +37,21 @@ Get-ChildItem -Path "$PSScriptRoot\backend" -Force | Where-Object { $_.Name -ne 
     Copy-Item -Path $_.FullName -Destination "$TempDir\backend" -Recurse
 }
 
-# 3. Membuat folder tujuan di VPS
+# 3. Proses Upload & Eksekusi Server (Single SSH Stream - Masukkan Password 1 Kali)
 Write-Host ""
-Write-Host "[1/3] Membuat folder tujuan di VPS..." -ForegroundColor Yellow
-Write-Host "Silakan masukkan password VPS Anda jika diminta:" -ForegroundColor Gray
-ssh root@187.77.156.219 "mkdir -p /var/www/motodoct"
+Write-Host "Mengirim berkas & memperbarui server VPS..." -ForegroundColor Yellow
+Write-Host "Silakan masukkan password VPS Anda (CUKUP 1 KALI SAJA):" -ForegroundColor Cyan
 
-# 4. Mengunggah folder backend dan frontend (Tanpa node_modules & .env)
-Write-Host ""
-Write-Host "[2/3] Mengunggah berkas aplikasi ke VPS (Proses sangat cepat!)..." -ForegroundColor Yellow
-Write-Host "Silakan masukkan password VPS Anda kembali:" -ForegroundColor Gray
-scp -r "$TempDir/backend" "$TempDir/frontend" root@187.77.156.219:/var/www/motodoct/
+if ($pilihan -eq "1") {
+    $remoteCmd = "mkdir -p /var/www/motodoct && tar -xzf - -C /var/www/motodoct && cd /var/www/motodoct/backend && npm install --production && if grep -q 'DB_USER=root' .env 2>/dev/null; then echo 'Memulihkan konfigurasi database produksi (.env)...' && sed -i 's/DB_USER=root/DB_USER=motodoct_user/g' .env && sed -i 's/DB_PASSWORD=/DB_PASSWORD=motodoct123/g' .env; fi && chmod +x backup.sh && (crontab -l 2>/dev/null | grep -F '/var/www/motodoct/backend/backup.sh' >/dev/null || (crontab -l 2>/dev/null; echo '59 23 * * * /bin/bash /var/www/motodoct/backend/backup.sh > /dev/null 2>&1') | crontab -) && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
+} else {
+    $remoteCmd = "mkdir -p /var/www/motodoct && tar -xzf - -C /var/www/motodoct && cd /var/www/motodoct/backend && chmod +x setup-vps.sh && sudo bash setup-vps.sh"
+}
+
+cmd /c "tar -czf - -C ""$TempDir"" backend frontend | ssh root@187.77.156.219 ""$remoteCmd"""
 
 # Hapus folder staging lokal setelah selesai diunggah
 if (Test-Path $TempDir) { Remove-Item -Recurse -Force $TempDir }
-
-# 5. Menjalankan proses di VPS sesuai pilihan
-Write-Host ""
-if ($pilihan -eq "1") {
-    Write-Host "[3/3] Menjalankan Quick Update di VPS..." -ForegroundColor Yellow
-    Write-Host "Menginstal dependensi, memverifikasi konfigurasi, & me-restart PM2..." -ForegroundColor Gray
-    Write-Host "Silakan masukkan password VPS Anda untuk terakhir kalinya:" -ForegroundColor Gray
-    ssh root@187.77.156.219 "cd /var/www/motodoct/backend && npm install --production && if grep -q 'DB_USER=root' .env 2>/dev/null; then echo 'Memulihkan konfigurasi database produksi (.env)...' && sed -i 's/DB_USER=root/DB_USER=motodoct_user/g' .env && sed -i 's/DB_PASSWORD=/DB_PASSWORD=motodoct123/g' .env; fi && chmod +x backup.sh && (crontab -l 2>/dev/null | grep -F '/var/www/motodoct/backend/backup.sh' >/dev/null || (crontab -l 2>/dev/null; echo '59 23 * * * /bin/bash /var/www/motodoct/backend/backup.sh > /dev/null 2>&1') | crontab -) && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
-} else {
-    Write-Host "[3/3] Menjalankan Full Setup di VPS..." -ForegroundColor Yellow
-    Write-Host "Menyiapkan sistem database, Nginx, UFW firewall, PM2, dll..." -ForegroundColor Gray
-    Write-Host "Silakan masukkan password VPS Anda untuk terakhir kalinya:" -ForegroundColor Gray
-    ssh root@187.77.156.219 "cd /var/www/motodoct/backend && chmod +x setup-vps.sh && sudo bash setup-vps.sh"
-}
 
 Write-Host ""
 Write-Host "====================================================" -ForegroundColor Green

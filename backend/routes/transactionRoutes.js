@@ -18,6 +18,6 @@ router.get('/:id', c.getTransactionById);
 router.get('/vehicle/:plate', c.getVehicleHistory);
 router.post('/', c.createTransaction);
 router.post('/return', c.processReturn);
-router.delete('/:id', isAdminOrOwner, c.deleteTransaction);
+router.delete('/:id', c.deleteTransaction);
 
 module.exports = router;

@@ -48,10 +48,11 @@ exports.getSummary = async (req, res) => {
 
         // 4. Beban Komisi Mekanik
         const [[resKomisiMekanik]] = await db.execute(`
-            SELECT COALESCE(SUM(ts.price * m.commission_rate / 100), 0) AS total
+            SELECT COALESCE(SUM(IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100)), 0) AS total
             FROM transaction_services ts
             JOIN transactions t ON ts.transaction_id = t.id
             JOIN mechanics m ON ts.mechanic_id = m.id
+            JOIN services sv ON ts.service_id = sv.id
             WHERE DATE(t.created_at) BETWEEN ? AND ?
         `, [dateFrom, dateTo]);
 
@@ -69,10 +70,11 @@ exports.getSummary = async (req, res) => {
                     ts.id, 
                     ts.mechanic_id, 
                     ts.price, 
-                    CAST(((ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
+                    CAST((IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
                     ts.transaction_id
                 FROM transaction_services ts
                 JOIN mechanics m ON ts.mechanic_id = m.id
+                JOIN services sv ON ts.service_id = sv.id
 
                 UNION ALL
 

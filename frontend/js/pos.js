@@ -45,6 +45,30 @@ function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
+function getRackBadgeHtml(rack) {
+  if (!rack || rack === '-') return '<span style="color:#cbd5e1;">-</span>';
+  const match = rack.match(/^(\d+)/);
+  const num = match ? parseInt(match[1]) : 0;
+  let bg = '#f1f5f9';
+  let color = '#475569';
+  let border = '#cbd5e1';
+  switch(num) {
+    case 1: bg = '#fee2e2'; color = '#991b1b'; border = '#fca5a5'; break;
+    case 2: bg = '#ffedd5'; color = '#9a3412'; border = '#fed7aa'; break;
+    case 3: bg = '#fef9c3'; color = '#854d0e'; border = '#fef08a'; break;
+    case 4: bg = '#dcfce7'; color = '#166534'; border = '#bbf7d0'; break;
+    case 5: bg = '#e0f2fe'; color = '#075985'; border = '#bae6fd'; break;
+    case 6: bg = '#f3e8ff'; color = '#6b21a8'; border = '#e9d5ff'; break;
+    case 7: bg = '#fae8ff'; color = '#86198f'; border = '#f5d0fe'; break;
+    case 8: bg = '#e2fbf5'; color = '#0369a1'; border = '#99f6e4'; break;
+    case 9: bg = '#f0fdf4'; color = '#166534'; border = '#bbf7d0'; break;
+    case 10: bg = '#e0f7fa'; color = '#006064'; border = '#b2ebf2'; break;
+    case 11: bg = '#f1f5f9'; color = '#334155'; border = '#cbd5e1'; break;
+    case 12: bg = '#fff1f2'; color = '#9f1239'; border = '#fecdd3'; break;
+  }
+  return `<span class="rack-badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block; white-space: nowrap;">${escHtml(rack)}</span>`;
+}
+
 function logout() {
   localStorage.clear();
   window.location.href = 'login.html';
@@ -156,12 +180,10 @@ function renderProducts(filter = '') {
            </button>`;
 
       const codeHtml = p.code 
-        ? `<span class="code-badge" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px; font-size:11px;">${escHtml(p.code)}</span>`
+        ? `<span class="code-badge" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px; font-size:11px; white-space: nowrap; display: inline-block;">${escHtml(p.code)}</span>`
         : '<span style="color:#cbd5e1;">-</span>';
 
-      const rackHtml = p.rack_location && p.rack_location !== '-'
-        ? `<strong style="color: #0f766e; font-weight: 600;">${escHtml(p.rack_location)}</strong>`
-        : '<span style="color:#cbd5e1;">-</span>';
+      const rackHtml = getRackBadgeHtml(p.rack_location);
 
       let brandAndTypeHtml = '';
       if (brandName === '-' && motorType === '-') {
@@ -169,13 +191,13 @@ function renderProducts(filter = '') {
       } else {
         brandAndTypeHtml = `
           <div style="font-weight: 500; color: #1e293b;">${escHtml(brandName !== '-' ? brandName : '')}</div>
-          <div style="font-size: 11px; color: #64748b; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;" title="${escHtml(motorType !== '-' ? motorType : '')}">${escHtml(motorType !== '-' ? motorType : '')}</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 85px;" title="${escHtml(motorType !== '-' ? motorType : '')}">${escHtml(motorType !== '-' ? motorType : '')}</div>
         `;
       }
 
       return `
         <tr class="${rowClass}">
-          <td style="font-family: monospace; font-weight: 700; color: #475569;">
+          <td style="font-family: monospace; font-weight: 700; color: #475569; white-space: nowrap;">
             ${codeHtml}
           </td>
           <td>
@@ -204,13 +226,13 @@ function renderProducts(filter = '') {
         <table class="pos-table">
           <thead>
             <tr>
-              <th style="width: 90px;">Kode</th>
+              <th style="width: 100px;">Kode</th>
               <th>Nama Sparepart</th>
-              <th style="width: 50px;">Rak</th>
-              <th style="width: 130px;">Merk & Tipe Motor</th>
-              <th style="text-align: right; width: 105px;">Harga</th>
-              <th style="text-align: center; width: 75px;">Stok</th>
-              <th style="text-align: center; width: 85px;">Aksi</th>
+              <th style="width: 35px;">Rak</th>
+              <th style="width: 105px;">Merk & Tipe Motor</th>
+              <th style="text-align: right; width: 85px;">Harga</th>
+              <th style="text-align: center; width: 60px;">Stok</th>
+              <th style="text-align: center; width: 70px;">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -218,12 +240,12 @@ function renderProducts(filter = '') {
           </tbody>
         </table>
       </div>
-      <div class="pos-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; background: #fff; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; flex-shrink: 0;">
-        <span style="color: #64748b; font-weight: 500;">Menampilkan ${startIdx + 1}-${Math.min(endIdx, filteredSp.length)} dari ${filteredSp.length} item</span>
-        <div style="display: flex; gap: 6px;">
-          <button class="pos-pag-btn" onclick="changePosPage(-1)" ${currentPage === 1 ? 'disabled' : ''} style="padding: 6px 12px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer;">Sebelumnya</button>
-          <span style="align-self: center; font-weight: 700; color: #1e293b; padding: 0 4px;">Halaman ${currentPage} / ${totalPages}</span>
-          <button class="pos-pag-btn" onclick="changePosPage(1)" ${currentPage === totalPages ? 'disabled' : ''} style="padding: 6px 12px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer;">Berikutnya</button>
+      <div class="pos-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; background: #fff; padding: 10px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 13.5px; flex-shrink: 0;">
+        <span style="color: #475569; font-weight: 700;">Menampilkan ${startIdx + 1}-${Math.min(endIdx, filteredSp.length)} dari ${filteredSp.length} item</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="pos-pag-btn" onclick="changePosPage(-1)" ${currentPage === 1 ? 'disabled' : ''} style="padding: 10px 16px; background: #fff; border: 2px solid #94a3b8; border-radius: 8px; font-weight: 700; font-size: 13px; color: #1e293b; cursor: pointer; transition: all 0.2s;">Sebelumnya</button>
+          <span style="align-self: center; font-weight: 800; color: #0f172a; padding: 0 6px;">Halaman ${currentPage} / ${totalPages}</span>
+          <button class="pos-pag-btn" onclick="changePosPage(1)" ${currentPage === totalPages ? 'disabled' : ''} style="padding: 10px 16px; background: #fff; border: 2px solid #94a3b8; border-radius: 8px; font-weight: 700; font-size: 13px; color: #1e293b; cursor: pointer; transition: all 0.2s;">Berikutnya</button>
         </div>
       </div>
     `;
@@ -415,6 +437,7 @@ function renderCart() {
   if (typeof saveActiveCartState === 'function') {
     saveActiveCartState();
   }
+  toggleHelperCommissionInput();
 }
 
 function updateTotals() {
@@ -454,11 +477,40 @@ function toggleHelperCommissionInput() {
   const helperSel = document.getElementById('selectHelper');
   const container = document.getElementById('helperCommContainer');
   const input = document.getElementById('helperCommissionInput');
+  
   if (helperSel && container) {
     const hasHelper = helperSel.value !== '';
     container.classList.toggle('hidden', !hasHelper);
-    if (!hasHelper && input) {
+    
+    if (hasHelper && input) {
+      input.readOnly = false;
+      input.style.backgroundColor = '';
+      input.style.cursor = '';
+      
+      // Cek apakah ada servis 'remap' di keranjang
+      const remapItem = cart.find(c => c.type === 'servis' && c.name.toLowerCase() === 'remap');
+      if (remapItem) {
+        // Tampilkan info text di bawah input
+        let labelInfo = document.getElementById('helperCommissionInfoLabel');
+        if (!labelInfo) {
+          labelInfo = document.createElement('div');
+          labelInfo.id = 'helperCommissionInfoLabel';
+          labelInfo.style.fontSize = '11px';
+          labelInfo.style.color = '#e87722';
+          labelInfo.style.marginTop = '4px';
+          labelInfo.style.fontWeight = '600';
+          input.parentNode.appendChild(labelInfo);
+        }
+        const maxCommission = Math.round(parseFloat(remapItem.price) * 0.5);
+        labelInfo.textContent = `💡 Info: Jasa Remap memotong 50% untuk Toko. Sisa 50% (Rp ${maxCommission.toLocaleString('id-ID')}) dibagi antara Mekanik Utama & Helper. Tentukan bagian Helper di atas.`;
+      } else {
+        const labelInfo = document.getElementById('helperCommissionInfoLabel');
+        if (labelInfo) labelInfo.remove();
+      }
+    } else if (!hasHelper && input) {
       input.value = '';
+      const labelInfo = document.getElementById('helperCommissionInfoLabel');
+      if (labelInfo) labelInfo.remove();
     }
   }
 }
@@ -644,15 +696,22 @@ async function processTransaction() {
   const rawHelperComm = document.getElementById('helperCommissionInput')?.value.replace(/\./g, '') || '0';
   const helperComm = parseFloat(rawHelperComm) || 0;
 
-  const servicesPayload = cart
-    .filter(c => c.type === 'servis')
-    .map((c, idx) => ({
+  // Cari index dari servis 'remap' di keranjang servis
+  const filteredServices = cart.filter(c => c.type === 'servis');
+  let remapIdx = filteredServices.findIndex(c => c.name.toLowerCase() === 'remap');
+  // Jika tidak ada remap, helper dipasangkan ke servis pertama (index 0)
+  const targetHelperIdx = remapIdx !== -1 ? remapIdx : 0;
+
+  const servicesPayload = filteredServices.map((c, idx) => {
+    const isTarget = idx === targetHelperIdx;
+    return {
       service_id: c.id,
       mechanic_id: parseInt(mechanicId),
       price: c.price,
-      helper_mechanic_id: idx === 0 && helperMechId ? parseInt(helperMechId) : null,
-      helper_commission: idx === 0 && helperMechId ? helperComm : 0
-    }));
+      helper_mechanic_id: isTarget && helperMechId ? parseInt(helperMechId) : null,
+      helper_commission: isTarget && helperMechId ? helperComm : 0
+    };
+  });
 
   const btnProcess = document.getElementById('btnProcess');
   if (btnProcess) { btnProcess.disabled = true; btnProcess.textContent = 'Memproses...'; }
@@ -1661,6 +1720,7 @@ const selectMechanicInput = document.getElementById('selectMechanic');
 if (selectMechanicInput) {
   selectMechanicInput.addEventListener('change', () => {
     if (typeof saveActiveCartState === 'function') saveActiveCartState();
+    toggleHelperCommissionInput();
   });
 }
 

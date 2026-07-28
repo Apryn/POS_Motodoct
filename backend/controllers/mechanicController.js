@@ -59,7 +59,7 @@ exports.getMechanicJobs = async (req, res) => {
                 COALESCE(t.license_plate, c.license_plate) as license_plate,
                 m.commission_rate,
                 ts.helper_commission,
-                CAST(((ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
+                CAST((IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
                 mh.name as helper_name,
                 NULL as main_mechanic_name
             FROM transaction_services ts
