@@ -156,7 +156,7 @@
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <input type="text" id="searchInput" placeholder="🔍 Cari nama, kode, atau rak..." />
+        <input type="text" id="searchInput" placeholder="🔍 Cari nama, merk (YSP), kode, supplier, tipe motor, rak..." />
         <select id="filterKategori"><option value="">Semua Kategori</option></select>
         <select id="filterStok">
           <option value="">Semua Status</option>
@@ -191,6 +191,7 @@
             <th>Kategori</th>
             <th>Merk</th>
             <th>Tipe Motor</th>
+            <th>Supplier</th>
             <th>Lokasi Rak</th>
             <th>Stok</th>
             <th id="headerHargaBeli">Harga Beli</th>
@@ -201,7 +202,7 @@
           </tr>
         </thead>
         <tbody id="sparepartTableBody">
-          <tr><td colspan="13" class="empty-state">Memuat data...</td></tr>
+          <tr><td colspan="16" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
       <div id="paginationContainer" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px; flex-wrap:wrap; gap:12px;">

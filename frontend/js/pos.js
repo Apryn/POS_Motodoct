@@ -143,7 +143,7 @@ function renderProducts(filter = '') {
 
   const filteredSp = spareparts.filter(p => {
     if (keywords.length === 0) return true;
-    const searchString = `${p.name} ${p.nama_lain || ''} ${p.code || ''} ${p.brand || ''} ${p.type || ''}`.toLowerCase();
+    const searchString = `${p.name} ${p.nama_lain || ''} ${p.code || ''} ${p.brand || ''} ${p.type || ''} ${p.supplier || ''} ${p.category_name || ''} ${p.rack_location || ''}`.toLowerCase();
     return keywords.every(kw => searchString.includes(kw));
   });
 

@@ -185,7 +185,7 @@ function renderTable() {
   let filtered = spareparts.filter(p => {
     let matchSearch = true;
     if (keywords.length > 0) {
-      const searchString = `${p.name} ${p.nama_lain || ''} ${p.code || ''} ${p.rack_location || ''} ${p.type || ''}`.toLowerCase();
+      const searchString = `${p.name} ${p.nama_lain || ''} ${p.code || ''} ${p.brand || ''} ${p.type || ''} ${p.supplier || ''} ${p.category_name || ''} ${p.rack_location || ''}`.toLowerCase();
       matchSearch = keywords.every(kw => searchString.includes(kw));
     }
     const matchKat = !katFilter || String(p.category_id) === katFilter;
@@ -229,7 +229,7 @@ function renderTable() {
 
   const tbody = document.getElementById('sparepartTableBody');
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="${isAdminOrOwner ? 15 : 14}" class="empty-state">Tidak ada data sparepart</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${isAdminOrOwner ? 16 : 15}" class="empty-state">Tidak ada data sparepart</td></tr>`;
     updatePaginationUI(0, 0, 0);
     return;
   }
@@ -257,6 +257,7 @@ function renderTable() {
       </td>
       <td>${p.brand || '-'}</td>
       <td>${p.type || '-'}</td>
+      <td><span style="color:#475569; font-weight:500;">${escHtml(p.supplier || '-')}</span></td>
       <td>
         <div class="rack-cell" style="position: relative;">
           <span class="rack-text" style="cursor: pointer; border-bottom: 1px dashed #94a3b8; display: inline-block; min-width: 60px;" 
