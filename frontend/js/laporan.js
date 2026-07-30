@@ -178,7 +178,7 @@ async function loadLaporan() {
         document.getElementById('plLabaBersih').textContent = rupiah(d.laba_bersih_riil);
       }
 
-      // Populate Mechanic Commission Table
+      // Populate Mechanic Commission Table (in Laba Rugi tab)
       const komisiTbody = document.getElementById('komisiTableBody');
       if (komisiTbody) {
         if (d.rekap_mekanik && d.rekap_mekanik.length > 0) {
@@ -398,7 +398,7 @@ function renderTransactionTable(data) {
 
 // Tab switching
 function switchTab(tab) {
-  ['LabaRugi', 'Komisi', 'Pendapatan', 'Biaya', 'Perbandingan'].forEach(t => {
+  ['LabaRugi', 'Pendapatan', 'Biaya', 'Perbandingan'].forEach(t => {
     const box = document.getElementById(`tab${t}`);
     const btn = document.querySelector(`.lap-tab[data-tab="${t}"]`);
     if (box) box.classList.toggle('hidden', t !== tab);

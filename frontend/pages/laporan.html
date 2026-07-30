@@ -163,7 +163,6 @@
     <!-- Lap Tabs -->
     <div class="lap-tabs">
       <button class="lap-tab active" data-tab="LabaRugi" onclick="switchTab('LabaRugi')">📋 Buku Laba Rugi</button>
-      <button class="lap-tab" data-tab="Komisi" onclick="switchTab('Komisi')">🔧 Komisi Mekanik</button>
       <button class="lap-tab" data-tab="Pendapatan" onclick="switchTab('Pendapatan')">📈 Tren Pendapatan</button>
       <button class="lap-tab" data-tab="Biaya" onclick="switchTab('Biaya')">📉 Tren Pengeluaran</button>
       <button class="lap-tab" data-tab="Perbandingan" onclick="switchTab('Perbandingan')">📊 Perbandingan</button>
@@ -255,29 +254,29 @@
           </tbody>
         </table>
       </div>
-    </div>
 
-    <!-- Tab: Komisi Mekanik -->
-    <div class="chart-box hidden" id="tabKomisi">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #f0f0f0; padding-bottom:8px;">
-        <h3 style="font-size:15px; color:#333;">Laporan Komisi & Rekap Pekerjaan Mekanik</h3>
-        <span style="font-size:12px; color:#999; font-style:italic;">Rincian bagi hasil jasa servis untuk periode terpilih</span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr style="background:#f8f9fa;">
-              <th style="padding:10px; text-align:left;">Nama Mekanik</th>
-              <th style="padding:10px; text-align:center;">Jumlah Servis</th>
-              <th style="padding:10px; text-align:right;">Total Omset Jasa</th>
-              <th style="padding:10px; text-align:right;">Komisi Mekanik</th>
-              <th style="padding:10px; text-align:right;">Bagian Bengkel (Net Jasa)</th>
-            </tr>
-          </thead>
-          <tbody id="komisiTableBody">
-            <tr><td colspan="5" class="empty-state">Memuat data komisi...</td></tr>
-          </tbody>
-        </table>
+      <!-- Section Rincian Komisi Mekanik di dalam Buku Laba Rugi -->
+      <div class="print-page-break" style="margin-top: 24px; border-top: 2px dashed #e2e8f0; padding-top: 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="font-size:14px; color:#333; margin:0; font-weight:700;">🔧 Rincian Bagi Hasil & Komisi Mekanik</h4>
+          <span style="font-size:12px; color:#777; font-style:italic;">Detail alokasi komisi dari beban komisi di atas</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="background:#f8f9fa;">
+                <th style="padding:10px; text-align:left;">Nama Mekanik</th>
+                <th style="padding:10px; text-align:center;">Jumlah Servis</th>
+                <th style="padding:10px; text-align:right;">Total Omset Jasa</th>
+                <th style="padding:10px; text-align:right;">Komisi Mekanik</th>
+                <th style="padding:10px; text-align:right;">Bagian Bengkel (Net Jasa)</th>
+              </tr>
+            </thead>
+            <tbody id="komisiTableBody">
+              <tr><td colspan="5" class="empty-state" style="text-align:center; padding:15px; color:#888;">Memuat data komisi...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 

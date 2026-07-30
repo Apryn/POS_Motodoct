@@ -40,11 +40,12 @@ Get-ChildItem -Path "$PSScriptRoot\backend" -Force | Where-Object { $_.Name -ne 
 # 3. Proses Upload & Eksekusi Server (Single SSH Stream - Masukkan Password 1 Kali)
 Write-Host ""
 Write-Host "Mengirim berkas & memperbarui server VPS..." -ForegroundColor Yellow
-Write-Host "Silakan masukkan password VPS Anda (CUKUP 1 KALI SAJA):" -ForegroundColor Cyan
+Write-Host "Silakan masukkan password VPS Anda :" -ForegroundColor Cyan
 
 if ($pilihan -eq "1") {
     $remoteCmd = "mkdir -p /var/www/motodoct && tar -xzf - -C /var/www/motodoct && cd /var/www/motodoct/backend && npm install --production && if grep -q 'DB_USER=root' .env 2>/dev/null; then echo 'Memulihkan konfigurasi database produksi (.env)...' && sed -i 's/DB_USER=root/DB_USER=motodoct_user/g' .env && sed -i 's/DB_PASSWORD=/DB_PASSWORD=motodoct123/g' .env; fi && chmod +x backup.sh && (crontab -l 2>/dev/null | grep -F '/var/www/motodoct/backend/backup.sh' >/dev/null || (crontab -l 2>/dev/null; echo '59 23 * * * /bin/bash /var/www/motodoct/backend/backup.sh > /dev/null 2>&1') | crontab -) && (pm2 restart motodoct-kasir || pm2 start server.js --name motodoct-kasir)"
-} else {
+}
+else {
     $remoteCmd = "mkdir -p /var/www/motodoct && tar -xzf - -C /var/www/motodoct && cd /var/www/motodoct/backend && chmod +x setup-vps.sh && sudo bash setup-vps.sh"
 }
 

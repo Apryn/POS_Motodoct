@@ -416,6 +416,29 @@ nav {
 }
 
 @media print {
-  .sidebar, .btn-print, .btn-primary, .btn-secondary, .lap-tabs, .hamburger { display: none !important; }
-  .main { margin-left: 0 !important; }
+  .sidebar, .btn-print, .btn-primary, .btn-secondary, .lap-tabs, .hamburger, .lap-bottom, .table-wrap, #presetPeriode, .filter-periode {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+  .lap-header {
+    margin-bottom: 12px !important;
+  }
+  .lap-stats {
+    margin-bottom: 12px !important;
+  }
+  .chart-box {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+    margin-top: 0 !important;
+    border-top: none !important;
+    padding-top: 10px !important;
+  }
 }

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panduan Cetak Laporan & Pencocokan Kasir - Motodoct</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', Arial, sans-serif;
+      color: #1e293b;
+      background: #f8fafc;
+      line-height: 1.6;
+      padding: 30px 15px;
+    }
+    .container {
+      max-width: 850px;
+      background: #ffffff;
+      margin: 0 auto;
+      padding: 40px 50px;
+      border-radius: 16px;
+      box-shadow: 0 4px 25px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      border-bottom: 4px double #e87722;
+      padding-bottom: 20px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    .header .logo {
+      font-size: 26px;
+      font-weight: 900;
+      color: #e87722;
+      margin-bottom: 6px;
+      display: inline-block;
+      border: 3px solid #e87722;
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 6px;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+    .header .doc-title {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .meta-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #f1f5f9;
+      padding: 14px 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      border: 1px solid #cbd5e1;
+      font-size: 13px;
+    }
+    .meta-info div span {
+      font-weight: 700;
+      color: #334155;
+    }
+    h2 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      background: #f8fafc;
+      border-left: 4px solid #e87722;
+      padding: 8px 12px;
+      margin-top: 28px;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-radius: 0 6px 6px 0;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+    p, li {
+      font-size: 13.5px;
+      color: #334155;
+      margin-bottom: 10px;
+    }
+    ul, ol {
+      padding-left: 22px;
+      margin-bottom: 14px;
+    }
+    .step-box {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+    .step-box strong {
+      color: #e87722;
+    }
+    .highlight-box {
+      background: #fff7ed;
+      border: 1.5px solid #ffedd5;
+      border-left: 4px solid #ea580c;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 16px 0;
+      font-size: 13.5px;
+    }
+    .formula-box {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 16px 0;
+      letter-spacing: 0.5px;
+      border: 2px solid #e87722;
+    }
+    .preview-card {
+      background: #ffffff;
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+      font-size: 12.5px;
+    }
+    .preview-card-header {
+      font-weight: 800;
+      color: #2563eb;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      font-size: 11px;
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    table.demo-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    table.demo-table th, table.demo-table td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    table.demo-table th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .total-row {
+      font-weight: 800;
+      background: #f0fdf4 !important;
+      color: #166534;
+    }
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px dashed #e2e8f0;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .container { border: none; box-shadow: none; padding: 0; max-width: 100%; }
+      .page-break { page-break-before: always !important; break-before: page !important; margin-top: 0 !important; padding-top: 20px !important; border-top: none !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print" style="max-width:850px; margin:0 auto 15px; text-align:right;">
+    <button onclick="window.print()" style="padding:10px 20px; background:#e87722; color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; font-size:14px;">
+      🖨️ Cetak SOP ke PDF
+    </button>
+  </div>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">MOTODOCT</div>
+      <h1>SOP KASIR: CETAK LAPORAN BULANAN & PENCOCOKAN UANG FISIK LACI</h1>
+      <div class="doc-title">Panduan Standar Operasional Prosedur Penutupan Kasir (Closing Cash)</div>
+    </div>
+
+    <!-- Meta Info -->
+    <div class="meta-info">
+      <div><span>Kode Dokumen:</span> SOP-MOTODOCT-KAS-002</div>
+      <div><span>Berlaku Untuk:</span> Kasir & Owner Bengkel</div>
+      <div><span>Modul Sistem:</span> Laporan Bulanan & Arus Kas</div>
+      <div><span>Tanggal Update:</span> 29 Juli 2026</div>
+    </div>
+
+    <!-- BAGIAN 1 -->
+    <h2>BAGIAN 1: PROSEDUR MENCETAK LAPORAN BULANAN</h2>
+    
+    <p>Untuk mencetak Laporan Keuangan Bengkel Bulanan (Laba Rugi & Rekap Komisi Mekanik), ikuti langkah berikut:</p>
+
+    <div class="step-box">
+      <strong>Langkah 1: Masuk Menu Laporan</strong><br>
+      Navigasi ke menu utama <strong>📊 Laporan</strong> di sidebar kiri dashboard Motodoct.
+    </div>
+
+    <div class="step-box">
+      <strong>Langkah 2: Pilih Periode Bulan</strong><br>
+      Pada dropdown pilihan periode di pojok kanan atas, pilih <strong>"Bulan Ini"</strong> (atau <strong>"Bulan Lalu"</strong> jika rekap bulan sebelumnya). Sistem akan langsung menampilkan seluruh transaksi di bulan terpilih.
+    </div>
+
+    <div class="step-box">
+      <strong>Langkah 3: Klik Tombol Cetak</strong><br>
+      Klik tombol <strong>🖨️ Cetak</strong> di pojok kanan atas halaman.
+    </div>
+
+    <div class="step-box">
+      <strong>Langkah 4: Pengaturan Cetak Browser</strong><br>
+      Pada dialog cetak browser yang muncul:
+      <ul>
+        <li><strong>Destination / Tujuan:</strong> Pilih printer fisik ATAU <em>Save as PDF (Simpan sebagai PDF)</em>.</li>
+        <li><strong>Layout:</strong> Portrait</li>
+        <li><strong>Paper Size:</strong> A4</li>
+      </ul>
+    </div>
+
+    <h3>📌 Struktur Hasil Cetakan 2 Halaman (Otomatis)</h3>
+    <p>Hasil cetakan laporan akan terbagi secara rapi menjadi <strong>2 Lembar Kertas (2 Pages)</strong>:</p>
+
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <span>📄 LEMBAR Halaman 1: Buku Laba Rugi Bengkel (P&L Statement)</span>
+        <span class="badge">A4 - Page 1</span>
+      </div>
+      <p style="margin:0; font-size:12px; color:#475569;">
+        Berisi <strong>Ringkasan 4 Kartu Keuangan</strong> (Total Transaksi, Kas Masuk, Kas Keluar, Laba Bersih) serta <strong>Tabel Laporan Laba Rugi Bengkel</strong> (Penjualan Sparepart, Jasa, HPP Modal, Beban Komisi, Biaya Ops, dan Laba Bersih).
+      </p>
+    </div>
+
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <span>📄 LEMBAR Halaman 2: Rincian Bagi Hasil & Komisi Mekanik</span>
+        <span class="badge">A4 - Page 2</span>
+      </div>
+      <p style="margin:0; font-size:12px; color:#475569;">
+        Secara otomatis pindah ke kertas baru (Halaman 2). Berisi rincian pembagian komisi per mekanik: <strong>Nama Mekanik, Jumlah Pekerjaan Servis, Total Omset Jasa, Komisi Mekanik, dan Bagian Bersih Bengkel</strong>.
+      </p>
+    </div>
+
+    <!-- PAGE BREAK FOR PDF PRINT -->
+    <div class="page-break"></div>
+
+    <!-- BAGIAN 2 -->
+    <h2>BAGIAN 2: PENCOCOKAN UANG FISIK LACI KASIR (CASH COUNT)</h2>
+
+    <div class="highlight-box">
+      <strong>⚠️ PRINSIP PENTING PADA PENCOCOKAN KASIR:</strong><br>
+      Kasir <strong>TIDAK boleh mencocokkan uang fisik di laci dengan angka Laba Bersih</strong> ataupun Total Kas Masuk secara mentah, karena di dalam laci masih terdapat uang modal sparepart & uang komisi mekanik yang belum dibayarkan.
+    </div>
+
+    <h3>🧮 Rumus Utama Kasir Mengontrol Uang Laci:</h3>
+
+    <div class="formula-box">
+      Uang Fisik Laci = (Modal Kas Awal) + (Kas Masuk Tunai) - (Pengeluaran Kas Tunai)
+    </div>
+
+    <p>Di mana:</p>
+    <ul>
+      <li><strong>Kas Masuk Tunai (CASH):</strong> Total transaksi yang dibayar menggunakan uang tunai.</li>
+      <li><strong>Pengeluaran Kas Tunai (Outflow):</strong> Pengeluaran dari laci kasir (pembelian bensin, konsumsi, biaya ops harian).</li>
+      <li><strong>Modal Kas Awal:</strong> Uang kembalian yang disiapkan di awal shift.</li>
+    </ul>
+
+    <!-- BAGIAN 3 -->
+    <h2>BAGIAN 3: STUDI KASUS & CONTOH PERHITUNGAN REAL</h2>
+
+    <p>Berikut adalah simulasi perhitungan pencocokan kasir berdasarkan data riil dari sistem Motodoct:</p>
+
+    <table class="demo-table">
+      <thead>
+        <tr>
+          <th>Keterangan Indikator Sistem</th>
+          <th>Nominal di Layar Laporan Motodoct</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td> Total Transaksi Terjadi</td>
+          <td><strong>174 Transaksi</strong></td>
+        </tr>
+        <tr>
+          <td>📥 Total Kas Masuk / Inflow (Anggap Semua Cash)</td>
+          <td><strong>Rp 37.951.500</strong></td>
+        </tr>
+        <tr>
+          <td>📤 Total Kas Keluar / Outflow (Pengeluaran Ops)</td>
+          <td><strong>- Rp 1.794.000</strong></td>
+        </tr>
+        <tr>
+          <td>📦 Harga Pokok Penjualan (HPP Sparepart - Modal)</td>
+          <td><em>- Rp 21.291.361 (Sudah di dalam kas masuk)</em></td>
+        </tr>
+        <tr>
+          <td>🔧 Beban Komisi Mekanik (Hak Mekanik)</td>
+          <td><em>- Rp 7.478.050 (Sudah di dalam kas masuk)</em></td>
+        </tr>
+        <tr class="total-row">
+          <td>💎 LABA BERSIH OPERASIONAL (NET PROFIT)</td>
+          <td><strong>Rp 7.388.139</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>📊 Perhitungan Sisa Uang Fisik yang Wajib Ada di Laci Kasir:</h3>
+
+    <div class="step-box" style="background:#f0fdf4; border-color:#bbf7d0;">
+      <p style="margin:0; font-size:14px; color:#166534; font-weight:700;">
+        Sisa Uang Fisik Laci = Kas Masuk (Rp 37.951.500) - Kas Keluar (Rp 1.794.000)<br>
+        <span style="font-size:16px; color:#15803d; display:block; margin-top:6px;">
+          👉 SISA UANG FISIK DI LACI = Rp 36.157.500
+        </span>
+      </p>
+    </div>
+
+    <h3>🔍 Kenapa Sisa Laci (Rp 36,1 Jt) Berbeda dengan Laba Bersih (Rp 7,3 Jt)?</h3>
+    <p>Di dalam uang fisik **Rp 36.157.500** di laci kasir tersebut, rincian komponen alokasi uangnya adalah:</p>
+
+    <ul>
+      <li><strong>Uang Modal Sparepart (HPP):</strong> Rp 21.291.361 <em>(Dipakai untuk beli stok sparepart lagi)</em></li>
+      <li><strong>Uang Hak Komisi Mekanik:</strong> Rp 7.478.050 <em>(Dipakai untuk bayar gaji/komisi mekanik)</em></li>
+      <li><strong>Uang Keuntungan Bersih Pemilik (Laba Bersih):</strong> Rp 7.388.139 <em>(Keuntungan murni bengkel)</em></li>
+    </ul>
+
+    <p style="font-weight:700; color:#0f172a;">
+      Total = Rp 21.291.361 + Rp 7.478.050 + Rp 7.388.139 = <strong>Rp 36.157.500 (PAS!)</strong>
+    </p>
+
+    <!-- BAGIAN 4 -->
+    <h2>BAGIAN 4: LEMBAR VERIFIKASI & SERAH TERIMA KASIR</h2>
+
+    <table class="demo-table" style="margin-top:16px;">
+      <thead>
+        <tr>
+          <th style="width:50%;">Hitungan Sistem</th>
+          <th style="width:50%;">Fisik Laci Real (Penghitungan Kasir)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Target Kas Laci: <strong>Rp 36.157.500</strong></td>
+          <td>Uang Kertas (Rp 100rb, 50rb, 20rb, dll): Rp ____________</td>
+        </tr>
+        <tr>
+          <td>Modal Kas Awal: Rp ____________</td>
+          <td>Uang Koin: Rp ____________</td>
+        </tr>
+        <tr class="total-row">
+          <td>TOTAL TARGET FISIK: Rp ____________</td>
+          <td>TOTAL FISIK DI LACI: Rp ____________</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align:center; padding:10px; font-weight:700;">
+            Status: [ &nbsp; ] MATCH / BALANCE &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ &nbsp; ] SELISIH ( Rp ____________ )
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="display:flex; justify-content:space-between; margin-top:40px; text-align:center;">
+      <div style="width:40%;">
+        <p style="margin-bottom:50px;">Kasir yang Bertugas,</p>
+        <p><strong>( ______________________ )</strong></p>
+      </div>
+      <div style="width:40%;">
+        <p style="margin-bottom:50px;">Manager / Owner Bengkel,</p>
+        <p><strong>( ______________________ )</strong></p>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
