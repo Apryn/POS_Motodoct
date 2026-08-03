@@ -15,7 +15,13 @@ const normalizeUnit = (u) => {
 
 exports.getAllSpareparts = async (req, res) => {
     try {
-        const query = `SELECT s.*, c.name as category_name FROM spareparts s LEFT JOIN categories c ON s.category_id = c.id ORDER BY s.name ASC, s.id DESC`;
+        const { status } = req.query;
+        let query;
+        if (status === 'deleted') {
+            query = `SELECT s.*, c.name as category_name FROM spareparts s LEFT JOIN categories c ON s.category_id = c.id WHERE s.is_deleted = 1 ORDER BY s.name ASC, s.id DESC`;
+        } else {
+            query = `SELECT s.*, c.name as category_name FROM spareparts s LEFT JOIN categories c ON s.category_id = c.id WHERE (s.is_deleted IS NULL OR s.is_deleted = 0) ORDER BY s.name ASC, s.id DESC`;
+        }
         const [rows] = await db.execute(query);
         res.json({ success: true, data: rows });
     } catch (error) {
@@ -114,10 +120,30 @@ exports.updateSparepart = async (req, res) => {
 exports.deleteSparepart = async (req, res) => {
     try {
         const { id } = req.params;
-        await db.execute('DELETE FROM spareparts WHERE id = ?', [id]);
-        res.json({ success: true, message: 'Sparepart berhasil dihapus' });
+        await db.execute('UPDATE spareparts SET is_deleted = 1 WHERE id = ?', [id]);
+        res.json({ success: true, message: 'Sparepart berhasil dipindahkan ke Tong Sampah' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Gagal menghapus sparepart' });
+    }
+};
+
+exports.restoreSparepart = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.execute('UPDATE spareparts SET is_deleted = 0 WHERE id = ?', [id]);
+        res.json({ success: true, message: 'Sparepart berhasil dipulihkan dari Tong Sampah' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Gagal memulihkan sparepart' });
+    }
+};
+
+exports.permanentDeleteSparepart = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.execute('DELETE FROM spareparts WHERE id = ?', [id]);
+        res.json({ success: true, message: 'Sparepart berhasil dihapus secara permanen' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Gagal menghapus sparepart secara permanen' });
     }
 };
 
@@ -318,7 +344,7 @@ exports.getOpnameList = async (req, res) => {
             SELECT s.*, c.name as category_name 
             FROM spareparts s 
             LEFT JOIN categories c ON s.category_id = c.id
-            WHERE s.id IS NOT NULL
+            WHERE (s.is_deleted IS NULL OR s.is_deleted = 0)
         `;
         const params = [];
 

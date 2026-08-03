@@ -319,6 +319,13 @@ app.listen(PORT, async () => {
       console.log("🛠️  Kolom last_opname_at berhasil ditambahkan ke tabel spareparts!");
     }
 
+    // 6c. spareparts.is_deleted
+    const [sparepartDelCols] = await db.execute("SHOW COLUMNS FROM spareparts LIKE 'is_deleted'");
+    if (sparepartDelCols.length === 0) {
+      await db.execute("ALTER TABLE spareparts ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0");
+      console.log("🛠️  Kolom is_deleted berhasil ditambahkan ke tabel spareparts!");
+    }
+
     // 7. mechanics.is_deleted
     const [mechDelCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'is_deleted'");
     if (mechDelCols.length === 0) {

@@ -183,19 +183,45 @@ async function loadLaporan() {
       if (komisiTbody) {
         if (d.rekap_mekanik && d.rekap_mekanik.length > 0) {
           komisiTbody.innerHTML = d.rekap_mekanik.map(m => {
-            const netJasa = parseFloat(m.total_jasa) - parseFloat(m.total_komisi);
+            const totalKomisi = parseFloat(m.total_komisi) || 0;
+            const komisiCair = parseFloat(m.total_komisi_cair) || 0;
+            const komisiUnpaid = parseFloat(m.total_komisi_unpaid) || 0;
+            const netJasa = parseFloat(m.total_jasa) - totalKomisi;
             return `
               <tr>
                 <td style="padding:10px;"><strong>${m.nama_mekanik}</strong></td>
                 <td style="padding:10px; text-align:center;">${m.total_servis}</td>
                 <td style="padding:10px; text-align:right;">${rupiah(m.total_jasa)}</td>
-                <td style="padding:10px; text-align:right; color:#e67e22; font-weight:bold;">${rupiah(m.total_komisi)}</td>
-                <td style="padding:10px; text-align:right; color:#27ae60; font-weight:bold;">${rupiah(netJasa)}</td>
+                <td style="padding:10px; text-align:right; color:#e67e22; font-weight:bold;">${rupiah(totalKomisi)}</td>
+                <td style="padding:10px; text-align:right; color:#27ae60; font-weight:600;">${rupiah(komisiCair)}</td>
+                <td style="padding:10px; text-align:right; color:#e74c3c; font-weight:600;">${rupiah(komisiUnpaid)}</td>
+                <td style="padding:10px; text-align:right; color:#2980b9; font-weight:bold;">${rupiah(netJasa)}</td>
               </tr>
             `;
           }).join('');
         } else {
-          komisiTbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="text-align:center; padding:20px; color:#888;">Tidak ada aktivitas mekanik dalam periode ini.</td></tr>';
+          komisiTbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="text-align:center; padding:20px; color:#888;">Tidak ada aktivitas mekanik dalam periode ini.</td></tr>';
+        }
+      }
+
+      // Populate Mechanic Claim/Payout History Table
+      const pencairanTbody = document.getElementById('pencairanTableBody');
+      if (pencairanTbody) {
+        if (d.riwayat_pencairan && d.riwayat_pencairan.length > 0) {
+          pencairanTbody.innerHTML = d.riwayat_pencairan.map(p => {
+            const tgl = p.tanggal_cair ? new Date(p.tanggal_cair).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+            return `
+              <tr>
+                <td style="padding:10px;"><strong>${tgl}</strong></td>
+                <td style="padding:10px;"><strong>${p.nama_mekanik}</strong></td>
+                <td style="padding:10px; text-align:center;">${p.total_servis} pekerjaan</td>
+                <td style="padding:10px; text-align:right; color:#27ae60; font-weight:bold;">${rupiah(p.total_cair)}</td>
+                <td style="padding:10px; text-align:center;"><span style="background:rgba(39, 174, 96, 0.1); color:#27ae60; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">✅ CAIR</span></td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          pencairanTbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="text-align:center; padding:20px; color:#888;">Belum ada pencairan komisi mekanik pada periode ini.</td></tr>';
         }
       }
 

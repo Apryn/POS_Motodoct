@@ -24,8 +24,14 @@ if ($pilihan -ne "2") { $pilihan = "1" }
 # 2. Menyiapkan Staging Folder Lokal (Mengabaikan node_modules)
 Write-Host ""
 Write-Host "Menyiapkan berkas untuk diunggah..." -ForegroundColor Yellow
-$TempDir = "$PSScriptRoot\temp_deploy"
-if (Test-Path $TempDir) { Remove-Item -Recurse -Force $TempDir }
+
+# Hapus semua folder temp lama dulu (kalau ada)
+Get-ChildItem -Path $PSScriptRoot -Filter "temp_deploy*" -Directory | ForEach-Object {
+    Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
+}
+
+# Pakai nama unik agar tidak bentrok kalau proses sebelumnya masih jalan
+$TempDir = "$PSScriptRoot\temp_deploy_$(Get-Date -Format 'yyyyMMddHHmmss')"
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
 # Salin frontend
@@ -52,7 +58,7 @@ else {
 cmd /c "tar -czf - -C ""$TempDir"" backend frontend | ssh root@187.77.156.219 ""$remoteCmd"""
 
 # Hapus folder staging lokal setelah selesai diunggah
-if (Test-Path $TempDir) { Remove-Item -Recurse -Force $TempDir }
+Remove-Item -Recurse -Force $TempDir -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "====================================================" -ForegroundColor Green

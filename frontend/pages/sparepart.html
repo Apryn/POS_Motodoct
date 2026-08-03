@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-    <!-- Secure Route Guard & Role Access Control -->
+  <!-- Secure Route Guard & Role Access Control -->
   <script>
-    (function() {
+    (function () {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (!token) {
         window.location.href = 'login.html';
         return;
       }
-      
+
       const allPages = [
         'dashboard.html', 'transaksi.html', 'keranjang.html', 'sparepart.html',
         'pembelian.html', 'pengeluaran.html', 'kategori.html', 'servis.html',
@@ -23,29 +24,29 @@
         gudang: allPages,
         owner: allPages
       };
-      
+
       const roleDefaults = {
         admin: 'dashboard.html',
         kasir: 'transaksi.html',
         gudang: 'sparepart.html',
         owner: 'dashboard.html'
       };
-      
+
       const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-      
+
       if (currentPage === 'index.html') {
         window.location.href = roleDefaults[user.role] || 'login.html';
         return;
       }
-      
+
       const allowedPages = rolePages[user.role] || [];
       const isAllowed = allowedPages.some(page => currentPage.includes(page));
-      
+
       if (!isAllowed) {
         alert('Akses Ditolak: Role Anda (' + (user.role || 'user') + ') tidak memiliki izin untuk halaman ini!');
         window.location.href = roleDefaults[user.role] || 'login.html';
       } else {
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
           document.querySelectorAll('.sidebar nav a').forEach(a => {
             const href = a.getAttribute('href');
             if (href) {
@@ -62,11 +63,12 @@
   </script>
 
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stok Gudang — Motodoct</title>
   <link rel="stylesheet" href="../css/dashboard.css" />
   <link rel="stylesheet" href="../css/table.css" />
 </head>
+
 <body>
 
   <!-- Sidebar Overlay (mobile) -->
@@ -78,20 +80,29 @@
       <img src="../assets/logo.png" alt="Motodoct" />
     </div>
     <nav>
-      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
-      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span class="nav-label">Transaksi</span></a>
-      <a href="keranjang.html" class="nav-item"><i data-lucide="archive"></i><span class="nav-label">Keranjang Tersimpan</span></a>
-      <a href="sparepart.html" class="nav-item active"><i data-lucide="package"></i><span class="nav-label">Stok Gudang</span></a>
-      <a href="opname.html" class="nav-item"><i data-lucide="clipboard-check"></i><span class="nav-label">Stock Opname</span></a>
-      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian Stok</span></a>
-      <a href="pengeluaran.html" class="nav-item"><i data-lucide="wallet"></i><span class="nav-label">Pengeluaran</span></a>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span
+          class="nav-label">Dashboard</span></a>
+      <a href="transaksi.html" class="nav-item"><i data-lucide="shopping-cart"></i><span
+          class="nav-label">Transaksi</span></a>
+      <a href="keranjang.html" class="nav-item"><i data-lucide="archive"></i><span class="nav-label">Keranjang
+          Tersimpan</span></a>
+      <a href="sparepart.html" class="nav-item active"><i data-lucide="package"></i><span class="nav-label">Stok
+          Gudang</span></a>
+      <a href="opname.html" class="nav-item"><i data-lucide="clipboard-check"></i><span class="nav-label">Stock
+          Opname</span></a>
+      <a href="pembelian.html" class="nav-item"><i data-lucide="truck"></i><span class="nav-label">Pembelian
+          Stok</span></a>
+      <a href="pengeluaran.html" class="nav-item"><i data-lucide="wallet"></i><span
+          class="nav-label">Pengeluaran</span></a>
       <a href="kategori.html" class="nav-item"><i data-lucide="folder"></i><span class="nav-label">Kategori</span></a>
       <a href="servis.html" class="nav-item"><i data-lucide="wrench"></i><span class="nav-label">Servis</span></a>
       <a href="mekanik.html" class="nav-item"><i data-lucide="user-cog"></i><span class="nav-label">Mekanik</span></a>
       <a href="pelanggan.html" class="nav-item"><i data-lucide="users"></i><span class="nav-label">Pelanggan</span></a>
-      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span class="nav-label">Laporan</span></a>
+      <a href="laporan.html" class="nav-item"><i data-lucide="bar-chart-2"></i><span
+          class="nav-label">Laporan</span></a>
       <a href="notifikasi.html" class="nav-item"><i data-lucide="bell"></i><span class="nav-label">Notifikasi</span></a>
-      <a href="user.html" class="nav-item"><i data-lucide="user-check"></i><span class="nav-label">Manajemen User</span></a>
+      <a href="user.html" class="nav-item"><i data-lucide="user-check"></i><span class="nav-label">Manajemen
+          User</span></a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-logout" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
@@ -156,13 +167,17 @@
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <input type="text" id="searchInput" placeholder="🔍 Cari nama, merk (YSP), kode, supplier, tipe motor, rak..." />
-        <select id="filterKategori"><option value="">Semua Kategori</option></select>
+        <input type="text" id="searchInput"
+          placeholder="🔍 Cari nama, merk (YSP), kode, supplier, tipe motor, rak..." />
+        <select id="filterKategori">
+          <option value="">Semua Kategori</option>
+        </select>
         <select id="filterStok">
           <option value="">Semua Status</option>
           <option value="aman">Aman</option>
           <option value="menipis">Menipis</option>
           <option value="habis">Habis</option>
+          <option value="deleted">Deleted Items</option>
         </select>
         <select id="sortSpareparts">
           <option value="name_asc">Urut: Nama (A-Z)</option>
@@ -183,7 +198,9 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" style="cursor: pointer; width: 16px; height: 16px; accent-color: #e87722;"></th>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllCheckbox"
+                onchange="toggleSelectAll(this)"
+                style="cursor: pointer; width: 16px; height: 16px; accent-color: #e87722;"></th>
             <th>No</th>
             <th>Kode</th>
             <th>Nama Barang</th>
@@ -202,25 +219,38 @@
           </tr>
         </thead>
         <tbody id="sparepartTableBody">
-          <tr><td colspan="16" class="empty-state">Memuat data...</td></tr>
+          <tr>
+            <td colspan="16" class="empty-state">Memuat data...</td>
+          </tr>
         </tbody>
       </table>
-      <div id="paginationContainer" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px; flex-wrap:wrap; gap:12px;">
+      <div id="paginationContainer"
+        style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid #f0f0f0; background:#fcfcfc; border-bottom-left-radius:12px; border-bottom-right-radius:12px; flex-wrap:wrap; gap:12px;">
         <span id="paginationInfo" style="font-size:12px; color:#64748b; font-weight:500;">Menampilkan 0 item</span>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button id="btnFirstPage" class="btn-secondary" style="padding:6px 10px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="goToPage(1)" title="Halaman Pertama">«</button>
-          <button id="btnPrevPage" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="changePage(-1)">Sebelumnya</button>
-          
+          <button id="btnFirstPage" class="btn-secondary"
+            style="padding:6px 10px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="goToPage(1)"
+            title="Halaman Pertama">«</button>
+          <button id="btnPrevPage" class="btn-secondary"
+            style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;"
+            onclick="changePage(-1)">Sebelumnya</button>
+
           <div style="display:flex; align-items:center; gap:4px; font-size:12px; color:#475569; font-weight:500;">
             <span>Halaman</span>
-            <select id="paginationSelect" style="padding:4px 8px; border:1.5px solid #cbd5e1; border-radius:6px; font-size:12px; outline:none; background:#fff; cursor:pointer;" onchange="goToPage(Number(this.value))">
+            <select id="paginationSelect"
+              style="padding:4px 8px; border:1.5px solid #cbd5e1; border-radius:6px; font-size:12px; outline:none; background:#fff; cursor:pointer;"
+              onchange="goToPage(Number(this.value))">
               <option value="1">1</option>
             </select>
             <span>dari <span id="paginationTotalPages">1</span></span>
           </div>
 
-          <button id="btnNextPage" class="btn-secondary" style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="changePage(1)">Berikutnya</button>
-          <button id="btnLastPage" class="btn-secondary" style="padding:6px 10px; font-size:12px; border-radius:6px; cursor:pointer;" onclick="goToPage(getLastPage())" title="Halaman Terakhir">»</button>
+          <button id="btnNextPage" class="btn-secondary"
+            style="padding:6px 12px; font-size:12px; border-radius:6px; cursor:pointer;"
+            onclick="changePage(1)">Berikutnya</button>
+          <button id="btnLastPage" class="btn-secondary"
+            style="padding:6px 10px; font-size:12px; border-radius:6px; cursor:pointer;"
+            onclick="goToPage(getLastPage())" title="Halaman Terakhir">»</button>
         </div>
       </div>
     </div>
@@ -253,7 +283,9 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>Kategori</label>
-              <select id="fieldKategori"><option value="">-- Pilih Kategori --</option></select>
+              <select id="fieldKategori">
+                <option value="">-- Pilih Kategori --</option>
+              </select>
             </div>
             <div class="form-group">
               <label>Lokasi Rak</label>
@@ -335,7 +367,8 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>Satuan <span class="required">*</span></label>
-              <select id="fieldSatuan" required style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
+              <select id="fieldSatuan" required
+                style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
                 <option value="pcs">pcs</option>
                 <option value="set">set</option>
                 <option value="botol">botol</option>
@@ -400,7 +433,9 @@
               </tr>
             </thead>
             <tbody id="stockCardTableBody">
-              <tr><td colspan="5" class="empty-state">Memuat data...</td></tr>
+              <tr>
+                <td colspan="5" class="empty-state">Memuat data...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -420,11 +455,13 @@
       </div>
       <form id="formBulkAdjust" onsubmit="event.preventDefault(); submitBulkAdjust()">
         <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
-          <p style="font-size:12px; color:#555; line-height:1.4;">Setel ulang persentase markup harga jual untuk kategori target secara massal.</p>
-          
+          <p style="font-size:12px; color:#555; line-height:1.4;">Setel ulang persentase markup harga jual untuk
+            kategori target secara massal.</p>
+
           <div class="form-group">
             <label for="bulkAdjustCategory">Kategori Target</label>
-            <select id="bulkAdjustCategory" style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
+            <select id="bulkAdjustCategory"
+              style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
               <option value="">Semua Kategori</option>
             </select>
           </div>
@@ -437,7 +474,8 @@
 
           <div class="form-group">
             <label for="bulkAdjustRounding">Pembulatan Kelipatan</label>
-            <select id="bulkAdjustRounding" style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
+            <select id="bulkAdjustRounding"
+              style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none;">
               <option value="0">Tanpa Pembulatan</option>
               <option value="1000">Kelipatan 1.000 terdekat (Contoh: 12.300 -> 12.000)</option>
             </select>
@@ -450,7 +488,8 @@
           </div>
           <p id="bulkAdjustError" style="font-size:12px; color:#e74c3c; display:none; margin:0;"></p>
         </div>
-        <div class="modal-footer" style="border-top:1px solid #f0f0f0; padding-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+        <div class="modal-footer"
+          style="border-top:1px solid #f0f0f0; padding-top:12px; display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="btn-secondary" onclick="closeBulkAdjustModal()">Batal</button>
           <button type="submit" class="btn-primary" id="btnSaveBulkAdjust">Terapkan Perubahan</button>
         </div>
@@ -465,8 +504,5 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>
 </body>
+
 </html>
-
-
-
-

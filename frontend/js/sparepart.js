@@ -17,6 +17,7 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 if (!token) window.location.href = 'login.html';
 
 const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
+const canDelete = user.role === 'admin' || user.role === 'owner' || user.role === 'gudang';
 
 // Hide bulk adjust button and Harga Beli header if not admin/owner
 if (!isAdminOrOwner) {
@@ -120,15 +121,17 @@ let spareparts = [];
 let categories = [];
 let editId = null;
 let deleteId = null;
+let permDeleteId = null;
 let currentPage = 1;
 const itemsPerPage = 50;
 let filteredCount = 0;
 let selectedSparepartIds = new Set();
+let currentTab = 'active';
 
 async function loadData() {
   try {
     const [resS, resC] = await Promise.all([
-      fetch(`${API}/spareparts`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/spareparts?status=${currentTab}`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${API}/categories`, { headers: { Authorization: `Bearer ${token}` } })
     ]);
     const [sData, cData] = await Promise.all([resS.json(), resC.json()]);
@@ -189,7 +192,7 @@ function renderTable() {
       matchSearch = keywords.every(kw => searchString.includes(kw));
     }
     const matchKat = !katFilter || String(p.category_id) === katFilter;
-    const matchStok = !stokFilter ||
+    const matchStok = !stokFilter || stokFilter === 'deleted' ||
       (stokFilter === 'aman' && p.stock > 5) ||
       (stokFilter === 'menipis' && p.stock > 0 && p.stock <= 5) ||
       (stokFilter === 'habis' && p.stock === 0);
@@ -287,8 +290,13 @@ function renderTable() {
       <td>${getStatusBadge(p.stock)}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button>
-          ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDeleteModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')">Hapus</button>` : ''}
+          ${currentTab === 'active' ? `
+            <button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button>
+            ${canDelete ? `<button class="btn-del-row" onclick="openDeleteModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')">Hapus</button>` : ''}
+          ` : `
+            ${canDelete ? `<button class="btn-secondary" style="background:#10b981; color:#fff; padding:4px 10px; font-weight:600;" onclick="restoreSparepart(${p.id})">↺ Pulihkan</button>` : ''}
+            ${isAdminOrOwner ? `<button class="btn-del-row" style="background:#ef4444; color:#fff; padding:4px 10px; font-weight:600;" onclick="openPermanentDeleteModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')">🗑 Permanen</button>` : ''}
+          `}
         </div>
       </td>
     </tr>
@@ -317,8 +325,17 @@ document.getElementById('filterKategori')?.addEventListener('change', function()
   renderTable();
 });
 document.getElementById('filterStok')?.addEventListener('change', function() {
-  currentPage = 1;
-  renderTable();
+  const val = this.value;
+  const targetTab = val === 'deleted' ? 'deleted' : 'active';
+  if (currentTab !== targetTab) {
+    currentTab = targetTab;
+    currentPage = 1;
+    selectedSparepartIds.clear();
+    loadData();
+  } else {
+    currentPage = 1;
+    renderTable();
+  }
 });
 document.getElementById('sortSpareparts')?.addEventListener('change', function() {
   currentPage = 1;
@@ -572,34 +589,90 @@ async function saveSparepart() {
   }
 }
 
-// Delete single
+// Tab Switcher & Restore
+function switchTab(tab) {
+  if (currentTab === tab) return;
+  currentTab = tab;
+  currentPage = 1;
+  selectedSparepartIds.clear();
+  const filterStokEl = document.getElementById('filterStok');
+  if (filterStokEl) filterStokEl.value = tab === 'deleted' ? 'deleted' : '';
+  loadData();
+}
+
+async function restoreSparepart(id) {
+  if (!confirm('Yakin ingin memulihkan barang ini ke Stok Gudang aktif?')) return;
+  try {
+    const res = await fetch(`${API}/spareparts/${id}/restore`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      await loadData();
+    } else {
+      alert('Gagal: ' + (data.message || 'Terjadi kesalahan'));
+    }
+  } catch (err) {
+    console.error('Restore error:', err);
+    alert('Koneksi error!');
+  }
+}
+
+// Delete single & Permanent delete
 function openDeleteModal(id, name) {
   deleteId = id;
-  document.getElementById('deleteItemName').textContent = name;
-  document.getElementById('modalDelete').classList.remove('hidden');
+  permDeleteId = null;
+  const nameEl = document.getElementById('deleteItemName');
+  if (nameEl) nameEl.textContent = name;
+  const modal = document.getElementById('modalDelete');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function openPermanentDeleteModal(id, name) {
+  deleteId = id;
+  permDeleteId = id;
+  const nameEl = document.getElementById('deleteItemName');
+  if (nameEl) nameEl.textContent = `${name} (HAPUS PERMANEN)`;
+  const modal = document.getElementById('modalDelete');
+  if (modal) modal.classList.remove('hidden');
 }
 
 function closeDeleteModal() {
-  document.getElementById('modalDelete').classList.add('hidden');
+  const modal = document.getElementById('modalDelete');
+  if (modal) modal.classList.add('hidden');
   deleteId = null;
+  permDeleteId = null;
 }
 
 async function confirmDelete() {
   if (!deleteId) return;
+  const btn = document.querySelector('#modalDelete .btn-danger');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menghapus...'; }
+
+  const targetId = deleteId;
+  const isPerm = permDeleteId;
+  deleteId = null;
+  permDeleteId = null;
+
   try {
-    const res = await fetch(`${API}/spareparts/${deleteId}`, {
+    const url = isPerm ? `${API}/spareparts/${targetId}/permanent` : `${API}/spareparts/${targetId}`;
+    const res = await fetch(url, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await res.json();
     if (data.success) {
       closeDeleteModal();
-      loadData();
+      await loadData();
     } else {
-      alert('Gagal: ' + data.message);
+      alert('Gagal: ' + (data.message || 'Terjadi kesalahan'));
     }
   } catch (err) {
+    console.error('Delete error:', err);
     alert('Koneksi error!');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Hapus'; }
   }
 }
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const c = require('../controllers/sparepartController');
 const auth = require('../middleware/auth');
 const isAdminOrOwner = require('../middleware/isAdminOrOwner');
+const isWarehouseOrAdminOrOwner = require('../middleware/isWarehouseOrAdminOrOwner');
 
 router.use(auth);
 
@@ -15,6 +16,8 @@ router.get('/:id/stock-card', c.getSparepartStockCard);
 router.post('/', c.createSparepart);
 router.post('/bulk-adjust', isAdminOrOwner, c.bulkAdjustPrices);
 router.put('/:id', c.updateSparepart);
-router.delete('/:id', isAdminOrOwner, c.deleteSparepart);
+router.delete('/:id', isWarehouseOrAdminOrOwner, c.deleteSparepart);
+router.post('/:id/restore', isWarehouseOrAdminOrOwner, c.restoreSparepart);
+router.delete('/:id/permanent', isAdminOrOwner, c.permanentDeleteSparepart);
 
 module.exports = router;

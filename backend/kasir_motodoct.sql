@@ -53,6 +53,7 @@ CREATE TABLE `spareparts` (
   `brand` varchar(100) DEFAULT NULL,
   `price_bengkel` decimal(10,2) DEFAULT 0.00,
   `type` varchar(100) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`),

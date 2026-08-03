@@ -268,12 +268,38 @@
                 <th style="padding:10px; text-align:left;">Nama Mekanik</th>
                 <th style="padding:10px; text-align:center;">Jumlah Servis</th>
                 <th style="padding:10px; text-align:right;">Total Omset Jasa</th>
-                <th style="padding:10px; text-align:right;">Komisi Mekanik</th>
-                <th style="padding:10px; text-align:right;">Bagian Bengkel (Net Jasa)</th>
+                <th style="padding:10px; text-align:right;">Total Komisi</th>
+                <th style="padding:10px; text-align:right;">Sudah Cair</th>
+                <th style="padding:10px; text-align:right;">Belum Cair</th>
+                <th style="padding:10px; text-align:right;">Bagian Bengkel</th>
               </tr>
             </thead>
             <tbody id="komisiTableBody">
-              <tr><td colspan="5" class="empty-state" style="text-align:center; padding:15px; color:#888;">Memuat data komisi...</td></tr>
+              <tr><td colspan="7" class="empty-state" style="text-align:center; padding:15px; color:#888;">Memuat data komisi...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section Riwayat Pencairan Komisi Mekanik -->
+      <div style="margin-top: 24px; border-top: 2px dashed #e2e8f0; padding-top: 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="font-size:14px; color:#333; margin:0; font-weight:700;">💸 Riwayat Pencairan Komisi Mekanik (Kas Keluar Realisasi)</h4>
+          <span style="font-size:12px; color:#777; font-style:italic;">Daftar pembayaran komisi yang telah dicairkan dalam periode ini</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="background:#f8f9fa;">
+                <th style="padding:10px; text-align:left;">Tanggal Cair</th>
+                <th style="padding:10px; text-align:left;">Nama Mekanik</th>
+                <th style="padding:10px; text-align:center;">Jumlah Pekerjaan</th>
+                <th style="padding:10px; text-align:right;">Nominal Komisi Dicairkan</th>
+                <th style="padding:10px; text-align:center;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="pencairanTableBody">
+              <tr><td colspan="5" class="empty-state" style="text-align:center; padding:15px; color:#888;">Memuat data pencairan...</td></tr>
             </tbody>
           </table>
         </div>

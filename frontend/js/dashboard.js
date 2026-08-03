@@ -62,31 +62,46 @@ let currentDays = 7;
 async function loadChart(days = 7) {
   currentDays = days;
   const labels = [], pendArr = [], biayaArr = [];
-  const today = new Date();
-  const promises = [];
+  const todayObj = new Date();
+  const fromObj = new Date();
+  fromObj.setDate(todayObj.getDate() - (days - 1));
+  const fromDate = getLocalDate(fromObj);
+  const toDate = getLocalDate(todayObj);
 
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const dateStr = getLocalDate(d);
-    labels.push(d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
-    promises.push(
-      fetch(`${API}/reports/summary?from=${dateStr}&to=${dateStr}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      }).then(r => r.json()).catch(() => ({ success: false }))
-    );
+  let harianMap = {}, pengeluaranMap = {};
+
+  try {
+    const res = await fetch(`${API}/reports/summary?from=${fromDate}&to=${toDate}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      (json.data.harian || []).forEach(item => {
+        const t = getLocalDate(new Date(item.tanggal));
+        harianMap[t] = parseFloat(item.pendapatan || 0);
+      });
+      (json.data.pengeluaran_harian || []).forEach(item => {
+        const t = getLocalDate(new Date(item.tanggal));
+        pengeluaranMap[t] = parseFloat(item.pengeluaran || 0);
+      });
+    }
+  } catch (err) {
+    console.error('Chart load error:', err);
   }
 
-  const results = await Promise.all(promises);
   let hasData = false;
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(todayObj);
+    d.setDate(todayObj.getDate() - i);
+    const dateStr = getLocalDate(d);
+    labels.push(d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
 
-  results.forEach(r => {
-    const pend = r.success ? (r.data.total_pendapatan || 0) : 0;
-    const biaya = r.success ? (r.data.total_pengeluaran || 0) : 0;
+    const pend = harianMap[dateStr] || 0;
+    const biaya = pengeluaranMap[dateStr] || 0;
     pendArr.push(pend);
     biayaArr.push(biaya);
     if (pend > 0 || biaya > 0) hasData = true;
-  });
+  }
 
   const canvas = document.getElementById('chartDashboard');
   const emptyBox = document.getElementById('chartEmpty');
@@ -183,11 +198,9 @@ async function loadDashboard() {
   const headers = { Authorization: `Bearer ${token}` };
 
   try {
-    const [todayRes, bulanRes, spRes] = await Promise.all([
-      fetch(`${API}/reports/summary?from=${today}&to=${today}`, { headers }).then(r => r.json()),
-      fetch(`${API}/reports/summary?from=${firstDay}&to=${today}`, { headers }).then(r => r.json()),
-      fetch(`${API}/spareparts`, { headers }).then(r => r.json()),
-    ]);
+    // Ambil KPI hari ini + stok inventaris pakai endpoint RINGAN
+    const todayRes = await fetch(`${API}/reports/dashboard-stats?from=${today}&to=${today}`, { headers })
+      .then(r => r.json()).catch(() => ({ success: false }));
 
     // ===== KPI HARI INI =====
     if (todayRes.success) {
@@ -199,7 +212,6 @@ async function loadDashboard() {
       document.getElementById('statPengeluaran').textContent = rupiahShort(d.total_pengeluaran);
       document.getElementById('statLaba').textContent = rupiahShort(laba);
 
-      // Laba card warna dinamis
       const labaCard = document.getElementById('labaCard');
       const labaIcon = document.getElementById('labaIcon');
       const labaSub = document.getElementById('labaSub');
@@ -224,7 +236,28 @@ async function loadDashboard() {
         labaIcon.textContent = '➖';
         labaSub.textContent = 'impas';
       }
+
+      // Inventaris Gudang
+      if (d.sparepart_stats) {
+        document.getElementById('totalSparepart').textContent = d.sparepart_stats.total_item || 0;
+        document.getElementById('totalMenipis').textContent = d.sparepart_stats.stok_menipis || 0;
+        document.getElementById('totalHabis').textContent = d.sparepart_stats.stok_habis || 0;
+      }
+
+      const badge = document.getElementById('notifBadge');
+      const badgeTotal = (d.sparepart_stats?.stok_menipis || 0) + (d.sparepart_stats?.stok_habis || 0);
+      if (badge && badgeTotal > 0) {
+        badge.textContent = badgeTotal;
+        badge.style.display = 'inline';
+      }
     }
+
+    // Ambil Ringkasan Bulan & Chart secara PARALEL (tidak bloking KPI)
+    const [bulanRes] = await Promise.all([
+      fetch(`${API}/reports/dashboard-stats?from=${firstDay}&to=${today}`, { headers })
+        .then(r => r.json()).catch(() => ({ success: false })),
+      loadChart(7),
+    ]);
 
     // ===== RINGKASAN BULAN =====
     if (bulanRes.success) {
@@ -238,27 +271,6 @@ async function loadDashboard() {
       labaEl.style.color = labaB >= 0 ? 'var(--purple)' : 'var(--red)';
       document.getElementById('totalTrxBulan').textContent = b.total_transaksi || 0;
     }
-
-    // ===== INVENTARIS =====
-    if (spRes.success) {
-      const parts = spRes.data;
-      document.getElementById('totalSparepart').textContent = parts.length;
-      const menipis = parts.filter(p => p.stock > 0 && p.stock <= 5).length;
-      const habis = parts.filter(p => p.stock === 0).length;
-      document.getElementById('totalMenipis').textContent = menipis;
-      document.getElementById('totalHabis').textContent = habis;
-
-      // Badge notifikasi di sidebar
-      const badge = document.getElementById('notifBadge');
-      const total = menipis + habis;
-      if (badge && total > 0) {
-        badge.textContent = total;
-        badge.style.display = 'inline';
-      }
-    }
-
-    // ===== CHART =====
-    await loadChart(7);
 
   } catch (err) {
     console.error('Dashboard error:', err);
