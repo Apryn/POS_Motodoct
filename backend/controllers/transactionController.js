@@ -359,4 +359,66 @@ exports.deleteTransaction = async (req, res) => {
     }
 };
 
+exports.deleteTransactionService = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { serviceId } = req.params;
+
+        // 1. Dapatkan detail item servis
+        const [[item]] = await conn.execute(
+            'SELECT * FROM transaction_services WHERE id = ?',
+            [serviceId]
+        );
+        if (!item) {
+            await conn.rollback();
+            return res.status(404).json({ success: false, message: 'Item servis tidak ditemukan' });
+        }
+
+        const transactionId = item.transaction_id;
+
+        // 2. Dapatkan info transaksi utama
+        const [[trx]] = await conn.execute('SELECT * FROM transactions WHERE id = ?', [transactionId]);
+        if (!trx) {
+            await conn.rollback();
+            return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
+        }
+
+        // 3. Hitung proporsi diskon jika total_amount berbeda dengan total subtotal
+        const [[resSubtotalSparepart]] = await conn.execute(
+            'SELECT COALESCE(SUM(subtotal), 0) AS total FROM transaction_spareparts WHERE transaction_id = ?',
+            [transactionId]
+        );
+        const [[resSubtotalJasa]] = await conn.execute(
+            'SELECT COALESCE(SUM(price), 0) AS total FROM transaction_services WHERE transaction_id = ?',
+            [transactionId]
+        );
+
+        const currentSubtotal = Number(resSubtotalSparepart.total) + Number(resSubtotalJasa.total);
+        const discountRatio = currentSubtotal > 0 ? (Number(trx.total_amount) / currentSubtotal) : 1;
+        const deductionAmount = Math.round(Number(item.price) * discountRatio);
+
+        // 4. Hapus data servis
+        await conn.execute('DELETE FROM transaction_services WHERE id = ?', [serviceId]);
+
+        // 5. Update total_amount transaksi
+        const newTotalAmount = Math.max(0, Number(trx.total_amount) - deductionAmount);
+        await conn.execute('UPDATE transactions SET total_amount = ? WHERE id = ?', [newTotalAmount, transactionId]);
+
+        await conn.commit();
+        res.json({
+            success: true,
+            message: 'Jenis servis berhasil dihapus dari transaksi',
+            data: { transaction_id: transactionId, new_total: newTotalAmount }
+        });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error hapus servis transaksi:", error);
+        res.status(500).json({ success: false, message: 'Gagal menghapus jenis servis dari transaksi' });
+    } finally {
+        conn.release();
+    }
+};
+
+
 

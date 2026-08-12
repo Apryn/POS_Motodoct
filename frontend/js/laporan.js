@@ -527,12 +527,16 @@ async function lihatDetail(id) {
             <th style="padding:6px 10px;text-align:left;">Jenis Servis</th>
             <th style="padding:6px 10px;text-align:left;">Mekanik</th>
             <th style="padding:6px 10px;text-align:right;">Harga</th>
+            <th style="padding:6px 10px;text-align:center;width:80px;">Aksi</th>
           </tr></thead>
           <tbody>${data.services.map(s => `
             <tr style="border-bottom:1px solid #f0f0f0;">
               <td style="padding:6px 10px;">${s.service_name}</td>
               <td style="padding:6px 10px;">${s.mechanic_name}</td>
               <td style="padding:6px 10px;text-align:right;">${rupiah(s.price)}</td>
+              <td style="padding:6px 10px;text-align:center;">
+                <button onclick="deleteTransactionServiceItem(${s.id}, '${s.service_name.replace(/'/g, "\\'")}', ${data.id})" style="padding:2px 6px;background:#fff0f0;color:#e74c3c;border:1px solid #ffccd0;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Hapus</button>
+              </td>
             </tr>`).join('')}
           </tbody>
         </table>`;
@@ -638,6 +642,34 @@ async function submitReturn() {
   } finally {
     btnSave.disabled = false;
     btnSave.textContent = 'Simpan Retur';
+  }
+}
+
+async function deleteTransactionServiceItem(serviceId, serviceName, transactionId) {
+  const konfirmasi = confirm(`Apakah Anda yakin ingin menghapus servis "${serviceName}" dari transaksi ini?`);
+  if (!konfirmasi) return;
+
+  try {
+    const res = await fetch(`${API}/transactions/services/${serviceId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('Jenis servis berhasil dihapus dari transaksi!');
+      await lihatDetail(transactionId);
+      if (typeof loadLaporan === 'function') {
+        loadLaporan();
+      }
+    } else {
+      alert('Gagal menghapus servis: ' + (data.message || 'Server error'));
+    }
+  } catch (err) {
+    console.error('Error delete transaction service:', err);
+    alert('Terjadi kesalahan koneksi saat menghapus servis');
   }
 }
 
