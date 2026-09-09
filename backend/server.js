@@ -22,6 +22,8 @@ const savedCartRoutes = require("./routes/savedCartRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const userRoutes = require("./routes/userRoutes");
 const reminderRoutes = require("./routes/reminderRoutes");
+const whatsappRoutes = require("./routes/whatsappRoutes");
+const { initWhatsApp } = require("./services/whatsappService");
 
 const path = require("path");
 const fs = require("fs");
@@ -111,6 +113,7 @@ app.use("/api/saved-carts", savedCartRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reminders", reminderRoutes);
+app.use("/api/whatsapp", whatsappRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -120,6 +123,9 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+
+  // Inisialisasi WhatsApp Gateway (Baileys)
+  initWhatsApp();
 
   // Auto-create oil_reminders table if it doesn't exist (with nullable transaction_id)
   try {

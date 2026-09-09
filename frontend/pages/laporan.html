@@ -382,8 +382,35 @@
       <div class="modal-body" id="detailContent"></div>
       <div class="modal-footer">
         <button class="btn-danger" id="btnDeleteTransaction" onclick="deleteTransactionClick()" style="padding: 6px 12px; background: #e74c3c; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: none; margin-right: auto;">🗑️ Hapus Transaksi</button>
+        <button class="btn-primary" id="btnSendWaDetail" onclick="sendWaReceiptFromLaporan()" style="padding: 6px 12px; background: #25d366; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: none;">💬 Kirim WA</button>
         <button class="btn-print-struk" id="btnPrintDetailStruk" onclick="printDetailStruk()" style="padding: 6px 12px; background: #27ae60; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: none;">🖨️ Cetak Struk 58mm</button>
         <button class="btn-secondary" onclick="closeDetail()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kirim WA -->
+  <div class="modal hidden" id="modalSendWa" style="z-index: 1400;">
+    <div class="modal-box" style="max-width:480px; width:92%;">
+      <div class="modal-header" style="background:#075e54; color:#fff;">
+        <h3 style="color:#fff; display:flex; align-items:center; gap:6px;">💬 Kirim Notifikasi WhatsApp</h3>
+        <button class="modal-close" onclick="closeWaModal()" style="color:#fff;">✕</button>
+      </div>
+      <div class="modal-body" style="padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">No. WhatsApp Pelanggan <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="waPhoneInput" placeholder="Contoh: 08123456789 atau 628123456789" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:13.5px; font-weight:600; outline:none;" />
+          <span style="font-size:11px; color:#64748b; margin-top:2px; display:block;">Nomor WA otomatis terisi jika pelanggan terdaftar, atau masukkan manual.</span>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Pratinjau Pesan WhatsApp</label>
+          <textarea id="waPreviewText" rows="10" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:12px; font-family:monospace; line-height:1.4; outline:none; background:#f8fafc; resize:vertical;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="background:#f1f5f9; padding:12px 20px; gap:8px;">
+        <button type="button" onclick="copyWaText()" style="padding:8px 14px; background:#64748b; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">📋 Salin Pesan</button>
+        <button type="button" onclick="executeSendWa()" style="padding:8px 16px; background:#25d366; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">🚀 Buka WA & Kirim</button>
+        <button type="button" class="btn-secondary" onclick="closeWaModal()">Batal</button>
       </div>
     </div>
   </div>

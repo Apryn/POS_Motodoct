@@ -347,8 +347,60 @@
       </div>
       <div class="struk-content" id="strukContent"></div>
       <div class="struk-footer">
+        <button class="btn-print-struk" onclick="openWaModalFromPos()" style="background:#25d366; border-color:#25d366; font-weight:700; display:inline-flex; align-items:center; gap:6px;">💬 Kirim WA</button>
         <button class="btn-print-struk" onclick="printStruk()">Cetak Struk</button>
         <button class="btn-close-struk" onclick="closeStruk()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kirim WA -->
+  <div class="modal-struk hidden" id="modalSendWa" style="z-index: 1400;">
+    <div class="struk-box" style="max-width:480px; width:92%;">
+      <div class="struk-header" style="background:#075e54; color:#fff;">
+        <h3 style="color:#fff; display:flex; align-items:center; gap:6px;">💬 Kirim Notifikasi WhatsApp</h3>
+        <button class="btn-close-struk" onclick="closeWaModal()" style="width:auto;padding:4px 10px; color:#fff; background:transparent;">✕</button>
+      </div>
+      <div style="padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">No. WhatsApp Pelanggan <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="waPhoneInput" placeholder="Contoh: 08123456789 atau 628123456789" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:13.5px; font-weight:600; outline:none;" />
+          <span style="font-size:11px; color:#64748b; margin-top:2px; display:block;">Nomor WA otomatis terisi jika pelanggan terdaftar, atau masukkan manual.</span>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Pratinjau Pesan WhatsApp</label>
+          <textarea id="waPreviewText" rows="10" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:12px; font-family:monospace; line-height:1.4; outline:none; background:#f8fafc; resize:vertical;"></textarea>
+        </div>
+      </div>
+      <div class="struk-footer" style="background:#f1f5f9; padding:12px 20px; gap:8px;">
+        <button type="button" onclick="copyWaText()" style="padding:8px 14px; background:#64748b; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">📋 Salin Pesan</button>
+        <button type="button" onclick="executeSendWa()" style="padding:8px 16px; background:#25d366; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">🚀 Buka WA & Kirim</button>
+        <button type="button" class="btn-close-struk" onclick="closeWaModal()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Scan QR WhatsApp Bengkel (Baileys) -->
+  <div class="modal-struk hidden" id="modalWaQr" style="z-index: 1500;">
+    <div class="struk-box" style="max-width:380px; width:92%; text-align:center;">
+      <div class="struk-header" style="background:#075e54; color:#fff;">
+        <h3 style="color:#fff; display:flex; align-items:center; justify-content:center; gap:6px;">📱 Koneksi WhatsApp Bengkel</h3>
+        <button class="btn-close-struk" onclick="closeWaQrModal()" style="width:auto;padding:4px 10px; color:#fff; background:transparent;">✕</button>
+      </div>
+      <div style="padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+        <div id="waQrStatusText" style="font-size:13px; font-weight:600; color:#334155;">Memeriksa status WhatsApp...</div>
+        <div id="waQrBox" style="width:230px; height:230px; border:2px dashed #cbd5e1; border-radius:12px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;">
+          <span style="font-size:12px; color:#94a3b8;">Menyiapkan QR Code...</span>
+        </div>
+        <p style="font-size:11.5px; color:#64748b; line-height:1.4; margin:0;" id="waQrInstructions">
+          Buka WhatsApp di HP Anda &gt; Menu Titik Tiga / Pengaturan &gt; <strong>Perangkat Tertaut</strong> &gt; <strong>Tautkan Perangkat</strong>, lalu arahkan kamera ke QR Code di atas.
+        </p>
+        <button type="button" id="btnDisconnectWa" onclick="disconnectWaServer()" style="display:none; padding:7px 14px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
+          🚪 Putus Koneksi / Ganti Nomor
+        </button>
+      </div>
+      <div class="struk-footer" style="justify-content:center; background:#f8fafc;">
+        <button type="button" class="btn-close-struk" onclick="closeWaQrModal()">Tutup</button>
       </div>
     </div>
   </div>
@@ -499,6 +551,23 @@
           <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Link Gambar QRIS Statis (Opsional)</label>
           <input type="text" id="cfgQrisUrl" placeholder="Kosongkan jika ingin generate otomatis"
             style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+
+        <h4 style="font-size:12px; font-weight:700; color:#25d366; border-bottom:1px solid #eee; padding-bottom:4px; margin:8px 0 0 0;">NOTIFIKASI WHATSAPP</h4>
+        <div style="display:flex; align-items:flex-start; gap:8px;">
+          <input type="checkbox" id="cfgAutoSendWa" style="width:16px; height:16px; margin-top:2px; cursor:pointer;" checked />
+          <label for="cfgAutoSendWa" style="font-size:12px; font-weight:600; color:#334155; cursor:pointer; line-height:1.4;">Otomatis buka/kirim WhatsApp ke pelanggan setelah pembayaran sukses</label>
+        </div>
+        <div style="margin-top:8px; padding:10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:12px; font-weight:700; color:#166534;" id="waConnectionBadge">
+              ⏳ Memeriksa koneksi...
+            </div>
+            <button type="button" onclick="openWaQrModal()" style="padding:4px 10px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+              📲 Hubungkan WA
+            </button>
+          </div>
+          <p style="font-size:11px; color:#15803d; margin:4px 0 0 0;">Scan QR Code sekali untuk mengirim struk otomatis dari nomor WhatsApp bengkel Anda sendiri (Baileys).</p>
         </div>
 
         <h4 style="font-size:12px; font-weight:700; color:#1e293b; border-bottom:1px solid #eee; padding-bottom:4px; margin:8px 0 0 0;">CATATAN STRUK</h4>

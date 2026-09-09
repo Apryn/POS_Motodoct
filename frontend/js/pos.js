@@ -736,6 +736,41 @@ async function processTransaction() {
     if (data.success) {
       showStruk(data.data, total, subtotal, discountAmt);
 
+      // Auto Kirim / Buka WhatsApp jika pelanggan memiliki nomor HP dan opsi aktif
+      try {
+        const cfg = getReceiptSettings();
+        const custPhone = (lastPosTransaction && lastPosTransaction.custPhone) || (data.data && data.data.customer_phone);
+        if (cfg.autoSendWa !== false && custPhone) {
+          if (data.data && data.data.auto_wa_sent) {
+            console.log("✅ Pesan WhatsApp terkirim otomatis via Fonnte Gateway.");
+          } else {
+            let cleanPhone = String(custPhone).replace(/[^0-9]/g, '');
+            if (cleanPhone.startsWith('0')) {
+              cleanPhone = '62' + cleanPhone.substring(1);
+            }
+            const waMsg = formatWaReceiptMessage({
+              invoice_number: data.data.invoice_number,
+              created_at: new Date(),
+              customer_name: lastPosTransaction ? lastPosTransaction.custName : (data.data.customer_name || 'Pelanggan'),
+              license_plate: lastPosTransaction && lastPosTransaction.custPlate !== '-' ? lastPosTransaction.custPlate : (data.data.license_plate || ''),
+              payment_method: paymentMethod,
+              spareparts: lastPosTransaction ? lastPosTransaction.cart.filter(i => i.type === 'sparepart') : [],
+              services: lastPosTransaction ? lastPosTransaction.cart.filter(i => i.type === 'servis') : [],
+              subtotal: subtotal,
+              discount_amount: discountAmt,
+              total_amount: total
+            });
+            const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`;
+            const waWin = window.open(waUrl, '_blank');
+            if (!waWin || waWin.closed || typeof waWin.closed === 'undefined') {
+              openWaModalFromPos();
+            }
+          }
+        }
+      } catch (errWa) {
+        console.error("Gagal auto-send WA di POS:", errWa);
+      }
+
       // Hapus keranjang tersimpan kalau transaksi dari saved cart
       if (activeSavedCartId) {
         await fetch(`${API}/saved-carts/${activeSavedCartId}`, {
@@ -920,13 +955,14 @@ const DEFAULT_RECEIPT_SETTINGS = {
   bankName: 'BCA',
   bankAccount: '123-456-7890',
   bankOwner: 'BENGKEL MOTODOCT',
-  qrisUrl: ''
+  qrisUrl: '',
+  autoSendWa: true
 };
 
 function getReceiptSettings() {
   try {
     const saved = localStorage.getItem('receipt_settings');
-    return saved ? JSON.parse(saved) : DEFAULT_RECEIPT_SETTINGS;
+    return saved ? { ...DEFAULT_RECEIPT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_RECEIPT_SETTINGS;
   } catch {
     return DEFAULT_RECEIPT_SETTINGS;
   }
@@ -946,6 +982,9 @@ function openReceiptSettings() {
   document.getElementById('cfgBankOwner').value = cfg.bankOwner || 'BENGKEL MOTODOCT';
   document.getElementById('cfgQrisUrl').value = cfg.qrisUrl || '';
   
+  const autoWaCheck = document.getElementById('cfgAutoSendWa');
+  if (autoWaCheck) autoWaCheck.checked = cfg.autoSendWa !== false;
+  
   document.getElementById('modalReceiptSettings').classList.remove('hidden');
 }
 
@@ -954,6 +993,7 @@ function closeReceiptSettings() {
 }
 
 function saveReceiptSettings() {
+  const autoWaCheck = document.getElementById('cfgAutoSendWa');
   const cfg = {
     shopName: document.getElementById('cfgShopName').value.trim() || 'MOTODOCT',
     shopSlogan: document.getElementById('cfgShopSlogan').value.trim() || 'Bengkel Motor Terpercaya',
@@ -965,7 +1005,8 @@ function saveReceiptSettings() {
     bankName: document.getElementById('cfgBankName').value.trim().toUpperCase() || 'BCA',
     bankAccount: document.getElementById('cfgBankAccount').value.trim() || '123-456-7890',
     bankOwner: document.getElementById('cfgBankOwner').value.trim().toUpperCase() || 'BENGKEL MOTODOCT',
-    qrisUrl: document.getElementById('cfgQrisUrl').value.trim()
+    qrisUrl: document.getElementById('cfgQrisUrl').value.trim(),
+    autoSendWa: autoWaCheck ? autoWaCheck.checked : true
   };
   localStorage.setItem('receipt_settings', JSON.stringify(cfg));
   closeReceiptSettings();
@@ -1242,12 +1283,185 @@ function showStruk(trxData, total, subtotal, discountAmt) {
     </div>
   `;
 
+  let custPhone = trxData.customer_phone || '';
+  if (!custPhone && custVal) {
+    const matchedC = customers.find(c => `${c.name} (${c.license_plate || '-'})` === custVal || c.name === custName || c.license_plate === custPlate);
+    if (matchedC && matchedC.phone) custPhone = matchedC.phone;
+  }
+
+  lastPosTransaction = {
+    trxData,
+    cart: JSON.parse(JSON.stringify(cart)),
+    total,
+    subtotal,
+    discountAmt,
+    custName,
+    custPlate,
+    custPhone,
+    mechName,
+    paymentMethod,
+    created_at: now
+  };
+
   document.getElementById('modalStruk').classList.remove('hidden');
 }
 
 function closeStruk() {
   document.getElementById('modalStruk').classList.add('hidden');
 }
+
+let lastPosTransaction = null;
+let currentWaTrxData = null;
+
+function formatWaReceiptMessage(data) {
+  const cfg = typeof getReceiptSettings === 'function' ? getReceiptSettings() : {};
+  const shopName = cfg.shopName || 'MOTODOCT';
+  const shopWA = cfg.shopWA || '';
+  const shopIG = cfg.shopIG || '';
+  
+  const invoice = data.invoice_number || 'INV-';
+  const dateStr = data.created_at ? new Date(data.created_at).toLocaleString('id-ID') : new Date().toLocaleString('id-ID');
+  const custName = data.customer_name || 'Pelanggan';
+  const plate = data.license_plate ? ` (${data.license_plate})` : '';
+  const paymentMethod = (data.payment_method || 'cash').toUpperCase();
+  
+  let msg = `🏎️ *${shopName}*\n`;
+  msg += `📄 *NOTA TRANSAKSI / SERVICE MOTOR*\n\n`;
+  msg += `*No. Invoice:* ${invoice}\n`;
+  msg += `*Tanggal:* ${dateStr}\n`;
+  msg += `*Pelanggan:* ${custName}${plate}\n`;
+  msg += `=============================\n\n`;
+
+  // Item Spareparts
+  if (data.spareparts && data.spareparts.length > 0) {
+    msg += `📦 *SPAREPART / BARANG:* \n`;
+    data.spareparts.forEach((sp, idx) => {
+      const name = sp.sparepart_name || sp.name;
+      const qty = sp.quantity || sp.qty || 1;
+      const unit = sp.sparepart_unit || sp.unit || 'pcs';
+      const price = Number(sp.price || 0);
+      const subtotal = Number(sp.subtotal || (price * qty));
+      msg += `${idx + 1}. ${name}\n`;
+      msg += `   └ ${qty} ${unit} x Rp ${price.toLocaleString('id-ID')} = Rp ${subtotal.toLocaleString('id-ID')}\n`;
+    });
+    msg += `\n`;
+  }
+
+  // Item Services
+  if (data.services && data.services.length > 0) {
+    msg += `🔧 *JASA SERVICE / PERAWATAN:* \n`;
+    data.services.forEach((sv, idx) => {
+      const name = sv.service_name || sv.name;
+      const price = Number(sv.price || 0);
+      const mech = sv.mechanic_name || data.mechanic_name || '';
+      const mechText = mech ? ` (Mekanik: ${mech})` : '';
+      msg += `${idx + 1}. ${name}${mechText}\n`;
+      msg += `   └ Rp ${price.toLocaleString('id-ID')}\n`;
+    });
+    msg += `\n`;
+  }
+
+  msg += `=============================\n`;
+  if (data.subtotal && Number(data.subtotal) !== Number(data.total_amount || data.total)) {
+    msg += `Subtotal: Rp ${Number(data.subtotal).toLocaleString('id-ID')}\n`;
+  }
+  if (data.discount_amount && Number(data.discount_amount) > 0) {
+    msg += `Diskon: -Rp ${Number(data.discount_amount).toLocaleString('id-ID')}\n`;
+  }
+  const total = Number(data.total_amount || data.total || 0);
+  msg += `*TOTAL BAYAR: Rp ${total.toLocaleString('id-ID')}*\n`;
+  msg += `Pembayaran: ${paymentMethod}\n\n`;
+  
+  msg += `Terima kasih telah mempercayakan perbaikan & perawatan sepeda motor Anda di *${shopName}*! Semoga kendaraan Anda senantiasa prima. 🙏😊\n`;
+  if (shopWA || shopIG) {
+    msg += `\nInformasi Kontak:\n`;
+    if (shopWA) msg += `📱 WA: ${shopWA}\n`;
+    if (shopIG) msg += `📸 IG: ${shopIG}\n`;
+  }
+
+  return msg;
+}
+window.formatWaReceiptMessage = formatWaReceiptMessage;
+
+function openWaModalFromPos() {
+  if (!lastPosTransaction) {
+    alert("Data transaksi tidak ditemukan!");
+    return;
+  }
+
+  let phone = lastPosTransaction.custPhone || '';
+  if (!phone && lastPosTransaction.customerId) {
+    const foundC = customers.find(c => c.id == lastPosTransaction.customerId);
+    if (foundC && foundC.phone) phone = foundC.phone;
+  }
+
+  const spareparts = lastPosTransaction.cart
+    .filter(i => i.type === 'sparepart')
+    .map(i => ({ name: i.name, quantity: i.qty, unit: i.unit || 'pcs', price: i.price, subtotal: i.price * i.qty }));
+
+  const services = lastPosTransaction.cart
+    .filter(i => i.type === 'servis')
+    .map(i => ({ name: i.name, price: i.price, mechanic_name: lastPosTransaction.mechName }));
+
+  currentWaTrxData = {
+    invoice_number: lastPosTransaction.trxData?.invoice_number || 'INV-',
+    created_at: lastPosTransaction.created_at || new Date(),
+    customer_name: lastPosTransaction.custName,
+    license_plate: lastPosTransaction.custPlate !== '-' ? lastPosTransaction.custPlate : '',
+    payment_method: lastPosTransaction.paymentMethod,
+    spareparts,
+    services,
+    subtotal: lastPosTransaction.subtotal,
+    discount_amount: lastPosTransaction.discountAmt,
+    total_amount: lastPosTransaction.total,
+    phone
+  };
+
+  const phoneEl = document.getElementById('waPhoneInput');
+  if (phoneEl) phoneEl.value = phone;
+  const previewEl = document.getElementById('waPreviewText');
+  if (previewEl) previewEl.value = formatWaReceiptMessage(currentWaTrxData);
+  const modalEl = document.getElementById('modalSendWa');
+  if (modalEl) modalEl.classList.remove('hidden');
+}
+window.openWaModalFromPos = openWaModalFromPos;
+
+function closeWaModal() {
+  const modal = document.getElementById('modalSendWa');
+  if (modal) modal.classList.add('hidden');
+}
+window.closeWaModal = closeWaModal;
+
+function copyWaText() {
+  const textEl = document.getElementById('waPreviewText');
+  if (!textEl || !textEl.value) return;
+  navigator.clipboard.writeText(textEl.value).then(() => {
+    alert('✅ Pesan WhatsApp berhasil disalin!');
+  }).catch(err => {
+    console.error("Gagal menyalin pesan:", err);
+  });
+}
+window.copyWaText = copyWaText;
+
+function executeSendWa() {
+  const rawPhone = document.getElementById('waPhoneInput')?.value.trim();
+  const text = document.getElementById('waPreviewText')?.value.trim();
+  if (!rawPhone) {
+    alert('Masukkan nomor WhatsApp pelanggan!');
+    document.getElementById('waPhoneInput')?.focus();
+    return;
+  }
+
+  let cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '62' + cleanPhone.substring(1);
+  }
+
+  const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+  closeWaModal();
+}
+window.executeSendWa = executeSendWa;
 
 function printStruk() {
   const content = document.getElementById('strukContent').innerHTML;
@@ -2064,4 +2278,125 @@ function loadActiveCartState() {
     console.error('Error loading active cart state:', err);
   }
 }
+
+// ===== WHATSAPP BAILEYS QR & STATUS MANAGEMENT =====
+let waStatusPollInterval = null;
+
+async function checkWaConnectionStatus() {
+  try {
+    const res = await fetch(`${API}/whatsapp/status`);
+    const data = await res.json();
+    const badge = document.getElementById('waConnectionBadge');
+    if (data.success && data.data) {
+      if (data.data.isConnected) {
+        if (badge) {
+          badge.textContent = `✅ Terhubung: ${data.data.user || 'Nomor Bengkel'}`;
+          badge.style.color = '#15803d';
+        }
+      } else {
+        if (badge) {
+          badge.textContent = `⚠️ Belum Terhubung`;
+          badge.style.color = '#b45309';
+        }
+      }
+      return data.data;
+    }
+  } catch (err) {
+    console.warn("Gagal mengecek status WhatsApp:", err.message);
+  }
+  return null;
+}
+
+async function openWaQrModal() {
+  const modal = document.getElementById('modalWaQr');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  await refreshWaQrDisplay();
+  if (waStatusPollInterval) clearInterval(waStatusPollInterval);
+  waStatusPollInterval = setInterval(refreshWaQrDisplay, 3000);
+}
+window.openWaQrModal = openWaQrModal;
+
+function closeWaQrModal() {
+  const modal = document.getElementById('modalWaQr');
+  if (modal) modal.classList.add('hidden');
+  if (waStatusPollInterval) {
+    clearInterval(waStatusPollInterval);
+    waStatusPollInterval = null;
+  }
+  checkWaConnectionStatus();
+}
+window.closeWaQrModal = closeWaQrModal;
+
+async function refreshWaQrDisplay() {
+  const status = await checkWaConnectionStatus();
+  const statusText = document.getElementById('waQrStatusText');
+  const qrBox = document.getElementById('waQrBox');
+  const instructions = document.getElementById('waQrInstructions');
+  const btnDisconnect = document.getElementById('btnDisconnectWa');
+
+  if (!status) {
+    if (statusText) statusText.textContent = '❌ Tidak dapat terhubung ke server backend';
+    return;
+  }
+
+  if (status.isConnected) {
+    if (statusText) {
+      statusText.innerHTML = `✅ <span style="color:#15803d;">WhatsApp Bengkel Aktif & Terhubung!</span><br><span style="font-size:12px;color:#64748b;">Nomor: ${status.user || 'HP Bengkel'}</span>`;
+    }
+    if (qrBox) {
+      qrBox.innerHTML = `
+        <div style="text-align:center; padding:20px;">
+          <div style="font-size:48px; margin-bottom:8px;">📱</div>
+          <div style="font-size:12px; font-weight:700; color:#15803d;">Siap Kirim Otomatis!</div>
+          <div style="font-size:11px; color:#64748b; margin-top:4px;">Pesan nota akan langsung terkirim dari nomor ini.</div>
+        </div>
+      `;
+      qrBox.style.borderColor = '#86efac';
+      qrBox.style.background = '#f0fdf4';
+    }
+    if (instructions) instructions.style.display = 'none';
+    if (btnDisconnect) btnDisconnect.style.display = 'inline-block';
+  } else {
+    if (status.qrCode) {
+      if (statusText) statusText.textContent = '📲 Silakan scan QR Code di bawah dengan WhatsApp HP Anda:';
+      if (qrBox) {
+        qrBox.innerHTML = `<img src="${status.qrCode}" alt="WhatsApp QR Code" style="width:100%; height:100%; object-fit:contain;" />`;
+        qrBox.style.borderColor = '#22c55e';
+        qrBox.style.background = '#ffffff';
+      }
+    } else {
+      if (statusText) statusText.textContent = '⏳ Menyiapkan sesi WhatsApp...';
+      if (qrBox) qrBox.innerHTML = `<span style="font-size:12px; color:#64748b;">Memuat QR Code...</span>`;
+    }
+    if (instructions) instructions.style.display = 'block';
+    if (btnDisconnect) btnDisconnect.style.display = 'none';
+  }
+}
+
+async function disconnectWaServer() {
+  const konfirmasi = confirm("Apakah Anda yakin ingin memutuskan koneksi WhatsApp bengkel?");
+  if (!konfirmasi) return;
+
+  try {
+    const res = await fetch(`${API}/whatsapp/disconnect`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("✅ WhatsApp berhasil diputus. Silakan scan QR code baru.");
+      refreshWaQrDisplay();
+    } else {
+      alert("Gagal memutus koneksi: " + data.message);
+    }
+  } catch (err) {
+    alert("Koneksi error: " + err.message);
+  }
+}
+window.disconnectWaServer = disconnectWaServer;
+
+// Jalankan pengecekan status saat halaman POS dibuka
+setTimeout(checkWaConnectionStatus, 1500);
 

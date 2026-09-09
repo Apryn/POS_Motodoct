@@ -6,3 +6,5 @@ build/
 Thumbs.db
 *.log
 temp_deploy/
+auth_info_baileys/
+backend/auth_info_baileys/

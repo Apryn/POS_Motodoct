@@ -477,6 +477,9 @@ async function lihatDetail(id) {
     if (document.getElementById('btnPrintDetailStruk')) {
       document.getElementById('btnPrintDetailStruk').style.display = 'inline-block';
     }
+    if (document.getElementById('btnSendWaDetail')) {
+      document.getElementById('btnSendWaDetail').style.display = 'inline-block';
+    }
     const btnDel = document.getElementById('btnDeleteTransaction');
     if (btnDel) {
       btnDel.style.display = 'inline-block';
@@ -679,9 +682,119 @@ function closeDetail() {
   if (document.getElementById('btnPrintDetailStruk')) {
     document.getElementById('btnPrintDetailStruk').style.display = 'none';
   }
+  if (document.getElementById('btnSendWaDetail')) {
+    document.getElementById('btnSendWaDetail').style.display = 'none';
+  }
   if (document.getElementById('btnDeleteTransaction')) {
     document.getElementById('btnDeleteTransaction').style.display = 'none';
   }
+}
+
+function sendWaReceiptFromLaporan() {
+  if (!currentDetailTrx) {
+    alert("Data transaksi tidak ditemukan!");
+    return;
+  }
+
+  const phone = currentDetailTrx.customer_phone || '';
+  const messageText = typeof formatWaReceiptMessage === 'function'
+    ? formatWaReceiptMessage(currentDetailTrx)
+    : (typeof window.formatWaReceiptMessage === 'function' ? window.formatWaReceiptMessage(currentDetailTrx) : formatWaReceiptMessageLocal(currentDetailTrx));
+
+  const phoneEl = document.getElementById('waPhoneInput');
+  if (phoneEl) phoneEl.value = phone;
+  const textEl = document.getElementById('waPreviewText');
+  if (textEl) textEl.value = messageText;
+
+  const modalWa = document.getElementById('modalSendWa');
+  if (modalWa) modalWa.classList.remove('hidden');
+}
+
+function formatWaReceiptMessageLocal(data) {
+  const shopName = 'MOTODOCT';
+  const invoice = data.invoice_number || 'INV-';
+  const dateStr = data.created_at ? new Date(data.created_at).toLocaleString('id-ID') : new Date().toLocaleString('id-ID');
+  const custName = data.customer_name || 'Pelanggan';
+  const plate = data.license_plate ? ` (${data.license_plate})` : '';
+  const paymentMethod = (data.payment_method || 'cash').toUpperCase();
+  
+  let msg = `🏎️ *${shopName}*\n`;
+  msg += `📄 *NOTA TRANSAKSI / SERVICE MOTOR*\n\n`;
+  msg += `*No. Invoice:* ${invoice}\n`;
+  msg += `*Tanggal:* ${dateStr}\n`;
+  msg += `*Pelanggan:* ${custName}${plate}\n`;
+  msg += `=============================\n\n`;
+
+  if (data.spareparts && data.spareparts.length > 0) {
+    msg += `📦 *SPAREPART / BARANG:* \n`;
+    data.spareparts.forEach((sp, idx) => {
+      const name = sp.sparepart_name || sp.name;
+      const qty = sp.quantity || sp.qty || 1;
+      const unit = sp.sparepart_unit || sp.unit || 'pcs';
+      const price = Number(sp.price || 0);
+      const subtotal = Number(sp.subtotal || (price * qty));
+      msg += `${idx + 1}. ${name}\n`;
+      msg += `   └ ${qty} ${unit} x Rp ${price.toLocaleString('id-ID')} = Rp ${subtotal.toLocaleString('id-ID')}\n`;
+    });
+    msg += `\n`;
+  }
+
+  if (data.services && data.services.length > 0) {
+    msg += `🔧 *JASA SERVICE / PERAWATAN:* \n`;
+    data.services.forEach((sv, idx) => {
+      const name = sv.service_name || sv.name;
+      const price = Number(sv.price || 0);
+      const mech = sv.mechanic_name || '';
+      const mechText = mech ? ` (Mekanik: ${mech})` : '';
+      msg += `${idx + 1}. ${name}${mechText}\n`;
+      msg += `   └ Rp ${price.toLocaleString('id-ID')}\n`;
+    });
+    msg += `\n`;
+  }
+
+  msg += `=============================\n`;
+  const total = Number(data.total_amount || data.total || 0);
+  msg += `*TOTAL BAYAR: Rp ${total.toLocaleString('id-ID')}*\n`;
+  msg += `Pembayaran: ${paymentMethod}\n\n`;
+  
+  msg += `Terima kasih telah mempercayakan perbaikan & perawatan sepeda motor Anda di *${shopName}*! Semoga kendaraan Anda senantiasa prima. 🙏😊\n`;
+  return msg;
+}
+
+if (typeof window.closeWaModal !== 'function') {
+  window.closeWaModal = function() {
+    const modal = document.getElementById('modalSendWa');
+    if (modal) modal.classList.add('hidden');
+  };
+}
+
+if (typeof window.copyWaText !== 'function') {
+  window.copyWaText = function() {
+    const textEl = document.getElementById('waPreviewText');
+    if (!textEl || !textEl.value) return;
+    navigator.clipboard.writeText(textEl.value).then(() => {
+      alert('✅ Pesan WhatsApp berhasil disalin!');
+    }).catch(err => console.error(err));
+  };
+}
+
+if (typeof window.executeSendWa !== 'function') {
+  window.executeSendWa = function() {
+    const rawPhone = document.getElementById('waPhoneInput')?.value.trim();
+    const text = document.getElementById('waPreviewText')?.value.trim();
+    if (!rawPhone) {
+      alert('Masukkan nomor WhatsApp pelanggan!');
+      document.getElementById('waPhoneInput')?.focus();
+      return;
+    }
+    let cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62' + cleanPhone.substring(1);
+    }
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank');
+    if (window.closeWaModal) window.closeWaModal();
+  };
 }
 
 async function deleteTransactionClick() {

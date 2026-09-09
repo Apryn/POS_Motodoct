@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { checkStokAndNotify } = require('../services/telegramService');
+const { sendWhatsAppReceipt } = require('../services/whatsappService');
 
 exports.createTransaction = async (req, res) => {
     const conn = await db.getConnection();
@@ -94,12 +95,55 @@ exports.createTransaction = async (req, res) => {
                 console.error("Gagal menjadwalkan pengingat dinamis di transaksi:", err.message);
             }
         }
+        let customerPhone = null;
+        let custName = customer_name || null;
+        let custPlate = license_plate || null;
+        if (customer_id) {
+            const [[cRow]] = await conn.execute('SELECT name, phone, license_plate FROM customers WHERE id = ?', [customer_id]);
+            if (cRow) {
+                customerPhone = cRow.phone;
+                if (!custName) custName = cRow.name;
+                if (!custPlate) custPlate = cRow.license_plate;
+            }
+        }
         await conn.commit();
 
         // Cek stok setelah transaksi — kirim notif kalau ada yang menipis/habis
         checkStokAndNotify(db);
 
-        res.status(201).json({ success: true, message: 'Transaksi berhasil', data: { transaction_id, invoice_number, total } });
+        // Auto kirim WhatsApp jika gateway Fonnte terkonfigurasi & nomor customer ada
+        let autoWaSent = false;
+        if (customerPhone && process.env.FONNTE_TOKEN) {
+            try {
+                autoWaSent = await sendWhatsAppReceipt({
+                    phone: customerPhone,
+                    invoice_number,
+                    customer_name: custName,
+                    license_plate: custPlate,
+                    payment_method,
+                    spareparts,
+                    services,
+                    total_amount: total,
+                    created_at: new Date()
+                });
+            } catch (errWa) {
+                console.error("Gagal auto-kirim WA:", errWa.message);
+            }
+        }
+
+        res.status(201).json({ 
+            success: true, 
+            message: 'Transaksi berhasil', 
+            data: { 
+                transaction_id, 
+                invoice_number, 
+                total, 
+                customer_phone: customerPhone,
+                customer_name: custName,
+                license_plate: custPlate,
+                auto_wa_sent: autoWaSent
+            } 
+        });
     } catch (error) {
         await conn.rollback();
         console.error("Error transaksi:", error);
@@ -112,7 +156,7 @@ exports.createTransaction = async (req, res) => {
 exports.getAllTransactions = async (req, res) => {
     try {
         const [rows] = await db.execute(`
-            SELECT t.*, COALESCE(c.name, t.customer_name) as customer_name, u.username 
+            SELECT t.*, COALESCE(c.name, t.customer_name) as customer_name, c.phone as customer_phone, u.username 
             FROM transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
             LEFT JOIN users u ON t.user_id = u.id
@@ -128,7 +172,7 @@ exports.getTransactionById = async (req, res) => {
     try {
         const { id } = req.params;
         const [[trx]] = await db.execute(`
-            SELECT t.*, COALESCE(t.customer_name, c.name) as customer_name, COALESCE(t.license_plate, c.license_plate) as license_plate, u.username
+            SELECT t.*, COALESCE(t.customer_name, c.name) as customer_name, COALESCE(t.license_plate, c.license_plate) as license_plate, c.phone as customer_phone, u.username
             FROM transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
             LEFT JOIN users u ON t.user_id = u.id

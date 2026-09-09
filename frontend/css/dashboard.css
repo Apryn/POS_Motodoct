@@ -416,7 +416,7 @@ nav {
 }
 
 @media print {
-  .sidebar, .btn-print, .btn-primary, .btn-secondary, .lap-tabs, .hamburger, .lap-bottom, .table-wrap, #presetPeriode, .filter-periode {
+  .sidebar, .btn-print, .btn-primary, .btn-secondary, .lap-tabs, .hamburger, .lap-bottom, #presetPeriode, .filter-periode {
     display: none !important;
   }
   .main {
