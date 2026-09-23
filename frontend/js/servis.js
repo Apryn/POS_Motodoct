@@ -21,7 +21,7 @@ const avatarEl  = document.getElementById('userAvatar');
 if (welcomeEl) welcomeEl.textContent = user.username || 'Admin';
 if (avatarEl)  avatarEl.textContent  = (user.username || 'A')[0].toUpperCase();
 
-const isAdminOrOwner = user.role === 'admin' || user.role === 'owner';
+const canManage = user.role === 'admin' || user.role === 'owner' || user.role === 'kasir';
 
 const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
@@ -91,7 +91,7 @@ function renderTable(list) {
         <td>
           <div class="action-btns" style="justify-content: center;">
             <button class="btn-edit" onclick="openEdit(${s.id})">Edit</button>
-            ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${s.id}, '${escAttr(s.name)}')">Hapus</button>` : ''}
+            ${canManage ? `<button class="btn-del-row" onclick="openDelete(${s.id}, '${escAttr(s.name)}')">Hapus</button>` : ''}
           </div>
         </td>
       </tr>
