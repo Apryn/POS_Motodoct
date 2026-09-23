@@ -49,16 +49,19 @@ async function loadData() {
   } catch (err) {
     console.error('Load error:', err);
     document.getElementById('servisTableBody').innerHTML =
-      '<tr><td colspan="4" class="empty-state">Gagal memuat data. Periksa koneksi server.</td></tr>';
+      '<tr><td colspan="5" class="empty-state">Gagal memuat data. Periksa koneksi server.</td></tr>';
   }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 function renderStats() {
   const total = services.length;
-  const avg   = total ? Math.round(services.reduce((s, x) => s + Number(x.price || 0), 0) / total) : 0;
-  document.getElementById('statTotal').textContent    = total;
-  document.getElementById('statAvgHarga').textContent = formatRp(avg);
+  const customCommCount = services.filter(s => s.commission_type === 'percentage' || s.commission_type === 'nominal').length;
+  const avg = total ? Math.round(services.reduce((s, x) => s + Number(x.price || 0), 0) / total) : 0;
+  
+  if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = total;
+  if (document.getElementById('statCustomComm')) document.getElementById('statCustomComm').textContent = customCommCount;
+  if (document.getElementById('statAvgHarga')) document.getElementById('statAvgHarga').textContent = formatRp(avg);
 }
 
 // ── Table ─────────────────────────────────────────────────────────────────────
@@ -66,22 +69,34 @@ function renderTable(list) {
   const data  = list !== undefined ? list : services;
   const tbody = document.getElementById('servisTableBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Tidak ada data servis</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Tidak ada data servis</td></tr>';
     return;
   }
-  tbody.innerHTML = data.map((s, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${escHtml(s.name)}</td>
-      <td>${formatRp(s.price)}</td>
-      <td>
-        <div class="action-btns" style="justify-content: center;">
-          <button class="btn-edit"    onclick="openEdit(${s.id})">Edit</button>
-          ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${s.id}, '${escAttr(s.name)}')">Hapus</button>` : ''}
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = data.map((s, i) => {
+    let commBadge = '';
+    if (s.commission_type === 'percentage' && s.commission_value !== null && s.commission_value !== undefined) {
+      commBadge = `<span style="background:#e0f2fe; color:#0284c7; font-size:11px; font-weight:700; padding:4px 9px; border-radius:6px; border:1px solid #bae6fd; display:inline-block; white-space:nowrap;">⚡ ${Number(s.commission_value)}% Mekanik</span>`;
+    } else if (s.commission_type === 'nominal' && s.commission_value !== null && s.commission_value !== undefined) {
+      commBadge = `<span style="background:#dcfce7; color:#15803d; font-size:11px; font-weight:700; padding:4px 9px; border-radius:6px; border:1px solid #bbf7d0; display:inline-block; white-space:nowrap;">💰 ${formatRp(s.commission_value)} / servis</span>`;
+    } else {
+      commBadge = `<span style="background:#f1f5f9; color:#64748b; font-size:11px; font-weight:600; padding:4px 9px; border-radius:6px; border:1px solid #e2e8f0; display:inline-block; white-space:nowrap;">🔄 Ikuti Mekanik</span>`;
+    }
+
+    return `
+      <tr>
+        <td style="text-align: center;">${i + 1}</td>
+        <td><strong>${escHtml(s.name)}</strong></td>
+        <td><strong style="color: #0f172a;">${formatRp(s.price)}</strong></td>
+        <td>${commBadge}</td>
+        <td>
+          <div class="action-btns" style="justify-content: center;">
+            <button class="btn-edit" onclick="openEdit(${s.id})">Edit</button>
+            ${isAdminOrOwner ? `<button class="btn-del-row" onclick="openDelete(${s.id}, '${escAttr(s.name)}')">Hapus</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function filterTable() {
@@ -89,11 +104,45 @@ function filterTable() {
   renderTable(services.filter(s => s.name.toLowerCase().includes(q)));
 }
 
+// ── Commission Type Handler ──────────────────────────────────────────────────
+function onCommissionTypeChange() {
+  const type = document.getElementById('fieldCommissionType').value;
+  const group = document.getElementById('commissionValueGroup');
+  const label = document.getElementById('commissionValueLabel');
+  const help = document.getElementById('commissionValueHelp');
+  const defHelp = document.getElementById('commissionDefaultHelp');
+  const valInput = document.getElementById('fieldCommissionValue');
+
+  if (type === 'default') {
+    group.classList.add('hidden');
+    defHelp.classList.remove('hidden');
+    valInput.value = '';
+    valInput.required = false;
+  } else if (type === 'percentage') {
+    group.classList.remove('hidden');
+    defHelp.classList.add('hidden');
+    label.innerHTML = 'Persentase Komisi Mekanik (%) <span class="required">*</span>';
+    valInput.placeholder = 'Contoh: 50 (untuk bagi hasil 50%)';
+    valInput.required = true;
+    help.textContent = 'Mekanik akan menerima persentase ini dari total harga servis (dikurangi komisi helper bila ada).';
+  } else if (type === 'nominal') {
+    group.classList.remove('hidden');
+    defHelp.classList.add('hidden');
+    label.innerHTML = 'Nominal Komisi Mekanik (Rp) <span class="required">*</span>';
+    valInput.placeholder = 'Contoh: 5.000';
+    valInput.required = true;
+    help.textContent = 'Mekanik akan menerima nominal tetap ini per pekerjaan servis.';
+  }
+}
+
 // ── Modal Tambah/Edit ─────────────────────────────────────────────────────────
 function openModal() {
   editId = null;
   document.getElementById('modalTitle').textContent = 'Tambah Servis';
   document.getElementById('formServis').reset();
+  document.getElementById('fieldCommissionType').value = 'default';
+  document.getElementById('fieldCommissionValue').value = '';
+  onCommissionTypeChange();
   document.getElementById('modalServis').classList.remove('hidden');
 }
 
@@ -104,6 +153,20 @@ function openEdit(id) {
   document.getElementById('modalTitle').textContent = 'Edit Servis';
   document.getElementById('fieldNama').value  = s.name;
   document.getElementById('fieldHarga').value = Math.round(s.price).toLocaleString('id-ID');
+  
+  const cType = s.commission_type || 'default';
+  document.getElementById('fieldCommissionType').value = cType;
+  
+  const valInput = document.getElementById('fieldCommissionValue');
+  if (cType === 'percentage') {
+    valInput.value = s.commission_value !== null ? parseFloat(s.commission_value) : '';
+  } else if (cType === 'nominal') {
+    valInput.value = s.commission_value !== null ? Math.round(s.commission_value).toLocaleString('id-ID') : '';
+  } else {
+    valInput.value = '';
+  }
+
+  onCommissionTypeChange();
   document.getElementById('modalServis').classList.remove('hidden');
 }
 
@@ -113,9 +176,38 @@ function closeModal() {
 
 async function saveService() {
   const rawPrice = document.getElementById('fieldHarga').value.replace(/\./g, '');
+  const cType = document.getElementById('fieldCommissionType').value;
+  let cVal = null;
+
+  if (cType === 'percentage') {
+    const rawVal = document.getElementById('fieldCommissionValue').value.trim();
+    if (!rawVal) {
+      alert('Silakan masukkan persentase komisi mekanik (%)!');
+      return;
+    }
+    cVal = parseFloat(rawVal);
+    if (isNaN(cVal) || cVal < 0 || cVal > 100) {
+      alert('Persentase komisi harus di antara 0 sampai 100%!');
+      return;
+    }
+  } else if (cType === 'nominal') {
+    const rawVal = document.getElementById('fieldCommissionValue').value.replace(/\./g, '').trim();
+    if (!rawVal) {
+      alert('Silakan masukkan nominal komisi mekanik (Rp)!');
+      return;
+    }
+    cVal = parseFloat(rawVal);
+    if (isNaN(cVal) || cVal < 0) {
+      alert('Nominal komisi tidak boleh negatif!');
+      return;
+    }
+  }
+
   const payload = {
     name:  document.getElementById('fieldNama').value.trim(),
-    price: parseFloat(rawPrice) || 0
+    price: parseFloat(rawPrice) || 0,
+    commission_type: cType,
+    commission_value: cVal
   };
 
   if (!payload.name)  { alert('Nama servis wajib diisi!'); return; }
@@ -190,6 +282,19 @@ const fieldHargaEl = document.getElementById('fieldHarga');
 if (fieldHargaEl) {
   fieldHargaEl.addEventListener('input', function() {
     formatNumberInput(this);
+  });
+}
+
+const fieldCommValEl = document.getElementById('fieldCommissionValue');
+if (fieldCommValEl) {
+  fieldCommValEl.addEventListener('input', function() {
+    const type = document.getElementById('fieldCommissionType').value;
+    if (type === 'nominal') {
+      formatNumberInput(this);
+    } else if (type === 'percentage') {
+      // allow only numeric and decimal
+      this.value = this.value.replace(/[^0-9.]/g, '');
+    }
   });
 }
 

@@ -48,7 +48,17 @@ exports.getSummary = async (req, res) => {
 
         // 4. Beban Komisi Mekanik
         const [[resKomisiMekanik]] = await db.execute(`
-            SELECT COALESCE(SUM(IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100)), 0) AS total
+            SELECT COALESCE(SUM(
+                CASE 
+                    WHEN sv.commission_type = 'percentage' AND sv.commission_value IS NOT NULL 
+                        THEN ts.price * (sv.commission_value / 100)
+                    WHEN sv.commission_type = 'nominal' AND sv.commission_value IS NOT NULL 
+                        THEN sv.commission_value
+                    WHEN LOWER(sv.name) = 'remap' 
+                        THEN ts.price * 0.5
+                    ELSE ts.price * (m.commission_rate / 100)
+                END
+            ), 0) AS total
             FROM transaction_services ts
             JOIN transactions t ON ts.transaction_id = t.id
             JOIN mechanics m ON ts.mechanic_id = m.id
@@ -72,7 +82,17 @@ exports.getSummary = async (req, res) => {
                     ts.id, 
                     ts.mechanic_id, 
                     ts.price, 
-                    CAST((IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
+                    CAST((
+                        (CASE 
+                            WHEN sv.commission_type = 'percentage' AND sv.commission_value IS NOT NULL 
+                                THEN ts.price * (sv.commission_value / 100)
+                            WHEN sv.commission_type = 'nominal' AND sv.commission_value IS NOT NULL 
+                                THEN sv.commission_value
+                            WHEN LOWER(sv.name) = 'remap' 
+                                THEN ts.price * 0.5
+                            ELSE ts.price * (m.commission_rate / 100)
+                        END) - ts.helper_commission
+                    ) AS DECIMAL(10,2)) as calculated_commission,
                     ts.commission_status as comm_status,
                     ts.transaction_id
                 FROM transaction_services ts
@@ -106,7 +126,17 @@ exports.getSummary = async (req, res) => {
             [riwayatPencairan],
         ] = await Promise.all([
             db.execute(`
-                SELECT COALESCE(SUM(IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100) - ts.helper_commission), 0) AS total
+                SELECT COALESCE(SUM(
+                    (CASE 
+                        WHEN sv.commission_type = 'percentage' AND sv.commission_value IS NOT NULL 
+                            THEN ts.price * (sv.commission_value / 100)
+                        WHEN sv.commission_type = 'nominal' AND sv.commission_value IS NOT NULL 
+                            THEN sv.commission_value
+                        WHEN LOWER(sv.name) = 'remap' 
+                            THEN ts.price * 0.5
+                        ELSE ts.price * (m.commission_rate / 100)
+                    END) - ts.helper_commission
+                ), 0) AS total
                 FROM transaction_services ts
                 JOIN mechanics m ON ts.mechanic_id = m.id
                 JOIN services sv ON ts.service_id = sv.id
@@ -129,7 +159,17 @@ exports.getSummary = async (req, res) => {
                     SELECT 
                         ts.id, 
                         ts.mechanic_id, 
-                        CAST((IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as nominal_cair,
+                        CAST((
+                            (CASE 
+                                WHEN sv.commission_type = 'percentage' AND sv.commission_value IS NOT NULL 
+                                    THEN ts.price * (sv.commission_value / 100)
+                                WHEN sv.commission_type = 'nominal' AND sv.commission_value IS NOT NULL 
+                                    THEN sv.commission_value
+                                WHEN LOWER(sv.name) = 'remap' 
+                                    THEN ts.price * 0.5
+                                ELSE ts.price * (m.commission_rate / 100)
+                            END) - ts.helper_commission
+                        ) AS DECIMAL(10,2)) as nominal_cair,
                         ts.claimed_at as tanggal_cair
                     FROM transaction_services ts
                     JOIN mechanics m ON ts.mechanic_id = m.id

@@ -346,6 +346,22 @@ app.listen(PORT, async () => {
       console.log("🛠️   Kolom is_deleted berhasil ditambahkan ke tabel services!");
     }
 
+    // 7c. services.commission_type & commission_value
+    const [commTypeCols] = await db.execute("SHOW COLUMNS FROM services LIKE 'commission_type'");
+    if (commTypeCols.length === 0) {
+      await db.execute("ALTER TABLE services ADD COLUMN commission_type ENUM('percentage', 'nominal', 'default') NOT NULL DEFAULT 'default'");
+      console.log("🛠️   Kolom commission_type berhasil ditambahkan ke tabel services!");
+    }
+
+    const [commValCols] = await db.execute("SHOW COLUMNS FROM services LIKE 'commission_value'");
+    if (commValCols.length === 0) {
+      await db.execute("ALTER TABLE services ADD COLUMN commission_value DECIMAL(10,2) NULL DEFAULT NULL");
+      console.log("🛠️   Kolom commission_value berhasil ditambahkan ke tabel services!");
+      
+      // Inisialisasi remap ke persentase 50% jika ada
+      await db.execute("UPDATE services SET commission_type = 'percentage', commission_value = 50.00 WHERE LOWER(name) = 'remap'");
+    }
+
     // 8. transaction_services.commission_status & claimed_at
     const [statusCols] = await db.execute("SHOW COLUMNS FROM transaction_services LIKE 'commission_status'");
     if (statusCols.length === 0) {

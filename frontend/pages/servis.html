@@ -102,7 +102,7 @@
         <button class="hamburger" onclick="openSidebar()">☰</button>
         <div class="topbar-left">
           <h1>Jenis Servis</h1>
-          <p>Manajemen daftar jenis servis bengkel</p>
+          <p>Manajemen daftar jenis servis & bagi hasil komisi bengkel</p>
         </div>
       </div>
       <div class="topbar-right">
@@ -114,14 +114,22 @@
     </div>
 
     <!-- Stats -->
-    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px;">
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
       <div class="stat-card blue">
         <div class="stat-card-header">
           <span class="stat-card-label">Total Servis</span>
           <div class="stat-card-icon">🔧</div>
         </div>
         <div class="stat-card-value" id="statTotal">—</div>
-        <div class="stat-card-sub">jenis servis tersedia</div>
+        <div class="stat-card-sub">jenis servis aktif</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Bagi Hasil Khusus</span>
+          <div class="stat-card-icon">⚙️</div>
+        </div>
+        <div class="stat-card-value" id="statCustomComm">—</div>
+        <div class="stat-card-sub">skema % atau nominal</div>
       </div>
       <div class="stat-card orange">
         <div class="stat-card-header">
@@ -146,14 +154,15 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>No</th>
+            <th style="width: 50px;">No</th>
             <th>Nama Servis</th>
-            <th>Harga</th>
-            <th>Aksi</th>
+            <th>Harga Standar</th>
+            <th>Bagi Hasil Mekanik</th>
+            <th style="width: 140px; text-align: center;">Aksi</th>
           </tr>
         </thead>
         <tbody id="servisTableBody">
-          <tr><td colspan="4" class="empty-state">Memuat data...</td></tr>
+          <tr><td colspan="5" class="empty-state">Memuat data...</td></tr>
         </tbody>
       </table>
     </div>
@@ -174,8 +183,24 @@
             <input type="text" id="fieldNama" placeholder="Contoh: Ganti Oli" required />
           </div>
           <div class="form-group">
-            <label>Harga <span class="required">*</span></label>
+            <label>Harga Standar Servis <span class="required">*</span></label>
             <input type="text" id="fieldHarga" placeholder="0" required />
+          </div>
+          <div class="form-group">
+            <label>Skema Bagi Hasil (Komisi Mekanik)</label>
+            <select id="fieldCommissionType" onchange="onCommissionTypeChange()" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; background:#fff; font-family:inherit;">
+              <option value="default">Ikuti Profil Mekanik (Default 90%)</option>
+              <option value="percentage">Persentase Khusus (%)</option>
+              <option value="nominal">Nominal Tetap (Rp)</option>
+            </select>
+          </div>
+          <div class="form-group hidden" id="commissionValueGroup">
+            <label id="commissionValueLabel">Nilai Bagi Hasil Mekanik <span class="required">*</span></label>
+            <input type="text" id="fieldCommissionValue" placeholder="Masukkan nilai..." />
+            <small id="commissionValueHelp" style="display:block; margin-top:5px; font-size:12px; color:#64748b;"></small>
+          </div>
+          <div id="commissionDefaultHelp" style="padding:10px 12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; font-size:12px; color:#64748b; margin-top:5px; line-height: 1.4;">
+            💡 <strong>Ikuti Profil Mekanik:</strong> Komisi mekanik otomatis menggunakan persentase yang diatur pada profil masing-masing mekanik (umumnya 90% mekanik : 10% kas bengkel).
           </div>
         </div>
         <div class="modal-footer">

@@ -33,6 +33,8 @@ CREATE TABLE `services` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(150) NOT NULL,
   `price` decimal(10,2) NOT NULL,
+  `commission_type` enum('percentage','nominal','default') NOT NULL DEFAULT 'default',
+  `commission_value` decimal(10,2) DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

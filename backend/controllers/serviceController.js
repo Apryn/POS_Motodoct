@@ -12,9 +12,14 @@ exports.getAllServices = async (req, res) => {
 
 exports.createService = async (req, res) => {
     try {
-        const { name, price } = req.body;
-        const [result] = await db.execute('INSERT INTO services (name, price) VALUES (?, ?)', [name, price]);
-        res.status(201).json({ success: true, message: 'Servis berhasil ditambahkan', data: { id: result.insertId, name, price } });
+        const { name, price, commission_type, commission_value } = req.body;
+        const cType = ['percentage', 'nominal', 'default'].includes(commission_type) ? commission_type : 'default';
+        const cVal = (cType === 'default' || commission_value === null || commission_value === '' || commission_value === undefined) ? null : parseFloat(commission_value);
+        const [result] = await db.execute(
+            'INSERT INTO services (name, price, commission_type, commission_value) VALUES (?, ?, ?, ?)',
+            [name, price, cType, cVal]
+        );
+        res.status(201).json({ success: true, message: 'Servis berhasil ditambahkan', data: { id: result.insertId, name, price, commission_type: cType, commission_value: cVal } });
     } catch (error) {
         console.error('Error createService:', error);
         res.status(500).json({ success: false, message: 'Gagal menambahkan servis' });
@@ -24,8 +29,13 @@ exports.createService = async (req, res) => {
 exports.updateService = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, price } = req.body;
-        await db.execute('UPDATE services SET name=?, price=? WHERE id=?', [name, price, id]);
+        const { name, price, commission_type, commission_value } = req.body;
+        const cType = ['percentage', 'nominal', 'default'].includes(commission_type) ? commission_type : 'default';
+        const cVal = (cType === 'default' || commission_value === null || commission_value === '' || commission_value === undefined) ? null : parseFloat(commission_value);
+        await db.execute(
+            'UPDATE services SET name=?, price=?, commission_type=?, commission_value=? WHERE id=?',
+            [name, price, cType, cVal, id]
+        );
         res.json({ success: true, message: 'Servis berhasil diupdate' });
     } catch (error) {
         console.error('Error updateService:', error);

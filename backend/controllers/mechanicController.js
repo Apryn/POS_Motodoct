@@ -53,13 +53,25 @@ exports.getMechanicJobs = async (req, res) => {
                 ts.commission_status,
                 ts.claimed_at,
                 sv.name as service_name,
+                sv.commission_type as service_commission_type,
+                sv.commission_value as service_commission_value,
                 t.invoice_number,
                 t.created_at,
                 COALESCE(t.customer_name, c.name) as customer_name,
                 COALESCE(t.license_plate, c.license_plate) as license_plate,
                 m.commission_rate,
                 ts.helper_commission,
-                CAST((IF(LOWER(sv.name) = 'remap', ts.price * 0.5, ts.price * m.commission_rate / 100) - ts.helper_commission) AS DECIMAL(10,2)) as calculated_commission,
+                CAST((
+                    (CASE 
+                        WHEN sv.commission_type = 'percentage' AND sv.commission_value IS NOT NULL 
+                            THEN ts.price * (sv.commission_value / 100)
+                        WHEN sv.commission_type = 'nominal' AND sv.commission_value IS NOT NULL 
+                            THEN sv.commission_value
+                        WHEN LOWER(sv.name) = 'remap' 
+                            THEN ts.price * 0.5
+                        ELSE ts.price * (m.commission_rate / 100)
+                    END) - ts.helper_commission
+                ) AS DECIMAL(10,2)) as calculated_commission,
                 mh.name as helper_name,
                 NULL as main_mechanic_name
             FROM transaction_services ts
@@ -79,6 +91,8 @@ exports.getMechanicJobs = async (req, res) => {
                 ts.helper_commission_status as commission_status,
                 ts.helper_claimed_at as claimed_at,
                 sv.name as service_name,
+                sv.commission_type as service_commission_type,
+                sv.commission_value as service_commission_value,
                 t.invoice_number,
                 t.created_at,
                 COALESCE(t.customer_name, c.name) as customer_name,

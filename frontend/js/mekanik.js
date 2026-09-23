@@ -217,11 +217,19 @@ async function openJobs(id, name) {
       let countPaid = 0;
 
       const rowsHtml = list.map((j, i) => {
-        const isRemap = j.service_name && j.service_name.toLowerCase() === 'remap';
-        const commRate = isRemap ? 50.00 : parseFloat(j.commission_rate || 90.00);
         const totalJasa = parseFloat(j.service_price || 0);
         const komisiNet = parseFloat(j.calculated_commission || 0);
-        const tokoCut = j.role === 'helper' ? 0 : totalJasa - (totalJasa * commRate) / 100;
+        const helperComm = parseFloat(j.helper_commission || 0);
+        const tokoCut = j.role === 'helper' ? 0 : Math.max(0, totalJasa - (komisiNet + helperComm));
+        
+        let commSchemeInfo = '';
+        if (j.role === 'utama') {
+          if (j.service_commission_type === 'percentage' && j.service_commission_value) {
+            commSchemeInfo = `<div style="font-size:10px; color:#0284c7; font-weight:600;">(Skema ${j.service_commission_value}%)</div>`;
+          } else if (j.service_commission_type === 'nominal' && j.service_commission_value) {
+            commSchemeInfo = `<div style="font-size:10px; color:#15803d; font-weight:600;">(Tetap ${formatRp(j.service_commission_value)})</div>`;
+          }
+        }
         
         const isPaid = j.commission_status === 'paid';
         
@@ -263,7 +271,7 @@ async function openJobs(id, name) {
             <td><strong>${escHtml(j.invoice_number)}</strong></td>
             <td>${escHtml(j.customer_name || 'Pelanggan Umum')}</td>
             <td><span class="code-badge" style="background:#1e293b; color:#ffffff; font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; border:1px solid #475569; letter-spacing:0.5px; display:inline-block; white-space:nowrap;">${escHtml(j.license_plate || '-')}</span></td>
-            <td>${escHtml(j.service_name)}</td>
+            <td>${escHtml(j.service_name)}${commSchemeInfo}</td>
             <td style="text-align:center;">${roleBadge}</td>
             <td style="text-align:right; font-weight:700;">${formatRp(totalJasa)}</td>
             <td style="text-align:right; color:#ef4444;">${j.role === 'helper' ? '-' : formatRp(tokoCut)}</td>
