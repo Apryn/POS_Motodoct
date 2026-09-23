@@ -336,7 +336,14 @@ app.listen(PORT, async () => {
     const [mechDelCols] = await db.execute("SHOW COLUMNS FROM mechanics LIKE 'is_deleted'");
     if (mechDelCols.length === 0) {
       await db.execute("ALTER TABLE mechanics ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0");
-      console.log("🛠️  Kolom is_deleted berhasil ditambahkan ke tabel mechanics!");
+      console.log("🛠️   Kolom is_deleted berhasil ditambahkan ke tabel mechanics!");
+    }
+
+    // 7b. services.is_deleted
+    const [serviceDelCols] = await db.execute("SHOW COLUMNS FROM services LIKE 'is_deleted'");
+    if (serviceDelCols.length === 0) {
+      await db.execute("ALTER TABLE services ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0");
+      console.log("🛠️   Kolom is_deleted berhasil ditambahkan ke tabel services!");
     }
 
     // 8. transaction_services.commission_status & claimed_at
